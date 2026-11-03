@@ -18,8 +18,6 @@ export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { isDark, toggleTheme, colors } = useTheme();
   const {
-    tallyRecords,
-    totalUdhaar,
     slips,
     currentUser,
     isOwner,
@@ -66,40 +64,76 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: Math.max(insets.top + 16, 40),
-          paddingBottom: Math.max(insets.bottom + 25, 30),
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Top Header Bar */}
-      <View style={styles.topHeader}>
-        <View style={styles.logoRow}>
-          <Text style={styles.logo}>CALMandi</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top + 16, 40),
+            paddingBottom: Math.max(insets.bottom + 25, 30),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top Header Bar */}
+        <View style={styles.topHeader}>
+          <View style={styles.logoRow}>
+            <View style={[styles.miniLogoCircle, { backgroundColor: colors.primary }]}>
+              <Ionicons name="leaf" size={18} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.logo, { color: colors.primary }]}>CALMandi</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={[
+                styles.themeHeaderBtn,
+                {
+                  backgroundColor: isDark ? '#1E2D23' : '#F1F5F9',
+                  borderColor: isDark ? '#283C30' : '#E2E8F0',
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={toggleTheme}
+            >
+              <Ionicons
+                name={isDark ? 'sunny' : 'moon'}
+                size={16}
+                color={isDark ? '#FBBF24' : '#16834A'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TouchableOpacity
-            style={styles.themeToggleBtn}
-            activeOpacity={0.7}
-            onPress={toggleTheme}
-          >
-            <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#D97706" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+
+        {/* Quick Shortcut to First Home Screen */}
+        <TouchableOpacity
+          style={[
+            styles.welcomeBanner,
+            {
+              backgroundColor: isDark ? '#143823' : '#E8F5EC',
+              borderColor: colors.primary,
+            },
+          ]}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Welcome')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="sparkles" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+            <Text style={[styles.welcomeBannerText, { color: colors.primaryDark }]}>
+              Open First Home (Welcome) Screen
+            </Text>
+          </View>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+        </TouchableOpacity>
 
       {/* 1. CLEARLY VISIBLE ONLINE/OFFLINE STATUS BANNER AT TOP OF HOMESCREEN */}
       {/* 2. INCLUDES "TEST OFFLINE" BUTTON & "DATA SYNC CENTER" BUTTON */}
@@ -712,11 +746,43 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  welcomeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  welcomeBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  miniLogoCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#16834A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  themeHeaderBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1300,3 +1366,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
