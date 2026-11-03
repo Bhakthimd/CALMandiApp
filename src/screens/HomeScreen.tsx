@@ -10,10 +10,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
 import { UserRole } from '../types';
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { isDark, toggleTheme, colors } = useTheme();
   const {
     currentUser,
     isOwner,
@@ -36,7 +38,7 @@ export default function HomeScreen({ navigation }: any) {
         style: 'destructive',
         onPress: () => {
           logout();
-          navigation.replace('Login');
+          navigation.replace('Welcome');
         },
       },
     ]);
@@ -52,7 +54,7 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -66,28 +68,79 @@ export default function HomeScreen({ navigation }: any) {
         {/* Top Header Bar */}
         <View style={styles.topHeader}>
           <View style={styles.logoRow}>
-            <View style={styles.miniLogoCircle}>
+            <View style={[styles.miniLogoCircle, { backgroundColor: colors.primary }]}>
               <Ionicons name="leaf" size={18} color="#FFFFFF" />
             </View>
-            <Text style={styles.logo}>CALMandi</Text>
+            <Text style={[styles.logo, { color: colors.primary }]}>CALMandi</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={[
+                styles.themeHeaderBtn,
+                {
+                  backgroundColor: isDark ? '#1E2D23' : '#F1F5F9',
+                  borderColor: isDark ? '#283C30' : '#E2E8F0',
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={toggleTheme}
+            >
+              <Ionicons
+                name={isDark ? 'sunny' : 'moon'}
+                size={16}
+                color={isDark ? '#FBBF24' : '#16834A'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
+        {/* Quick Shortcut to First Home Screen */}
+        <TouchableOpacity
+          style={[
+            styles.welcomeBanner,
+            {
+              backgroundColor: isDark ? '#143823' : '#E8F5EC',
+              borderColor: colors.primary,
+            },
+          ]}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Welcome')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="sparkles" size={16} color={colors.primary} style={{ marginRight: 8 }} />
+            <Text style={[styles.welcomeBannerText, { color: colors.primaryDark }]}>
+              Open First Home (Welcome) Screen
+            </Text>
+          </View>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+        </TouchableOpacity>
+
         {/* User Greeting Card */}
-        <View style={styles.welcomeCard}>
+        <View
+          style={[
+            styles.welcomeCard,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <View style={styles.welcomeLeft}>
-            <Text style={styles.greetingText}>Welcome,</Text>
-            <Text style={styles.userName}>{currentUser?.name || 'Mandi Trader'}</Text>
-            <Text style={styles.businessName}>
+            <Text style={[styles.greetingText, { color: colors.textSecondary }]}>Welcome,</Text>
+            <Text style={[styles.userName, { color: colors.textPrimary }]}>
+              {currentUser?.name || 'Mandi Trader'}
+            </Text>
+            <Text style={[styles.businessName, { color: colors.textSecondary }]}>
               {currentUser?.business || 'CALMandi Market'}
             </Text>
           </View>
@@ -105,19 +158,22 @@ export default function HomeScreen({ navigation }: any) {
             </View>
 
             <TouchableOpacity
-              style={styles.switchRoleBtn}
+              style={[
+                styles.switchRoleBtn,
+                { backgroundColor: isDark ? '#1E2D23' : '#E8F5EC' },
+              ]}
               activeOpacity={0.7}
               onPress={handleToggleRole}
             >
-              <Ionicons name="swap-horizontal" size={13} color="#16834A" />
-              <Text style={styles.switchRoleBtnText}>
+              <Ionicons name="swap-horizontal" size={13} color={colors.primary} />
+              <Text style={[styles.switchRoleBtnText, { color: colors.primary }]}>
                 Switch to {isOwner ? 'Operator' : 'Owner'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {isOperator ? 'Operator Floor Desk' : 'What would you like to do?'}
         </Text>
 
@@ -187,138 +243,153 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* 1. Large Button: Customers */}
         <TouchableOpacity
-          style={styles.largeMenuCard}
+          style={[
+            styles.largeMenuCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('Customers')}
         >
-          <View style={[styles.largeIconBox, { backgroundColor: '#E8F5EC' }]}>
-            <Ionicons name="people" size={38} color="#16834A" />
+          <View style={[styles.largeIconBox, { backgroundColor: isDark ? '#143823' : '#E8F5EC' }]}>
+            <Ionicons name="people" size={38} color={colors.primary} />
           </View>
 
           <View style={styles.cardDetails}>
-            <Text style={styles.cardTitle}>Customers</Text>
-            <Text style={styles.cardDescription}>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Customers</Text>
+            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
               Add and view customer list
             </Text>
-            <View style={styles.countPill}>
-              <Text style={styles.countPillText}>
+            <View style={[styles.countPill, { backgroundColor: isDark ? '#143823' : '#E8F5EC' }]}>
+              <Text style={[styles.countPillText, { color: colors.primary }]}>
                 {customers.length} {customers.length === 1 ? 'Customer' : 'Customers'}
               </Text>
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={26} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={26} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* 2. Large Button: Products */}
         <TouchableOpacity
-          style={styles.largeMenuCard}
+          style={[
+            styles.largeMenuCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('Products')}
         >
-          <View style={[styles.largeIconBox, { backgroundColor: '#E0F2FE' }]}>
+          <View style={[styles.largeIconBox, { backgroundColor: isDark ? '#11294D' : '#E0F2FE' }]}>
             <Ionicons name="cube" size={38} color="#0284C7" />
           </View>
 
           <View style={styles.cardDetails}>
-            <Text style={styles.cardTitle}>Products</Text>
-            <Text style={styles.cardDescription}>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Products</Text>
+            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
               Add and view product catalog
             </Text>
-            <View style={[styles.countPill, { backgroundColor: '#E0F2FE' }]}>
+            <View style={[styles.countPill, { backgroundColor: isDark ? '#11294D' : '#E0F2FE' }]}>
               <Text style={[styles.countPillText, { color: '#0284C7' }]}>
                 {products.length} {products.length === 1 ? 'Product' : 'Products'}
               </Text>
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={26} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={26} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* 3. Large Button: Categories */}
         <TouchableOpacity
-          style={styles.largeMenuCard}
+          style={[
+            styles.largeMenuCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('Categories')}
         >
-          <View style={[styles.largeIconBox, { backgroundColor: '#FEF3C7' }]}>
+          <View style={[styles.largeIconBox, { backgroundColor: isDark ? '#3B2904' : '#FEF3C7' }]}>
             <Ionicons name="pricetags" size={38} color="#D97706" />
           </View>
 
           <View style={styles.cardDetails}>
-            <Text style={styles.cardTitle}>Categories</Text>
-            <Text style={styles.cardDescription}>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Categories</Text>
+            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
               Fruits, Vegetables, Leafy Vegetables & more
             </Text>
-            <View style={[styles.countPill, { backgroundColor: '#FEF3C7' }]}>
+            <View style={[styles.countPill, { backgroundColor: isDark ? '#3B2904' : '#FEF3C7' }]}>
               <Text style={[styles.countPillText, { color: '#B45309' }]}>
                 {categories.length} {categories.length === 1 ? 'Category' : 'Categories'}
               </Text>
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={26} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={26} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* 4. Common Module: Mandi Delivery Slips (Stock In / Stock Out) */}
         <TouchableOpacity
-          style={styles.largeMenuCard}
+          style={[
+            styles.largeMenuCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('Slips')}
         >
-          <View style={[styles.largeIconBox, { backgroundColor: '#F3E8FF' }]}>
-            <Ionicons name="receipt" size={38} color="#7C3AED" />
+          <View style={[styles.largeIconBox, { backgroundColor: isDark ? '#2E1065' : '#F3E8FF' }]}>
+            <Ionicons name="receipt" size={38} color="#9333EA" />
           </View>
 
           <View style={styles.cardDetails}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Mandi Slips</Text>
-              <View style={styles.slipTypeBadge}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Mandi Slips</Text>
+              <View style={[styles.slipTypeBadge, { backgroundColor: isDark ? '#3B0764' : '#F3E8FF' }]}>
                 <Text style={styles.slipTypeBadgeText}>IN & OUT</Text>
               </View>
             </View>
-            <Text style={styles.cardDescription}>
+            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
               Farmer arrivals, buyer dispatches & instant WhatsApp slips
             </Text>
-            <View style={[styles.countPill, { backgroundColor: '#F3E8FF' }]}>
-              <Text style={[styles.countPillText, { color: '#7C3AED' }]}>
+            <View style={[styles.countPill, { backgroundColor: isDark ? '#2E1065' : '#F3E8FF' }]}>
+              <Text style={[styles.countPillText, { color: '#9333EA' }]}>
                 {slips.length} Slips Recorded
               </Text>
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={26} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={26} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* 5. Owner-Only: Mandi Staff Team */}
         {isOwner && (
           <TouchableOpacity
-            style={styles.largeMenuCard}
+            style={[
+              styles.largeMenuCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Staff')}
           >
-            <View style={[styles.largeIconBox, { backgroundColor: '#F1F5F9' }]}>
-              <Ionicons name="shield-checkmark" size={38} color="#475569" />
+            <View style={[styles.largeIconBox, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+              <Ionicons name="shield-checkmark" size={38} color="#64748B" />
             </View>
 
             <View style={styles.cardDetails}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>Mandi Staff & Operators</Text>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Mandi Staff & Operators</Text>
                 <View style={styles.ownerOnlyBadge}>
                   <Text style={styles.ownerOnlyBadgeText}>OWNER ONLY</Text>
                 </View>
               </View>
-              <Text style={styles.cardDescription}>
+              <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
                 Manage your floor operators, desk assignments & permissions
               </Text>
-              <View style={[styles.countPill, { backgroundColor: '#F1F5F9' }]}>
-                <Text style={[styles.countPillText, { color: '#475569' }]}>
+              <View style={[styles.countPill, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+                <Text style={[styles.countPillText, { color: '#64748B' }]}>
                   4 Active Staff Members
                 </Text>
               </View>
             </View>
 
-            <Ionicons name="chevron-forward" size={26} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={26} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -340,6 +411,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  welcomeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  welcomeBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -358,6 +443,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#16834A',
     letterSpacing: 0.5,
+  },
+  themeHeaderBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   logoutButton: {
     flexDirection: 'row',

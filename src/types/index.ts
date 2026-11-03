@@ -85,9 +85,10 @@ export type MandiSlip = {
 };
 
 export type RootStackParamList = {
-  Login: undefined;
-  Otp: { mobile: string; demoOtp?: string };
-  Registration: { mobile?: string } | undefined;
+  Welcome: undefined;
+  Login: { role?: UserRole } | undefined;
+  Otp: { mobile: string; demoOtp?: string; detectedRole?: UserRole };
+  Registration: { mobile?: string; role?: UserRole } | undefined;
   Home: undefined;
   Customers: undefined;
   AddCustomer: undefined;
