@@ -101,7 +101,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.backButton}
             activeOpacity={0.7}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('Welcome')}
           >
             <Text style={styles.backButtonText}>‹ Back</Text>
           </TouchableOpacity>
