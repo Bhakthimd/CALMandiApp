@@ -24,6 +24,7 @@ export type Customer = {
   mobile: string;
   business: string;
   balance?: string;
+  pendingAmount?: number;
 };
 
 export type Category = {
@@ -47,6 +48,40 @@ export type Product = {
   unit: UnitType | string;
   quantity?: string;
   price?: string;
+  costPrice?: string; // Owner-only: purchase cost to calculate profit margin
+};
+
+export type StockMovementType = 'IN' | 'OUT'; // IN: Farmer Arrival, OUT: Buyer Dispatch
+
+export type TallyRecord = {
+  id: string;
+  time: string;
+  productName: string;
+  productId: string;
+  unit: string;
+  count: number;
+  mode: StockMovementType;
+  vehicleNo?: string;
+  partyName?: string;
+};
+
+export type MandiSlip = {
+  id: string;
+  slipNumber: string;
+  date: string;
+  type: StockMovementType;
+  partyName: string;
+  partyMobile: string;
+  productId: string;
+  productName: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  ratePerUnit: number;
+  totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  notes?: string;
 };
 
 export type RootStackParamList = {
@@ -61,4 +96,8 @@ export type RootStackParamList = {
   Products: undefined;
   AddProduct: undefined;
   Staff: undefined;
+  CreateSlip: { type?: StockMovementType; productId?: string } | undefined;
+  Slips: undefined;
+  Khata: undefined; // Owner only: Buyer Credit & Ledger
+  CrateTally: { productId?: string; initialMode?: StockMovementType } | undefined; // Operator only: Live Floor Crate Clicker
 };

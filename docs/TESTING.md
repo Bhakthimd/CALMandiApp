@@ -80,7 +80,42 @@ This document details the test procedures, manual testing checklist, validation 
 - [x] **👑 Owner Capabilities**: Ledger and payment balance visibility (`₹ 12,400 Pending`, `Settled`).
 - [x] **👷 Operator Capabilities**: Quick call/contact desk button to confirm shipments and dispatches with buyers.
 
-### G. Team & Role Permissions Module (`StaffScreen`)
+### G. Delivery Slips & WhatsApp Bills Module (Option A)
+- [x] **Quick Action Buttons on Home**:
+  - `📥 + Stock IN (Farmer)`: Direct shortcut to record farmer arrivals.
+  - `📤 + Stock OUT & Bill`: Direct shortcut to record buyer sales and generate WhatsApp slips.
+- [x] **Fast Entry Form (`CreateSlipScreen.tsx`)**:
+  - 1-tap toggle between **Stock IN (Farmer)** and **Stock OUT (Sale)**.
+  - Quick buyer chips from registered customer list.
+  - Horizontal commodity selector with live rate per unit.
+  - Quantity input with rapid batch chips (`+5`, `+10`, `+20`, `+50`).
+  - Automatic calculation of Total Bill, Amount Paid, and Balance Due (Udhaar).
+- [x] **WhatsApp Receipt Generator**:
+  - Professional, clean formatted mandi delivery slip.
+  - 🟢 **1-Tap Share on WhatsApp**: Opens WhatsApp with pre-formatted message or standard share sheet fallback.
+  - Automatic inventory sync: Stock IN increases physical stock; Stock OUT decreases physical stock and records pending balance on customer ledger.
+- [x] **Slips History Dashboard (`SlipsScreen.tsx`)**:
+  - Filter by `All Slips`, `📥 Inward (Arrival)`, and `📤 Outward (Sales)`.
+  - Re-share any slip via WhatsApp with one tap.
+
+### H. 👷 Operator Unique Feature: Live Floor Crate Tally (`CrateTallyScreen`)
+- [x] **Mandi Floor Purpose**: Built specifically for floor operators and tally clerks who stand at trucks during 4 AM - 9 AM unloading to count incoming/outgoing crates, boxes, and bags.
+- [x] **Dual Counting Modes**:
+  - 🟢 **Truck Unload (Stock IN)**: Real-time count of arriving commodities from farmers.
+  - 🔵 **Tempo Dispatch (Stock OUT)**: Real-time count of loaded shipments for buyer tempos.
+- [x] **Quick Commodity Switcher**: 1-tap horizontal selector across Banana (Crate), Apple (Box), Tomato (Kg), Potato (Bag), etc.
+- [x] **Giant Tactile Tap-to-Count Display**:
+  - High-visibility 72px bold count display.
+  - Giant tactile **`TAP TO COUNT (+1)`** button designed for rapid one-handed counting as laborers walk past.
+  - Rapid batch buttons: `[ +5 ]`, `[ +10 ]`, `[ +20 ]`, `[ +50 ]`, and red `[ -1 Undo ]`.
+  - Live projected warehouse inventory preview: `Current Stock: 25 Crates` ➔ `Projected Stock: 70 Crates`.
+- [x] **Vehicle & Party Tracking (Optional)**: Attaches vehicle number (`KA-04-E-1234`) and farmer/buyer name with 1 tap.
+- [x] **1-Tap Inventory Sync**: Tapping `Save Count & Update Mandi Stock` automatically updates product quantities in `MandiContext` and records an audited entry in Mandi slips.
+- [x] **WhatsApp Tally Slip**: 1-tap WhatsApp sharing formatted with timestamp, vehicle number, operator name, and count.
+- [x] **Shift Tally History**: Real-time log showing all tallies recorded during the operator's shift.
+- [x] **Quick Product Shortcut**: Tapping `⚡ Tap-to-Count` directly from any product card in `ProductsScreen` opens the clicker pre-selected with that commodity.
+
+### I. Team & Role Permissions Module (`StaffScreen`)
 - [x] **Staff Directory**: Lists all mandi operators, counter assignments, and phone numbers.
 - [x] **Add Staff Member Modal**: Owners can onboard new operators and assign floor counters.
 - [x] **Role Permissions Matrix Table**: Clear comparison table illustrating exact feature permissions between Owner and Operator.

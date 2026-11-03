@@ -117,11 +117,11 @@ export default function RegistrationScreen({ route, navigation }: any) {
         </Text>
 
         {/* Owner Name */}
-        <Text style={styles.label}>Your Name</Text>
+        <Text style={styles.label}>Owner Name</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Enter your name"
+          placeholder="Enter owner / trader name"
           placeholderTextColor="#999999"
           value={name}
           onChangeText={setName}

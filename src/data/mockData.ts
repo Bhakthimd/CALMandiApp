@@ -1,4 +1,4 @@
-import { Customer, Category, Product, UnitType, UserProfile, StaffMember } from '../types';
+import { Customer, Category, Product, UnitType, UserProfile, StaffMember, MandiSlip, TallyRecord } from '../types';
 
 export const demoOwnerProfile: UserProfile = {
   id: 'usr_owner_1',
@@ -60,6 +60,7 @@ export const initialCustomers: Customer[] = [
     mobile: '9876543210',
     business: 'Ravi Traders',
     balance: '₹ 12,400 Pending',
+    pendingAmount: 12400,
   },
   {
     id: '2',
@@ -67,6 +68,7 @@ export const initialCustomers: Customer[] = [
     mobile: '9876501234',
     business: 'Sri Lakshmi Fruits',
     balance: 'Settled',
+    pendingAmount: 0,
   },
   {
     id: '3',
@@ -74,6 +76,7 @@ export const initialCustomers: Customer[] = [
     mobile: '9876512340',
     business: 'M K Vegetables',
     balance: '₹ 4,800 Pending',
+    pendingAmount: 4800,
   },
 ];
 
@@ -102,6 +105,7 @@ export const initialProducts: Product[] = [
     unit: 'Crate',
     quantity: '25',
     price: '1200',
+    costPrice: '1000',
   },
   {
     id: '2',
@@ -110,6 +114,7 @@ export const initialProducts: Product[] = [
     unit: 'Box',
     quantity: '40',
     price: '1500',
+    costPrice: '1300',
   },
   {
     id: '3',
@@ -118,6 +123,7 @@ export const initialProducts: Product[] = [
     unit: 'Kg',
     quantity: '150',
     price: '30',
+    costPrice: '24',
   },
   {
     id: '4',
@@ -126,6 +132,7 @@ export const initialProducts: Product[] = [
     unit: 'Bunch',
     quantity: '80',
     price: '15',
+    costPrice: '10',
   },
   {
     id: '5',
@@ -134,5 +141,99 @@ export const initialProducts: Product[] = [
     unit: 'Kg',
     quantity: '50',
     price: '850',
+    costPrice: '750',
+  },
+];
+
+export const initialSlips: MandiSlip[] = [
+  {
+    id: 'slip_1',
+    slipNumber: 'SLIP-101',
+    date: 'Today, 08:30 AM',
+    type: 'IN',
+    partyName: 'Basavaraj (Farmer)',
+    partyMobile: '9845012345',
+    productId: '1',
+    productName: 'Banana',
+    category: 'Fruits',
+    quantity: 30,
+    unit: 'Crate',
+    ratePerUnit: 1000,
+    totalAmount: 30000,
+    paidAmount: 30000,
+    balanceAmount: 0,
+    notes: 'Tractor arrival: 30 crates',
+  },
+  {
+    id: 'slip_2',
+    slipNumber: 'SLIP-102',
+    date: 'Today, 10:15 AM',
+    type: 'OUT',
+    partyName: 'Ravi Traders',
+    partyMobile: '9876543210',
+    productId: '1',
+    productName: 'Banana',
+    category: 'Fruits',
+    quantity: 10,
+    unit: 'Crate',
+    ratePerUnit: 1200,
+    totalAmount: 12000,
+    paidAmount: 10000,
+    balanceAmount: 2000,
+    notes: 'Tempo load dispatched',
+  },
+  {
+    id: 'slip_3',
+    slipNumber: 'SLIP-103',
+    date: 'Today, 11:45 AM',
+    type: 'OUT',
+    partyName: 'M K Vegetables',
+    partyMobile: '9876512340',
+    productId: '3',
+    productName: 'Tomato',
+    category: 'Vegetables',
+    quantity: 50,
+    unit: 'Kg',
+    ratePerUnit: 30,
+    totalAmount: 1500,
+    paidAmount: 1500,
+    balanceAmount: 0,
+    notes: 'Cash receipt at counter',
+  },
+];
+
+export const initialTallyRecords: TallyRecord[] = [
+  {
+    id: 'tally_1',
+    time: 'Today, 07:15 AM',
+    productName: 'Banana',
+    productId: '1',
+    unit: 'Crate',
+    count: 35,
+    mode: 'IN',
+    vehicleNo: 'KA-04-E-4512',
+    partyName: 'Basavaraj (Farmer)',
+  },
+  {
+    id: 'tally_2',
+    time: 'Today, 08:45 AM',
+    productName: 'Tomato',
+    productId: '3',
+    unit: 'Kg',
+    count: 60,
+    mode: 'OUT',
+    vehicleNo: 'KA-02-B-9988',
+    partyName: 'Ravi Traders',
+  },
+  {
+    id: 'tally_3',
+    time: 'Today, 09:30 AM',
+    productName: 'Apple',
+    productId: '2',
+    unit: 'Box',
+    count: 20,
+    mode: 'IN',
+    vehicleNo: 'DL-01-A-7744',
+    partyName: 'Himachal Farm Fresh',
   },
 ];

@@ -139,24 +139,17 @@ export default function ProductsScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Add Product Button */}
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            isOperator && styles.addButtonOperatorLocked,
-          ]}
-          activeOpacity={0.7}
-          onPress={handleAddProductPress}
-        >
-          <Ionicons
-            name={isOperator ? 'lock-closed-outline' : 'add-circle-outline'}
-            size={20}
-            color="#FFFFFF"
-          />
-          <Text style={styles.addButtonText}>
-            {isOperator ? 'Add Product (Owner Locked)' : 'Add New Product'}
-          </Text>
-        </TouchableOpacity>
+        {/* Add Product Button (Owner Only) */}
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('AddProduct')}
+          >
+            <Ionicons name="add-circle-outline" size={22} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>+ Add New Product</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Products List Header with Quick Add */}
         <View style={styles.listHeader}>
@@ -239,30 +232,32 @@ export default function ProductsScreen({ navigation }: any) {
                       ) : null}
                     </View>
 
-                    {/* Owner Financial Value Tag */}
-                    {isOwner && itemTotalVal > 0 && (
-                      <Text style={styles.valuationText}>
-                        Stock Value: ₹{itemTotalVal.toLocaleString('en-IN')}
-                      </Text>
+                    {/* Owner Financial Value & Profit Margin (Hidden from Operator) */}
+                    {isOwner && (
+                      <View style={{ marginTop: 4 }}>
+                        <Text style={styles.valuationText}>
+                          Stock Capital: ₹{itemTotalVal.toLocaleString('en-IN')}
+                        </Text>
+                        {product.costPrice && (
+                          <Text style={styles.marginText}>
+                            Cost: ₹{product.costPrice} • Margin: +₹{priceNum - parseFloat(product.costPrice)}/{product.unit}
+                          </Text>
+                        )}
+                      </View>
                     )}
                   </View>
 
-                  {/* Delete / Lock Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.deleteButton,
-                      !canDeleteProduct && styles.lockButton,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => handleDelete(product.id, product.name)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons
-                      name={canDeleteProduct ? 'trash-outline' : 'lock-closed'}
-                      size={17}
-                      color={canDeleteProduct ? '#DC2626' : '#94A3B8'}
-                    />
-                  </TouchableOpacity>
+                  {/* Delete Button (Owner Only) */}
+                  {isOwner && (
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      activeOpacity={0.7}
+                      onPress={() => handleDelete(product.id, product.name)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="trash-outline" size={17} color="#DC2626" />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Number Input & Unit Display Section */}
@@ -319,6 +314,53 @@ export default function ProductsScreen({ navigation }: any) {
                       <Text style={styles.unitDisplayText}>{product.unit}</Text>
                     </View>
                   </View>
+                </View>
+
+                {/* Fast Action: Create Slip for this product */}
+                <View style={styles.cardActionsRow}>
+                  {isOperator ? (
+                    <TouchableOpacity
+                      style={styles.cardActionTallyBtn}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('CrateTally', {
+                          productId: product.id,
+                          initialMode: 'IN',
+                        })
+                      }
+                    >
+                      <Ionicons name="finger-print" size={15} color="#0284C7" />
+                      <Text style={styles.cardActionTallyText}>⚡ Tap-to-Count</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.cardActionInBtn}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('CreateSlip', {
+                          type: 'IN',
+                          productId: product.id,
+                        })
+                      }
+                    >
+                      <Ionicons name="arrow-down-circle" size={15} color="#16834A" />
+                      <Text style={styles.cardActionInText}>+ Inward Slip</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.cardActionOutBtn}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      navigation.navigate('CreateSlip', {
+                        type: 'OUT',
+                        productId: product.id,
+                      })
+                    }
+                  >
+                    <Ionicons name="arrow-up-circle" size={15} color="#0284C7" />
+                    <Text style={styles.cardActionOutText}>+ Sale & WhatsApp</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             );
@@ -570,7 +612,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#16834A',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  marginText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+    marginTop: 2,
   },
   deleteButton: {
     width: 32,
@@ -661,5 +709,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#374151',
+  },
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  cardActionTallyBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E0F2FE',
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#7DD3FC',
+  },
+  cardActionTallyText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0369A1',
+    marginLeft: 4,
+  },
+  cardActionInBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  cardActionInText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16834A',
+    marginLeft: 4,
+  },
+  cardActionOutBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F9FF',
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  cardActionOutText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0284C7',
+    marginLeft: 4,
   },
 });
