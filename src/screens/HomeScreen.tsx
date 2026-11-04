@@ -11,11 +11,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { UserRole } from '../types';
+import { useTheme } from '../context/ThemeContext';
 import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { isDark, toggleTheme, colors } = useTheme();
   const {
+    tallyRecords,
+    totalUdhaar,
+    slips,
     currentUser,
     isOwner,
     isOperator,
@@ -45,7 +50,7 @@ export default function HomeScreen({ navigation }: any) {
         style: 'destructive',
         onPress: () => {
           logout();
-          navigation.replace('Login');
+          navigation.replace('Welcome');
         },
       },
     ]);
@@ -74,15 +79,26 @@ export default function HomeScreen({ navigation }: any) {
     >
       {/* Top Header Bar */}
       <View style={styles.topHeader}>
-        <Text style={styles.logo}>CALMandi</Text>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          activeOpacity={0.7}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.logoRow}>
+          <Text style={styles.logo}>CALMandi</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity
+            style={styles.themeToggleBtn}
+            activeOpacity={0.7}
+            onPress={toggleTheme}
+          >
+            <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#D97706" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            activeOpacity={0.7}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 1. CLEARLY VISIBLE ONLINE/OFFLINE STATUS BANNER AT TOP OF HOMESCREEN */}
@@ -382,6 +398,29 @@ export default function HomeScreen({ navigation }: any) {
         <Ionicons name="chevron-forward" size={22} color="#888888" />
       </TouchableOpacity>
 
+        {/* Floor Crate Tally Clicker Card */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.specialMenuCard, { borderColor: '#7DD3FC', backgroundColor: '#F0F9FF' }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('CrateTally')}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#E0F2FE' }]}>
+            <Ionicons name="finger-print" size={26} color="#0284C7" />
+          </View>
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Floor Crate Tally</Text>
+              <View style={[styles.moduleTag, { backgroundColor: '#E0F2FE' }]}>
+                <Text style={[styles.moduleTagText, { color: '#0284C7' }]}>Live Clicker</Text>
+              </View>
+            </View>
+            <Text style={styles.cardDescription}>
+              High-speed tactile counter for loading/unloading crates & bags on the mandi floor.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+        </TouchableOpacity>
+
       {/* DASHBOARD SHORTCUTS: FEATURE 1, 2, 3 & ANALYTICS */}
       <Text style={styles.sectionTitle}>
         {isOwner ? 'Financials, Grades & Pricing' : 'Mandi Services & Ledgers'}
@@ -494,6 +533,29 @@ export default function HomeScreen({ navigation }: any) {
 
         <Ionicons name="chevron-forward" size={22} color="#888888" />
       </TouchableOpacity>
+
+        {/* Mandi Slips & Invoices Card */}
+        <TouchableOpacity
+          style={[styles.menuCard, { borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Slips')}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#DCFCE7' }]}>
+            <Ionicons name="receipt-outline" size={26} color="#16834A" />
+          </View>
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Mandi Slips & Receipts</Text>
+              <View style={[styles.moduleTag, { backgroundColor: '#DCFCE7' }]}>
+                <Text style={[styles.moduleTagText, { color: '#15803D' }]}>{slips ? slips.length : 0} Slips</Text>
+              </View>
+            </View>
+            <Text style={styles.cardDescription}>
+              View, search, print and WhatsApp digital arrival/dispatch patti slips.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+        </TouchableOpacity>
 
       {/* Main Master Management Modules */}
       <Text style={styles.sectionTitle}>
@@ -655,6 +717,17 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeToggleBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',

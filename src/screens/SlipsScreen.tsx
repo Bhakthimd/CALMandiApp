@@ -1,0 +1,476 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Share,
+  Linking,
+  } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useMandi } from '../context/MandiContext';
+import { MandiSlip } from '../types';
+
+export default function SlipsScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { slips } = useMandi();
+  const [filter, setFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
+
+  const filteredSlips = slips.filter((s: any) => {
+    if (filter === 'ALL') return true;
+    return s.type === filter;
+  });
+
+  const generateWhatsAppMessage = (slip: MandiSlip) => {
+    const isOut = slip.type === 'OUT';
+    return `*CALMandi Delivery Slip*
+-----------------------------
+*Slip No:* #${slip.slipNumber}
+*Date:* ${slip.date}
+*Type:* ${isOut ? '📤 Sale / Dispatch' : '📥 Farmer Arrival (Aawak)'}
+*Party:* ${slip.partyName} (${slip.partyMobile})
+-----------------------------
+*Commodity:* ${slip.productName} (${slip.category})
+*Quantity:* ${slip.quantity} ${slip.unit}
+*Rate:* ₹${slip.ratePerUnit} / ${slip.unit}
+*Total Amount:* ₹${slip.totalAmount.toLocaleString('en-IN')}
+*Amount Paid:* ₹${slip.paidAmount.toLocaleString('en-IN')}
+*Balance Due:* ₹${slip.balanceAmount.toLocaleString('en-IN')}
+${slip.notes ? `*Notes:* ${slip.notes}\n` : ''}-----------------------------
+_Thank you for your business!_
+*CALMandi APMC Market Yard*`;
+  };
+
+  const handleShare = async (slip: MandiSlip) => {
+    const msg = generateWhatsAppMessage(slip);
+    const cleanPhone = slip.partyMobile.replace(/\D/g, '');
+    const url = `whatsapp://send?phone=+91${cleanPhone}&text=${encodeURIComponent(msg)}`;
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        await Share.share({ message: msg });
+      }
+    } catch {
+      await Share.share({ message: msg });
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top + 16, 40),
+            paddingBottom: Math.max(insets.bottom + 20, 30),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backText}>‹ Home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.logo}>CALMandi</Text>
+        </View>
+
+        <Text style={styles.title}>Delivery Slips & Bills</Text>
+        <Text style={styles.subtitle}>
+          Track daily inward farmer arrivals and outward sales receipts.
+        </Text>
+
+        {/* Create New Slip Button */}
+        <TouchableOpacity
+          style={styles.createBtn}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('CreateSlip')}
+        >
+          <Ionicons name="add-circle" size={22} color="#FFFFFF" />
+          <Text style={styles.createBtnText}>+ Create New Delivery Slip</Text>
+        </TouchableOpacity>
+
+        {/* Filter Chips */}
+        <View style={styles.filtersRow}>
+          {[
+            { key: 'ALL', label: 'All Slips' },
+            { key: 'IN', label: '📥 Inward (Arrival)' },
+            { key: 'OUT', label: '📤 Outward (Sales)' },
+          ].map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[
+                styles.filterChip,
+                filter === item.key && styles.filterChipActive,
+              ]}
+              onPress={() => setFilter(item.key as any)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filter === item.key && styles.filterChipTextActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Slips List */}
+        {filteredSlips.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={48} color="#CCCCCC" />
+            <Text style={styles.emptyText}>No delivery slips recorded.</Text>
+            <Text style={styles.emptySubtext}>
+              Tap &quot;+ Create New Delivery Slip&quot; to generate your first receipt.
+            </Text>
+          </View>
+        ) : (
+          filteredSlips.map((slip: any) => {
+            const isOut = slip.type === 'OUT';
+            return (
+              <View key={slip.id} style={styles.slipCard}>
+                <View style={styles.cardTopRow}>
+                  <View style={styles.badgeRow}>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        isOut ? styles.outBadgeBg : styles.inBadgeBg,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.typeBadgeText,
+                          isOut ? styles.outBadgeText : styles.inBadgeText,
+                        ]}
+                      >
+                        {isOut ? '📤 DISPATCH' : '📥 ARRIVAL'}
+                      </Text>
+                    </View>
+                    <Text style={styles.slipNum}>#{slip.slipNumber}</Text>
+                  </View>
+                  <Text style={styles.slipDate}>{slip.date}</Text>
+                </View>
+
+                {/* Party & Commodity Details */}
+                <Text style={styles.partyName}>{slip.partyName}</Text>
+                <Text style={styles.partyMobile}>
+                  <Ionicons name="call-outline" size={12} color="#666666" />{' '}
+                  {slip.partyMobile}
+                </Text>
+
+                <View style={styles.detailBox}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailCommodity}>
+                      {slip.productName} ({slip.category})
+                    </Text>
+                    <Text style={styles.detailQty}>
+                      {slip.quantity} {slip.unit}
+                    </Text>
+                  </View>
+                  <Text style={styles.detailRate}>
+                    Rate: ₹{slip.ratePerUnit} / {slip.unit}
+                  </Text>
+                </View>
+
+                <View style={styles.amountRow}>
+                  <View>
+                    <Text style={styles.amountLabel}>Total Bill</Text>
+                    <Text style={styles.totalAmountText}>
+                      ₹{slip.totalAmount.toLocaleString('en-IN')}
+                    </Text>
+                  </View>
+
+                  {slip.balanceAmount > 0 ? (
+                    <View style={styles.balanceBadge}>
+                      <Text style={styles.balanceBadgeText}>
+                        ₹{slip.balanceAmount.toLocaleString('en-IN')} Pending
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.settledBadge}>
+                      <Text style={styles.settledBadgeText}>Fully Paid</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* WhatsApp Share Button */}
+                <TouchableOpacity
+                  style={styles.whatsappBtn}
+                  activeOpacity={0.7}
+                  onPress={() => handleShare(slip)}
+                >
+                  <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" />
+                  <Text style={styles.whatsappBtnText}>Send WhatsApp Slip</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+  },
+  content: {
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backButton: {
+    paddingVertical: 6,
+    paddingRight: 10,
+  },
+  backText: {
+    fontSize: 18,
+    color: '#16834A',
+    fontWeight: '600',
+  },
+  logo: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#16834A',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 18,
+    lineHeight: 20,
+  },
+  createBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#16834A',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+    shadowColor: '#16834A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  createBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  filterChipActive: {
+    backgroundColor: '#16834A',
+    borderColor: '#16834A',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  emptyContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 30,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    marginTop: 10,
+  },
+  emptyText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#555555',
+    marginTop: 8,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#888888',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  slipCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  inBadgeBg: {
+    backgroundColor: '#E8F5EC',
+  },
+  outBadgeBg: {
+    backgroundColor: '#E0F2FE',
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  inBadgeText: {
+    color: '#16834A',
+  },
+  outBadgeText: {
+    color: '#0284C7',
+  },
+  slipNum: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  slipDate: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  partyName: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  partyMobile: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 10,
+    marginTop: 2,
+  },
+  detailBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailCommodity: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  detailQty: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#16834A',
+  },
+  detailRate: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  amountLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  totalAmountText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  balanceBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  balanceBadgeText: {
+    color: '#D97706',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  settledBadge: {
+    backgroundColor: '#E8F5EC',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  settledBadgeText: {
+    color: '#16834A',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  whatsappBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#25D366',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whatsappBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+});

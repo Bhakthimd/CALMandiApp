@@ -23,6 +23,8 @@ import {
   CustomerPricingRule,
   WastageRecord,
   FarmerPatti,
+  MandiSlip,
+  TallyRecord,
 } from '../types';
 import {
   initialCustomers,
@@ -36,6 +38,8 @@ import {
   initialLedgerTransactions,
   initialWastageRecords,
   initialFarmerPattis,
+  initialSlips,
+  initialTallyRecords,
   availableUnits,
   demoOwnerProfile,
 } from '../data/mockData';
@@ -183,6 +187,29 @@ interface MandiContextType {
   toggleOfflineSimulation: (forced?: boolean) => void;
   deleteArrival: (id: string) => void;
   deleteSale: (id: string) => void;
+
+  // Slips and Floor Crate Tally
+  slips: MandiSlip[];
+  recordSlip: (slipData: Omit<MandiSlip, 'id' | 'slipNumber' | 'date'>) => MandiSlip;
+  tallyRecords: TallyRecord[];
+  recordTally: (tallyData: Omit<TallyRecord, 'id' | 'time'>) => TallyRecord;
+
+  // Shift & Drawer
+  operatorCashDrawer: number;
+  shiftSubmitted: boolean;
+  submitShiftHandover: () => void;
+
+  // Owner Financials & Metrics
+  todaySales: number;
+  todayProfit: number;
+  totalUdhaar: number;
+
+  // Debt & Balance Settlement
+  settleCustomerBalance: (customerId: string, amountToSettle: number) => void;
+
+  // Customer Product Pricing Shortcuts
+  getCustomerProductPrice: (customerId: string, productId: string, gradeName?: string) => number | null;
+  setCustomerProductPrice: (customerId: string, productId: string, price: number, gradeName?: string) => Promise<void>;
 }
 
 const MandiContext = createContext<MandiContextType | undefined>(undefined);
@@ -207,6 +234,10 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
   // Feature 4 State
   const [pattis, setPattis] = useState<FarmerPatti[]>(initialFarmerPattis);
+  const [slips, setSlips] = useState<MandiSlip[]>(initialSlips);
+  const [tallyRecords, setTallyRecords] = useState<TallyRecord[]>(initialTallyRecords);
+  const [shiftSubmitted, setShiftSubmitted] = useState<boolean>(false);
+
 
   // Offline Mode & Sync State
   const [arrivals, setArrivals] = useState<ArrivalRecord[]>(initialArrivals);
@@ -330,12 +361,12 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen to network changes via NetInfo
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
+    const unsubscribe = NetInfo.addEventListener((state: any) => {
       const online = Boolean(state.isConnected && state.isInternetReachable !== false);
       setIsOnline(online);
     });
 
-    NetInfo.fetch().then((state) => {
+    NetInfo.fetch().then((state: any) => {
       const online = Boolean(state.isConnected && state.isInternetReachable !== false);
       setIsOnline(online);
     });
@@ -1265,6 +1296,226 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     setSales((prev) => prev.filter((s) => s.id !== id));
   };
 
+  // =========================================================================
+  // MANDI SLIPS, FLOOR CRATE TALLY & SHIFT HANDOVER
+  // =========================================================================
+
+  const settleCustomerBalance = (customerId: string, amountToSettle: number) => {
+    setCustomers((prev) =>
+      prev.map((c) => {
+        if (c.id === customerId) {
+          const currentPending = c.pendingAmount || 0;
+          const updated = Math.max(0, currentPending - amountToSettle);
+          return {
+            ...c,
+            pendingAmount: updated,
+            balance: updated > 0 ? `₹ ${updated.toLocaleString('en-IN')} Pending` : 'Settled',
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const recordSlip = (
+    slipData: Omit<MandiSlip, 'id' | 'slipNumber' | 'date'>
+  ): MandiSlip => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateFormatted = `Today, ${timeStr}`;
+
+    const newSlip: MandiSlip = {
+      id: `slip_${Date.now()}`,
+      slipNumber: `SLIP-${100 + slips.length + 1}`,
+      date: dateFormatted,
+      ...slipData,
+    };
+
+    // 1. Update physical product inventory in context
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === slipData.productId) {
+          const current = parseFloat(p.quantity || '0') || 0;
+          const delta = slipData.quantity;
+          const updated =
+            slipData.type === 'IN'
+              ? current + delta
+              : Math.max(0, current - delta);
+          return { ...p, quantity: updated.toString() };
+        }
+        return p;
+      })
+    );
+
+    // 2. If Outward dispatch with balance due, add directly to customer debt
+    if (slipData.type === 'OUT') {
+      const balanceDue = slipData.balanceAmount || 0;
+      if (slipData.customerId || slipData.partyMobile) {
+        setCustomers((prev) =>
+          prev.map((c) => {
+            if (
+              (slipData.customerId && c.id === slipData.customerId) ||
+              c.mobile === slipData.partyMobile ||
+              c.name === slipData.partyName
+            ) {
+              const currentPending = c.pendingAmount || 0;
+              const updatedPending = currentPending + balanceDue;
+              return {
+                ...c,
+                pendingAmount: updatedPending,
+                balance: `₹ ${updatedPending.toLocaleString('en-IN')} Pending`,
+              };
+            }
+            return c;
+          })
+        );
+      }
+    }
+
+    setSlips((prev) => [newSlip, ...prev]);
+    setShiftUpdatesCount((prev) => prev + 1);
+    return newSlip;
+  };
+
+  const recordTally = (
+    tallyData: Omit<TallyRecord, 'id' | 'time'>
+  ): TallyRecord => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeFormatted = `Today, ${timeStr}`;
+
+    const newRecord: TallyRecord = {
+      id: `tally_${Date.now()}`,
+      time: timeFormatted,
+      ...tallyData,
+    };
+
+    // Update physical product inventory in context
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === tallyData.productId) {
+          const current = parseFloat(p.quantity || '0') || 0;
+          const delta = tallyData.count;
+          const updated =
+            tallyData.mode === 'IN'
+              ? current + delta
+              : Math.max(0, current - delta);
+          return { ...p, quantity: updated.toString() };
+        }
+        return p;
+      })
+    );
+
+    // Auto-record corresponding MandiSlip for paperless audit
+    const matchingProduct = products.find((p) => p.id === tallyData.productId);
+    const rate = matchingProduct ? parseFloat(matchingProduct.price || '0') || 50 : 50;
+    const totalAmount = tallyData.count * rate;
+
+    const newSlip: MandiSlip = {
+      id: `slip_${Date.now()}`,
+      slipNumber: `TALLY-${100 + slips.length + 1}`,
+      date: timeFormatted,
+      type: tallyData.mode,
+      partyName:
+        tallyData.partyName?.trim() ||
+        (tallyData.mode === 'IN' ? 'Farmer Truck Unload' : 'Market Tempo Dispatch'),
+      partyMobile: '9876500000',
+      productId: tallyData.productId,
+      productName: tallyData.productName,
+      category: matchingProduct?.category || 'General',
+      quantity: tallyData.count,
+      unit: tallyData.unit,
+      ratePerUnit: rate,
+      totalAmount,
+      paidAmount: totalAmount,
+      balanceAmount: 0,
+      notes: `Counted via Floor Crate Tally. Vehicle: ${tallyData.vehicleNo || 'Floor Direct'}`,
+    };
+
+    setSlips((prev) => [newSlip, ...prev]);
+    setTallyRecords((prev) => [newRecord, ...prev]);
+    setShiftUpdatesCount((prev) => prev + 1);
+
+    return newRecord;
+  };
+
+  const submitShiftHandover = () => {
+    setShiftSubmitted(true);
+  };
+
+  // Helper shortcuts for customer product pricing
+  const getCustomerProductPrice = useCallback(
+    (customerId: string, productId: string, gradeName?: string): number | null => {
+      if (!customerId || !productId) return null;
+      const matchingRule = pricingRules.find(
+        (r) =>
+          r.isActive &&
+          r.customerId === customerId &&
+          r.productId === productId &&
+          (!gradeName || !r.gradeName || r.gradeName.toLowerCase() === gradeName.toLowerCase())
+      );
+      if (matchingRule) return matchingRule.price;
+
+      const cust = customers.find((c) => c.id === customerId);
+      if (cust && cust.customPrices) {
+        const rule = cust.customPrices.find(
+          (cp) =>
+            cp.productId === productId &&
+            (!gradeName || !cp.gradeName || cp.gradeName.toLowerCase() === gradeName.toLowerCase())
+        );
+        if (rule) return rule.price;
+      }
+      return null;
+    },
+    [pricingRules, customers]
+  );
+
+  const setCustomerProductPrice = async (
+    customerId: string,
+    productId: string,
+    price: number,
+    gradeName?: string
+  ): Promise<void> => {
+    const cust = customers.find((c) => c.id === customerId);
+    const prod = products.find((p) => p.id === productId);
+    const grade = gradeName
+      ? productGrades.find(
+          (g) => g.productId === productId && g.name.toLowerCase() === gradeName.toLowerCase()
+        )
+      : undefined;
+
+    await addPricingRule({
+      customerId,
+      customerName: cust?.name || 'Customer',
+      productId,
+      productName: prod?.name || 'Product',
+      gradeId: grade?.id,
+      gradeName: grade?.name || gradeName,
+      price,
+      effectiveDate: new Date().toISOString().split('T')[0],
+      isActive: true,
+    });
+  };
+
+  // Operator Cash in Drawer: sum of payments collected on sales today + base float
+  const operatorCashDrawer =
+    slips
+      .filter((s) => s.type === 'OUT')
+      .reduce((acc, curr) => acc + (curr.paidAmount || 0), 0) + 15000;
+
+  // Owner Financials
+  const todaySales =
+    slips
+      .filter((s) => s.type === 'OUT')
+      .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0) + 30000;
+
+  const todayProfit = Math.round(todaySales * 0.18);
+
+  const totalUdhaar = customers.reduce(
+    (acc, curr) => acc + (curr.pendingAmount || (curr.currentBalance && curr.currentBalance > 0 ? curr.currentBalance : 0)),
+    0
+  );
+
   // Metrics calculation
   const totalStockUnits = products.reduce((acc, curr) => {
     const val = parseFloat(curr.quantity || '0');
@@ -1364,6 +1615,29 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         toggleOfflineSimulation,
         deleteArrival,
         deleteSale,
+
+        // Slips and Floor Crate Tally
+        slips,
+        recordSlip,
+        tallyRecords,
+        recordTally,
+
+        // Shift & Drawer
+        operatorCashDrawer,
+        shiftSubmitted,
+        submitShiftHandover,
+
+        // Owner Financials & Metrics
+        todaySales,
+        todayProfit,
+        totalUdhaar,
+
+        // Debt & Balance Settlement
+        settleCustomerBalance,
+
+        // Customer Pricing Shortcuts
+        getCustomerProductPrice,
+        setCustomerProductPrice,
       }}
     >
       {children}

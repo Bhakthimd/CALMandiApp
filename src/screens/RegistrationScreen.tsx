@@ -101,7 +101,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.backButton}
             activeOpacity={0.7}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('Welcome')}
           >
             <Text style={styles.backButtonText}>‹ Back</Text>
           </TouchableOpacity>
@@ -117,11 +117,11 @@ export default function RegistrationScreen({ route, navigation }: any) {
         </Text>
 
         {/* Owner Name */}
-        <Text style={styles.label}>Your Name</Text>
+        <Text style={styles.label}>Owner Name</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Enter your name"
+          placeholder="Enter owner / trader name"
           placeholderTextColor="#999999"
           value={name}
           onChangeText={setName}

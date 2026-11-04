@@ -47,7 +47,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
   }, [productGrades, selectedProductId]);
 
   const totalGradeStock = useMemo(() => {
-    return currentGrades.reduce((sum, g) => sum + (g.isActive ? g.stockQuantity : 0), 0);
+    return currentGrades.reduce((sum, g) => sum + (g?.isActive ? (g?.stockQuantity || 0) : 0), 0);
   }, [currentGrades]);
 
   const handleOpenAddModal = () => {
@@ -316,7 +316,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                           styles.toggleBtn,
                           isActive ? styles.toggleBtnDisable : styles.toggleBtnEnable,
                         ]}
-                        onPress={() => handleToggleGrade(grade.id, isActive)}
+                        onPress={() => handleToggleGrade(grade.id, Boolean(isActive))}
                         activeOpacity={0.7}
                       >
                         <Ionicons

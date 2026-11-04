@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 
+import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OtpScreen from '../screens/OtpScreen';
 import RegistrationScreen from '../screens/RegistrationScreen';
@@ -17,27 +18,42 @@ import RecordArrivalScreen from '../screens/RecordArrivalScreen';
 import RecordSaleScreen from '../screens/RecordSaleScreen';
 import SyncCenterScreen from '../screens/SyncCenterScreen';
 
-// Feature 1, 2, 3 & Analytics Screens
+// Cash & Debt Screens
 import CashDebtScreen from '../screens/CashDebtScreen';
 import CustomerLedgerScreen from '../screens/CustomerLedgerScreen';
 import AddPaymentScreen from '../screens/AddPaymentScreen';
+
+// Product Grades & Wastage Screens
 import ProductGradesScreen from '../screens/ProductGradesScreen';
 import GradingWastageScreen from '../screens/GradingWastageScreen';
+
+// Customer-Wise Pricing Screen
 import CustomerPricingScreen from '../screens/CustomerPricingScreen';
+
+// Reports & Analytics Hub
 import ReportsScreen from '../screens/ReportsScreen';
+
+// Farmer Patti & Bills
 import PattiReceiptScreen from '../screens/PattiReceiptScreen';
+
+// Slips, Khata & Live Floor Crate Clicker
+import CreateSlipScreen from '../screens/CreateSlipScreen';
+import SlipsScreen from '../screens/SlipsScreen';
+import KhataScreen from '../screens/KhataScreen';
+import CrateTallyScreen from '../screens/CrateTallyScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName="Welcome"
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
       }}
     >
+      <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Otp" component={OtpScreen} />
       <Stack.Screen name="Registration" component={RegistrationScreen} />
@@ -70,6 +86,12 @@ export default function AppNavigator() {
 
       {/* Farmer Patti & Bills */}
       <Stack.Screen name="PattiReceipt" component={PattiReceiptScreen} />
+
+      {/* Slips, Khata & Live Crate Tally */}
+      <Stack.Screen name="CreateSlip" component={CreateSlipScreen} />
+      <Stack.Screen name="Slips" component={SlipsScreen} />
+      <Stack.Screen name="Khata" component={KhataScreen} />
+      <Stack.Screen name="CrateTally" component={CrateTallyScreen} />
     </Stack.Navigator>
   );
 }

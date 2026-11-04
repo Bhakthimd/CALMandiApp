@@ -14,20 +14,25 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
+import { UserRole } from '../types';
+import CALMandiLogo from '../components/CALMandiLogo';
 import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
-export default function LoginScreen({ navigation }: any) {
+export default function LoginScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const [mobile, setMobile] = useState('');
   const { loginUser } = useMandi();
+  const { colors } = useTheme();
+  const targetRole: UserRole = route?.params?.role || 'Owner';
 
   const handleContinue = () => {
     const cleanedMobile = mobile.replace(/\D/g, '');
 
     if (cleanedMobile.length !== 10) {
       Alert.alert(
-        'Invalid Number',
+        'Invalid Mobile',
         'Please enter a valid 10-digit mobile number.'
       );
       return;
@@ -37,12 +42,13 @@ export default function LoginScreen({ navigation }: any) {
 
     const demoOtp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    // Pass detected demo role if mobile matches known profiles
-    let detectedRole: 'Owner' | 'Operator' | undefined = undefined;
+    let detectedRole: UserRole | undefined = undefined;
     if (cleanedMobile === demoOwnerProfile.mobile) {
       detectedRole = 'Owner';
     } else if (cleanedMobile === demoOperatorProfile.mobile) {
       detectedRole = 'Operator';
+    } else {
+      detectedRole = targetRole;
     }
 
     navigation.navigate('Otp', {
@@ -52,7 +58,7 @@ export default function LoginScreen({ navigation }: any) {
     });
   };
 
-  const handleQuickLogin = (role: 'Owner' | 'Operator') => {
+  const handleQuickDemo = (role: 'Owner' | 'Operator') => {
     Keyboard.dismiss();
     const profile = role === 'Owner' ? demoOwnerProfile : demoOperatorProfile;
     loginUser(profile);
@@ -61,14 +67,61 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Top Header Back Button */}
+      <View
+        style={[
+          styles.topNavBar,
+          {
+            paddingTop: Math.max(insets.top + 10, 20),
+            backgroundColor: colors.background,
+            borderBottomColor: colors.borderLight,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('Welcome')}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Text style={[styles.backButtonText, { color: colors.textPrimary }]}>Home</Text>
+        </TouchableOpacity>
+
+        {/* Role Pill Indicator */}
+        <View
+          style={[
+            styles.rolePill,
+            targetRole === 'Operator'
+              ? { backgroundColor: colors.operatorBadgeBg, borderColor: colors.operatorPrimary }
+              : { backgroundColor: colors.ownerBadgeBg, borderColor: colors.primary },
+          ]}
+        >
+          <Ionicons
+            name={targetRole === 'Owner' ? 'shield-checkmark' : 'cube'}
+            size={14}
+            color={targetRole === 'Owner' ? colors.primaryDark : colors.operatorBadgeText}
+          />
+          <Text
+            style={[
+              styles.rolePillText,
+              {
+                color: targetRole === 'Owner' ? colors.primaryDark : colors.operatorBadgeText,
+              },
+            ]}
+          >
+            {targetRole === 'Owner' ? 'Owner Login' : 'Operator Login'}
+          </Text>
+        </View>
+      </View>
+
       <ScrollView
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: Math.max(insets.top + 20, 40),
+            paddingTop: 10,
             paddingBottom: Math.max(insets.bottom + 20, 30),
           },
         ]}
@@ -77,93 +130,132 @@ export default function LoginScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.form}>
-          <Text style={styles.logo}>CALMandi</Text>
-
-          <Text style={styles.title}>Welcome!</Text>
-
-          <Text style={styles.subtitle}>
-            Manage your mandi business with role-based operations.
-          </Text>
+          {/* Logo & Welcome */}
+          <View style={styles.headerArea}>
+            <CALMandiLogo size="medium" showTagline={true} />
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
+              Enter Mobile Number
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              We will send you a 4-digit verification code.
+            </Text>
+          </View>
 
           {/* Network Status & Offline Simulator Banner */}
           <NetworkStatusBanner />
 
-          {/* Quick Demo Role Logins */}
-          <View style={styles.quickLoginCard}>
-            <View style={styles.quickLoginHeader}>
-              <Ionicons name="flash-outline" size={18} color="#16834A" />
-              <Text style={styles.quickLoginTitle}>Quick Role Login</Text>
+          {/* Mobile Number Input */}
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number</Text>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.prefixContainer,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderRightColor: colors.border,
+                },
+              ]}
+            >
+              <Text style={styles.flagText}>🇮🇳</Text>
+              <Text style={[styles.prefixText, { color: colors.textPrimary }]}>+91</Text>
             </View>
-            <Text style={styles.quickLoginSubtitle}>
-              Tap a role below to explore role-specific features immediately:
-            </Text>
-
-            <View style={styles.roleButtonsRow}>
-              {/* Login as Owner */}
-              <TouchableOpacity
-                style={[styles.roleSelectCard, styles.ownerCard]}
-                activeOpacity={0.7}
-                onPress={() => handleQuickLogin('Owner')}
-              >
-                <View style={styles.roleIconCircleOwner}>
-                  <Ionicons name="shield-checkmark" size={20} color="#16834A" />
-                </View>
-                <Text style={styles.roleCardTitle}>Owner Login</Text>
-                <Text style={styles.roleCardDesc}>Full Control & Reports</Text>
-              </TouchableOpacity>
-
-              {/* Login as Operator */}
-              <TouchableOpacity
-                style={[styles.roleSelectCard, styles.operatorCard]}
-                activeOpacity={0.7}
-                onPress={() => handleQuickLogin('Operator')}
-              >
-                <View style={styles.roleIconCircleOperator}>
-                  <Ionicons name="briefcase" size={20} color="#0284C7" />
-                </View>
-                <Text style={styles.roleCardTitle}>Operator Login</Text>
-                <Text style={styles.roleCardDesc}>Stock & Daily Entry</Text>
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary }]}
+              placeholder="98765 43210"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={10}
+              value={mobile}
+              onChangeText={(value) =>
+                setMobile(value.replace(/\D/g, ''))
+              }
+              returnKeyType="done"
+              onSubmitEditing={handleContinue}
+            />
           </View>
 
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR LOGIN WITH OTP</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Text style={styles.label}>Mobile Number</Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Enter 10-digit mobile number"
-            placeholderTextColor="#999999"
-            keyboardType="number-pad"
-            maxLength={10}
-            value={mobile}
-            onChangeText={(value) =>
-              setMobile(value.replace(/\D/g, ''))
-            }
-          />
-
+          {/* Continue Button */}
           <TouchableOpacity
-            style={styles.button}
-            activeOpacity={0.7}
+            style={[
+              styles.button,
+              {
+                backgroundColor: targetRole === 'Operator' ? colors.operatorPrimary : colors.primary,
+                shadowColor: targetRole === 'Operator' ? colors.operatorPrimary : colors.primary,
+              },
+            ]}
+            activeOpacity={0.8}
             onPress={handleContinue}
           >
-            <Text style={styles.buttonText}>Continue with OTP</Text>
+            <Text style={styles.buttonText}>Continue</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
 
-          {/* Direct Link to Registration */}
+          {/* Register Link */}
           <View style={styles.registerPromptRow}>
-            <Text style={styles.registerPromptText}>New to CALMandi? </Text>
+            <Text style={[styles.registerPromptText, { color: colors.textSecondary }]}>
+              New to CALMandi?{' '}
+            </Text>
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('Registration')}
+              onPress={() => navigation.navigate('Registration', { role: targetRole })}
             >
-              <Text style={styles.registerLinkText}>Create Account / Register</Text>
+              <Text style={[styles.registerLinkText, { color: colors.primary }]}>
+                Register here
+              </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Quick Demo Bar for Testing */}
+          <View style={[styles.demoSection, { borderTopColor: colors.borderLight }]}>
+            <Text style={[styles.demoLabel, { color: colors.textMuted }]}>
+              1-Tap Demo Test:
+            </Text>
+            <View style={styles.demoButtonsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.demoChip,
+                  {
+                    backgroundColor: colors.demoChipBg,
+                    borderColor: colors.demoChipBorder,
+                  },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => handleQuickDemo('Owner')}
+              >
+                <Text style={[styles.demoChipText, { color: colors.primaryDark }]}>
+                  👑 Owner Demo
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.demoChip,
+                  {
+                    backgroundColor: colors.demoChipBg,
+                    borderColor: colors.demoChipBorderOperator,
+                  },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => handleQuickDemo('Operator')}
+              >
+                <Text
+                  style={[
+                    styles.demoChipTextOperator,
+                    { color: colors.operatorBadgeText },
+                  ]}
+                >
+                  👷 Operator Demo
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -174,195 +266,157 @@ export default function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
-
+  topNavBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  rolePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  rolePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
   },
-
   form: {
     width: '100%',
   },
-
-  logo: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#16834A',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-
-  title: {
-    fontSize: 27,
-    fontWeight: 'bold',
-    color: '#222222',
-    marginBottom: 6,
-  },
-
-  subtitle: {
-    fontSize: 15,
-    color: '#666666',
-    marginBottom: 22,
-    lineHeight: 22,
-  },
-
-  quickLoginCard: {
-    backgroundColor: '#F7FDF9',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: '#D1EAD8',
+  headerArea: {
+    alignItems: 'center',
     marginBottom: 24,
   },
-
-  quickLoginHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-
-  quickLoginTitle: {
-    fontSize: 15,
+  title: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#16834A',
-    marginLeft: 6,
-  },
-
-  quickLoginSubtitle: {
-    fontSize: 13,
-    color: '#666666',
-    marginBottom: 14,
-  },
-
-  roleButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  roleSelectCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-
-  ownerCard: {
-    borderColor: '#A7F3D0',
-  },
-
-  operatorCard: {
-    borderColor: '#BAE6FD',
-  },
-
-  roleIconCircleOwner: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#E8F5EC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-
-  roleIconCircleOperator: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#E0F2FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-
-  roleCardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-
-  roleCardDesc: {
-    fontSize: 11,
-    color: '#6B7280',
+    marginTop: 14,
+    marginBottom: 6,
     textAlign: 'center',
   },
-
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 22,
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-  },
-
   label: {
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#222222',
   },
-
-  input: {
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-    borderRadius: 10,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 20,
-    color: '#222222',
-    backgroundColor: '#FAFAFA',
-  },
-
-  button: {
-    backgroundColor: '#16834A',
-    padding: 16,
-    borderRadius: 10,
+  inputContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    marginBottom: 22,
+    overflow: 'hidden',
   },
-
+  prefixContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRightWidth: 1,
+  },
+  flagText: {
+    fontSize: 18,
+    marginRight: 6,
+  },
+  prefixText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  input: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  button: {
+    flexDirection: 'row',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
   },
-
   registerPromptRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 22,
-    paddingVertical: 8,
+    marginTop: 20,
+    paddingVertical: 6,
   },
-
   registerPromptText: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 15,
   },
-
   registerLinkText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#16834A',
+  },
+  demoSection: {
+    marginTop: 36,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    alignItems: 'center',
+  },
+  demoLabel: {
+    fontSize: 12,
+    marginBottom: 10,
+    fontWeight: '600',
+  },
+  demoButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  demoChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  demoChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  demoChipTextOperator: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

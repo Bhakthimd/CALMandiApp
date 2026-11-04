@@ -242,7 +242,7 @@ export async function loadArrivalsFromStorage(): Promise<ArrivalRecord[]> {
     try {
       const rows = db.getAllSync<any>('SELECT * FROM arrivals ORDER BY timestamp DESC');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           productId: r.productId,
           productName: r.productName,
@@ -348,7 +348,7 @@ export async function loadSalesFromStorage(): Promise<SaleRecord[]> {
     try {
       const rows = db.getAllSync<any>('SELECT * FROM sales ORDER BY timestamp DESC');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           customerId: r.customerId || undefined,
           customerName: r.customerName,
@@ -454,7 +454,7 @@ export async function loadLedgerTransactionsFromStorage(): Promise<LedgerTransac
     try {
       const rows = db.getAllSync<any>('SELECT * FROM ledger_transactions ORDER BY createdAt DESC');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           customerId: r.customerId,
           customerName: r.customerName,
@@ -492,7 +492,7 @@ export async function saveProductGradesToStorage(grades: ProductGrade[]): Promis
           `INSERT OR REPLACE INTO product_grades (
             id, productId, name, description, defaultPrice, stockQuantity, isActive
           ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [g.id, g.productId, g.name, g.description || '', g.defaultPrice, g.stockQuantity, g.isActive ? 1 : 0]
+          [g.id, g.productId || '', g.name, g.description || '', g.defaultPrice, g.stockQuantity, g.isActive ? 1 : 0]
         );
       }
       return;
@@ -514,7 +514,7 @@ export async function loadProductGradesFromStorage(): Promise<ProductGrade[]> {
     try {
       const rows = db.getAllSync<any>('SELECT * FROM product_grades');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           productId: r.productId,
           name: r.name,
@@ -575,7 +575,7 @@ export async function loadWastageRecordsFromStorage(): Promise<WastageRecord[]> 
     try {
       const rows = db.getAllSync<any>('SELECT * FROM wastage_records ORDER BY timestamp DESC');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           productId: r.productId,
           productName: r.productName,
@@ -617,7 +617,7 @@ export async function savePricingRuleToStorage(rule: CustomerPricingRule): Promi
           rule.gradeId || '',
           rule.gradeName || '',
           rule.price,
-          rule.effectiveDate,
+          rule.effectiveDate || '',
           rule.expiryDate || '',
           rule.isActive ? 1 : 0,
           rule.notes || '',
@@ -642,7 +642,7 @@ export async function loadPricingRulesFromStorage(): Promise<CustomerPricingRule
     try {
       const rows = db.getAllSync<any>('SELECT * FROM customer_pricing_rules');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           customerId: r.customerId,
           customerName: r.customerName,
@@ -719,7 +719,7 @@ export async function loadFarmerPattisFromStorage(): Promise<FarmerPatti[]> {
     try {
       const rows = db.getAllSync<any>('SELECT * FROM patti_records ORDER BY date DESC');
       if (rows && rows.length > 0) {
-        return rows.map((r) => ({
+        return rows.map((r: any) => ({
           id: r.id,
           pattiNumber: r.pattiNumber,
           arrivalId: r.arrivalId || undefined,

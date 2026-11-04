@@ -301,6 +301,16 @@ export default function CustomersScreen({ navigation }: any) {
                         {isPay ? 'Pay' : 'Receive'}
                       </Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionBtnSmall, { borderColor: '#BAE6FD', backgroundColor: '#F0F9FF' }]}
+                      onPress={() =>
+                        navigation.navigate('RecordSale', { customerId: customer.id })
+                      }
+                    >
+                      <Ionicons name="arrow-up-circle-outline" size={14} color="#0284C7" />
+                      <Text style={[styles.actionBtnSmallText, { color: '#0284C7' }]}>Dispatch</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>

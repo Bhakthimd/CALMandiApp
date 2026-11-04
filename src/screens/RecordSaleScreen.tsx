@@ -159,7 +159,28 @@ export default function RecordSaleScreen({ route, navigation }: any) {
       return;
     }
 
-    await proceedSave(resolvedBuyerName, resolvedCustomerId);
+    // Requirement 7: Confirmation dialog on dispatch transaction
+    // Requirement 8: Upfront payment given by customer, rest added to customer debt
+    Alert.alert(
+      'Confirm Dispatch Transaction',
+      `Buyer: ${resolvedBuyerName}\n` +
+      `Commodity: ${selectedProduct.name} (${selectedGrade?.name || 'Standard Grade'})\n` +
+      `Quantity: ${qtyNum} ${selectedProduct.unit} @ ₹${priceNum}\n` +
+      `Total Bill: ₹${netTotal.toLocaleString('en-IN')}\n` +
+      `Payment Mode: ${paymentMethod}\n` +
+      (paymentMethod === 'Credit'
+        ? `Entire ₹${netTotal.toLocaleString('en-IN')} will be added to Customer Debt.`
+        : `Upfront payment of ₹${netTotal.toLocaleString('en-IN')} received via ${paymentMethod}.`),
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm & Dispatch',
+          onPress: async () => {
+            await proceedSave(resolvedBuyerName, resolvedCustomerId);
+          },
+        },
+      ]
+    );
   };
 
   const proceedSave = async (buyerName: string, customerId?: string) => {

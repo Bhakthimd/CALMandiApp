@@ -16,18 +16,10 @@ import { useMandi } from '../context/MandiContext';
 
 export default function AddCategoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { addCategory, canAddCategory } = useMandi();
+  const { addCategory } = useMandi();
   const [name, setName] = useState('');
 
   const handleSave = () => {
-    if (!canAddCategory) {
-      Alert.alert(
-        'Owner Privilege Required',
-        'Only the Mandi Owner has permission to create new master categories.'
-      );
-      return;
-    }
-
     const cleanName = name.trim();
 
     if (!cleanName) {

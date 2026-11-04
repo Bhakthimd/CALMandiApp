@@ -17,7 +17,7 @@ import { useMandi } from '../context/MandiContext';
 
 export default function AddProductScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { categories, units, addProduct, isOwner } = useMandi();
+  const { categories, units, addProduct } = useMandi();
 
   const [name, setName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -26,14 +26,6 @@ export default function AddProductScreen({ navigation }: any) {
   const [price, setPrice] = useState<string>('');
 
   const handleSave = () => {
-    if (!isOwner) {
-      Alert.alert(
-        'Owner Privilege Required',
-        'Adding new commodities to the master catalog requires Mandi Owner authorization.'
-      );
-      return;
-    }
-
     const cleanName = name.trim();
 
     if (!cleanName) {
