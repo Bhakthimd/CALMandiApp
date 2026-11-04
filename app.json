@@ -7,7 +7,8 @@
     "icon": "./assets/calmandi_logo.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.calmandi.app"
     },
     "android": {
       "package": "com.calmandi.app",
