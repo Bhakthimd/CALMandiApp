@@ -189,16 +189,40 @@ export default function CustomersScreen({ navigation }: any) {
                 </Text>
               </View>
 
-              {/* Call Action Button */}
-              <TouchableOpacity
-                style={styles.callButton}
-                activeOpacity={0.7}
-                onPress={() =>
-                  handleCallCustomer(customer.name, customer.mobile)
-                }
-              >
-                <Ionicons name="call" size={16} color="#16834A" />
-              </TouchableOpacity>
+              {/* Actions */}
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TouchableOpacity
+                  style={styles.callButton}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    handleCallCustomer(customer.name, customer.mobile)
+                  }
+                >
+                  <Ionicons name="call" size={16} color="#16834A" />
+                </TouchableOpacity>
+
+                {isOperator ? (
+                  <TouchableOpacity
+                    style={[styles.callButton, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      navigation.navigate('CreateSlip', {
+                        type: 'OUT',
+                      })
+                    }
+                  >
+                    <Ionicons name="arrow-up-circle" size={18} color="#0284C7" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.callButton, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('Khata')}
+                  >
+                    <Ionicons name="book-outline" size={16} color="#DC2626" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ))
         )}

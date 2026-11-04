@@ -90,24 +90,16 @@ export default function CategoriesScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Add Category Button */}
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            isOperator && styles.addButtonLocked,
-          ]}
-          activeOpacity={0.7}
-          onPress={handleAddCategoryPress}
-        >
-          <Ionicons
-            name={isOperator ? 'lock-closed-outline' : 'add-outline'}
-            size={20}
-            color="#FFFFFF"
-          />
-          <Text style={styles.addButtonText}>
-            {isOperator ? 'Add Category (Owner Protected)' : '+ Add Category'}
-          </Text>
-        </TouchableOpacity>
+        {/* Add Category Button (Owner Only) */}
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('AddCategory')}
+          >
+            <Text style={styles.addButtonText}>+ Add Category</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Categories List Header */}
         <View style={styles.listHeader}>

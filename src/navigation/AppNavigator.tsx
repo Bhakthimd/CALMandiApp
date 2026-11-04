@@ -13,6 +13,10 @@ import AddCategoryScreen from '../screens/AddCategoryScreen';
 import ProductsScreen from '../screens/ProductsScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import StaffScreen from '../screens/StaffScreen';
+import CreateSlipScreen from '../screens/CreateSlipScreen';
+import SlipsScreen from '../screens/SlipsScreen';
+import KhataScreen from '../screens/KhataScreen';
+import CrateTallyScreen from '../screens/CrateTallyScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -36,6 +40,10 @@ export default function AppNavigator() {
       <Stack.Screen name="Products" component={ProductsScreen} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} />
       <Stack.Screen name="Staff" component={StaffScreen} />
+      <Stack.Screen name="CreateSlip" component={CreateSlipScreen} />
+      <Stack.Screen name="Slips" component={SlipsScreen} />
+      <Stack.Screen name="Khata" component={KhataScreen} />
+      <Stack.Screen name="CrateTally" component={CrateTallyScreen} />
     </Stack.Navigator>
   );
 }

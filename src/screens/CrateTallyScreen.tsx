@@ -1,0 +1,993 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Share,
+  Linking,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useMandi } from '../context/MandiContext';
+import { StockMovementType } from '../types';
+
+export default function CrateTallyScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { products, recordTally, tallyRecords, currentUser } = useMandi();
+
+  const initialProductId = route?.params?.productId || (products[0] ? products[0].id : '');
+  const initialMode: StockMovementType = route?.params?.initialMode || 'IN';
+
+  const [selectedProductId, setSelectedProductId] = useState<string>(initialProductId);
+  const [mode, setMode] = useState<StockMovementType>(initialMode);
+  const [count, setCount] = useState<number>(0);
+  const [vehicleNo, setVehicleNo] = useState<string>('');
+  const [partyName, setPartyName] = useState<string>('');
+  const [showPartyInput, setShowPartyInput] = useState<boolean>(false);
+
+  // Selected product object
+  const selectedProduct =
+    products.find((p) => p.id === selectedProductId) || products[0];
+
+  const currentStock = selectedProduct ? parseFloat(selectedProduct.quantity || '0') || 0 : 0;
+  const unitLabel = selectedProduct?.unit || 'Crates';
+
+  // Projected stock after this count is committed
+  const projectedStock =
+    mode === 'IN'
+      ? currentStock + count
+      : Math.max(0, currentStock - count);
+
+  // Tap counter handlers
+  const handleTapCount = () => {
+    setCount((prev) => prev + 1);
+  };
+
+  const handleAddBatch = (amount: number) => {
+    setCount((prev) => Math.max(0, prev + amount));
+  };
+
+  const handleReset = () => {
+    if (count === 0) return;
+    Alert.alert('Reset Counter', 'Are you sure you want to reset current count to 0?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reset', style: 'destructive', onPress: () => setCount(0) },
+    ]);
+  };
+
+  // Commit and save tally to live stock
+  const handleSaveTally = () => {
+    if (!selectedProduct) {
+      Alert.alert('Error', 'Please select a commodity first.');
+      return;
+    }
+
+    if (count <= 0) {
+      Alert.alert(
+        'Zero Count',
+        'Please tap to count crates or bags before saving.'
+      );
+      return;
+    }
+
+    if (mode === 'OUT' && count > currentStock) {
+      Alert.alert(
+        'Insufficient Stock',
+        `Current stock is only ${currentStock} ${unitLabel}. You are attempting to dispatch ${count} ${unitLabel}.\n\nDo you want to proceed anyway?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Proceed Anyway',
+            style: 'destructive',
+            onPress: () => performSave(),
+          },
+        ]
+      );
+      return;
+    }
+
+    performSave();
+  };
+
+  const performSave = () => {
+    const savedRecord = recordTally({
+      productName: selectedProduct.name,
+      productId: selectedProduct.id,
+      unit: unitLabel,
+      count,
+      mode,
+      vehicleNo: vehicleNo.trim().toUpperCase() || undefined,
+      partyName: partyName.trim() || undefined,
+    });
+
+    const actionText = mode === 'IN' ? 'Unloaded & Added to Stock' : 'Dispatched & Deducted from Stock';
+
+    Alert.alert(
+      '✅ Count Saved & Stock Updated',
+      `${count} ${unitLabel} of ${selectedProduct.name} ${actionText}.\n\nNew Live Stock: ${projectedStock} ${unitLabel}\nOperator: ${currentUser?.name || 'Suresh Kumar'}`,
+      [
+        {
+          text: 'Share WhatsApp Slip',
+          onPress: () => shareWhatsAppSlip(savedRecord.count, savedRecord.vehicleNo, savedRecord.partyName),
+        },
+        {
+          text: 'Done (Count Next)',
+          style: 'default',
+          onPress: () => {
+            setCount(0);
+            setVehicleNo('');
+            setPartyName('');
+          },
+        },
+      ]
+    );
+  };
+
+  // WhatsApp Tally Slip Sharing
+  const shareWhatsAppSlip = async (
+    tallyCount: number,
+    vehNo?: string,
+    party?: string
+  ) => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const actionTitle = mode === 'IN' ? '📥 TRUCK UNLOAD (STOCK IN)' : '📤 TEMPO DISPATCH (STOCK OUT)';
+
+    const message =
+      `*CALMandi - Live Floor Crate Tally Slip*\n` +
+      `--------------------------------\n` +
+      `*Action:* ${actionTitle}\n` +
+      `*Commodity:* ${selectedProduct?.name} (${unitLabel})\n` +
+      `*Counted Quantity:* ${tallyCount} ${unitLabel}\n` +
+      (vehNo ? `*Vehicle No:* ${vehNo}\n` : '') +
+      (party ? `*Party / Farmer:* ${party}\n` : '') +
+      `*Live Mandi Stock:* ${projectedStock} ${unitLabel}\n` +
+      `*Operator:* ${currentUser?.name || 'Floor Operator'}\n` +
+      `*Time:* Today, ${timeStr}\n` +
+      `--------------------------------\n` +
+      `Generated by CALMandi Mobile Tally Clicker`;
+
+    try {
+      const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+      const canOpen = await Linking.canOpenURL(whatsappUrl);
+      if (canOpen) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        await Share.share({ message });
+      }
+    } catch {
+      Share.share({ message });
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top + 16, 40),
+            paddingBottom: Math.max(insets.bottom + 25, 30),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Top Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backText}>‹ Home</Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerTitleBox}>
+            <Text style={styles.headerTitle}>Floor Crate Tally</Text>
+            <View style={styles.operatorTag}>
+              <Ionicons name="finger-print" size={11} color="#0284C7" />
+              <Text style={styles.operatorTagText}>OPERATOR CLICKER</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.resetButton}
+            activeOpacity={0.7}
+            onPress={handleReset}
+          >
+            <Ionicons name="refresh-outline" size={16} color="#DC2626" />
+            <Text style={styles.resetButtonText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Mode Selector: Inward (Truck Unload) vs Outward (Tempo Dispatch) */}
+        <View style={styles.modeContainer}>
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
+              mode === 'IN' ? styles.modeTabActiveIn : styles.modeTabInactive,
+            ]}
+            activeOpacity={0.8}
+            onPress={() => setMode('IN')}
+          >
+            <Ionicons
+              name="arrow-down-circle"
+              size={18}
+              color={mode === 'IN' ? '#FFFFFF' : '#16834A'}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                mode === 'IN' ? styles.modeTabTextActive : styles.modeTabTextInactive,
+              ]}
+            >
+              Truck Unload (IN)
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
+              mode === 'OUT' ? styles.modeTabActiveOut : styles.modeTabInactive,
+            ]}
+            activeOpacity={0.8}
+            onPress={() => setMode('OUT')}
+          >
+            <Ionicons
+              name="arrow-up-circle"
+              size={18}
+              color={mode === 'OUT' ? '#FFFFFF' : '#0284C7'}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                mode === 'OUT' ? styles.modeTabTextActive : styles.modeTabTextInactive,
+              ]}
+            >
+              Dispatch (OUT)
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Commodity Selector Chips */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionLabel}>Select Commodity to Count:</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.commodityScroll}
+          >
+            {products.map((item) => {
+              const isSelected = item.id === selectedProductId;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.commodityChip,
+                    isSelected && styles.commodityChipSelected,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setSelectedProductId(item.id);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.commodityChipText,
+                      isSelected && styles.commodityChipTextSelected,
+                    ]}
+                  >
+                    {item.name} ({item.unit})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Current Stock Banner */}
+          <View style={styles.stockStatusRow}>
+            <View style={styles.stockStatusLeft}>
+              <Text style={styles.stockStatusLabel}>Current Stock in Mandi:</Text>
+              <Text style={styles.stockStatusValue}>
+                {currentStock} {unitLabel}
+              </Text>
+            </View>
+            <View style={styles.stockStatusRight}>
+              <Text style={styles.projectedLabel}>Projected Stock:</Text>
+              <Text
+                style={[
+                  styles.projectedValue,
+                  mode === 'IN' ? { color: '#16834A' } : { color: '#0284C7' },
+                ]}
+              >
+                {projectedStock} {unitLabel}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Giant Digital Counter Display */}
+        <View style={styles.counterCard}>
+          <View style={styles.counterTopRow}>
+            <View
+              style={[
+                styles.counterModePill,
+                mode === 'IN' ? styles.inPillBg : styles.outPillBg,
+              ]}
+            >
+              <Text style={styles.counterModePillText}>
+                {mode === 'IN' ? '📥 TRUCK UNLOADING' : '📤 TEMPO DISPATCH'}
+              </Text>
+            </View>
+            <Text style={styles.commodityNameHeader}>
+              {selectedProduct?.name}
+            </Text>
+          </View>
+
+          {/* Huge Number */}
+          <View style={styles.bigNumberRow}>
+            <Text style={styles.bigNumber}>{count}</Text>
+            <Text style={styles.unitText}>{unitLabel}</Text>
+          </View>
+
+          <Text style={styles.clickerHint}>
+            Tap the giant button below for every {unitLabel.toLowerCase()} carried by laborers
+          </Text>
+        </View>
+
+        {/* Giant Tap-To-Count Button */}
+        <TouchableOpacity
+          style={[
+            styles.giantTapButton,
+            mode === 'IN' ? styles.giantTapButtonIn : styles.giantTapButtonOut,
+          ]}
+          activeOpacity={0.6}
+          onPress={handleTapCount}
+        >
+          <View style={styles.giantTapInner}>
+            <Ionicons name="add" size={44} color="#FFFFFF" />
+            <Text style={styles.giantTapText}>TAP TO COUNT (+1)</Text>
+          </View>
+          <Text style={styles.giantTapSubtext}>
+            Quick Tap for each {unitLabel.slice(0, -1) || 'unit'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Quick Batch Increment Buttons */}
+        <View style={styles.batchRow}>
+          <TouchableOpacity
+            style={styles.batchBtn}
+            activeOpacity={0.7}
+            onPress={() => handleAddBatch(5)}
+          >
+            <Text style={styles.batchBtnText}>+5</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.batchBtn}
+            activeOpacity={0.7}
+            onPress={() => handleAddBatch(10)}
+          >
+            <Text style={styles.batchBtnText}>+10</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.batchBtn}
+            activeOpacity={0.7}
+            onPress={() => handleAddBatch(20)}
+          >
+            <Text style={styles.batchBtnText}>+20</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.batchBtn}
+            activeOpacity={0.7}
+            onPress={() => handleAddBatch(50)}
+          >
+            <Text style={styles.batchBtnText}>+50</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.undoBtn}
+            activeOpacity={0.7}
+            onPress={() => handleAddBatch(-1)}
+          >
+            <Ionicons name="arrow-undo" size={16} color="#DC2626" />
+            <Text style={styles.undoBtnText}>-1</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Optional Vehicle & Party Details */}
+        <View style={styles.detailsCard}>
+          <TouchableOpacity
+            style={styles.detailsToggleRow}
+            activeOpacity={0.7}
+            onPress={() => setShowPartyInput(!showPartyInput)}
+          >
+            <View style={styles.detailsToggleLeft}>
+              <Ionicons name="bus-outline" size={18} color="#4B5563" />
+              <Text style={styles.detailsToggleTitle}>
+                {vehicleNo || partyName ? 'Vehicle & Party (Attached)' : 'Add Vehicle No / Party (Optional)'}
+              </Text>
+            </View>
+            <Ionicons
+              name={showPartyInput ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color="#6B7280"
+            />
+          </TouchableOpacity>
+
+          {showPartyInput && (
+            <View style={styles.detailsInputContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Vehicle / Truck Number</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. KA-04-E-1234"
+                  placeholderTextColor="#9CA3AF"
+                  value={vehicleNo}
+                  onChangeText={setVehicleNo}
+                  autoCapitalize="characters"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  {mode === 'IN' ? 'Farmer / Supplier Name' : 'Buyer / Trader Name'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={mode === 'IN' ? 'e.g. Basavaraj Farmer' : 'e.g. Ravi Traders'}
+                  placeholderTextColor="#9CA3AF"
+                  value={partyName}
+                  onChangeText={setPartyName}
+                />
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Primary Action Buttons */}
+        <TouchableOpacity
+          style={[styles.saveButton, count === 0 && styles.saveButtonDisabled]}
+          activeOpacity={0.8}
+          onPress={handleSaveTally}
+          disabled={count === 0}
+        >
+          <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+          <Text style={styles.saveButtonText}>
+            Save {count} {unitLabel} & Update Mandi Stock
+          </Text>
+        </TouchableOpacity>
+
+        {/* Shift History: Recent Tally Records */}
+        <View style={styles.historyCard}>
+          <View style={styles.historyHeader}>
+            <View style={styles.historyTitleRow}>
+              <Ionicons name="time-outline" size={18} color="#1F2937" />
+              <Text style={styles.historyTitle}>Today's Floor Tally Log</Text>
+            </View>
+            <View style={styles.historyCountBadge}>
+              <Text style={styles.historyCountBadgeText}>
+                {tallyRecords.length} Counts
+              </Text>
+            </View>
+          </View>
+
+          {tallyRecords.length === 0 ? (
+            <Text style={styles.emptyHistoryText}>
+              No tallies recorded in this shift yet.
+            </Text>
+          ) : (
+            tallyRecords.slice(0, 5).map((item) => (
+              <View key={item.id} style={styles.historyItem}>
+                <View style={styles.historyItemLeft}>
+                  <View
+                    style={[
+                      styles.historyTypeIcon,
+                      item.mode === 'IN'
+                        ? { backgroundColor: '#E8F5EC' }
+                        : { backgroundColor: '#E0F2FE' },
+                    ]}
+                  >
+                    <Ionicons
+                      name={item.mode === 'IN' ? 'arrow-down' : 'arrow-up'}
+                      size={16}
+                      color={item.mode === 'IN' ? '#16834A' : '#0284C7'}
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.historyProductName}>
+                      {item.productName}
+                    </Text>
+                    <Text style={styles.historySub}>
+                      {item.time} {item.vehicleNo ? `• ${item.vehicleNo}` : ''}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.historyItemRight}>
+                  <Text
+                    style={[
+                      styles.historyCountValue,
+                      item.mode === 'IN' ? { color: '#16834A' } : { color: '#0284C7' },
+                    ]}
+                  >
+                    {item.mode === 'IN' ? '+' : '-'}
+                    {item.count} {item.unit}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+  },
+  content: {
+    padding: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  backText: {
+    fontSize: 16,
+    color: '#16834A',
+    fontWeight: '700',
+  },
+  headerTitleBox: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  operatorTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 2,
+  },
+  operatorTagText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#0284C7',
+    marginLeft: 3,
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  resetButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginLeft: 2,
+  },
+  modeContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 14,
+  },
+  modeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modeTabActiveIn: {
+    backgroundColor: '#16834A',
+  },
+  modeTabActiveOut: {
+    backgroundColor: '#0284C7',
+  },
+  modeTabInactive: {
+    backgroundColor: 'transparent',
+  },
+  modeTabText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
+  modeTabTextActive: {
+    color: '#FFFFFF',
+  },
+  modeTabTextInactive: {
+    color: '#4B5563',
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  commodityScroll: {
+    paddingVertical: 4,
+  },
+  commodityChip: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  commodityChipSelected: {
+    backgroundColor: '#E8F5EC',
+    borderColor: '#16834A',
+  },
+  commodityChipText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '600',
+  },
+  commodityChipTextSelected: {
+    color: '#16834A',
+    fontWeight: '700',
+  },
+  stockStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  stockStatusLeft: {
+    flex: 1,
+  },
+  stockStatusLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  stockStatusValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 1,
+  },
+  stockStatusRight: {
+    alignItems: 'flex-end',
+  },
+  projectedLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  projectedValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 1,
+  },
+  counterCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  counterTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  counterModePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  inPillBg: {
+    backgroundColor: '#E8F5EC',
+  },
+  outPillBg: {
+    backgroundColor: '#E0F2FE',
+  },
+  counterModePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16834A',
+  },
+  commodityNameHeader: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  bigNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginVertical: 4,
+  },
+  bigNumber: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    letterSpacing: -1,
+  },
+  unitText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#6B7280',
+    marginLeft: 8,
+  },
+  clickerHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  giantTapButton: {
+    borderRadius: 18,
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  giantTapButtonIn: {
+    backgroundColor: '#16834A',
+  },
+  giantTapButtonOut: {
+    backgroundColor: '#0284C7',
+  },
+  giantTapInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  giantTapText: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    marginLeft: 6,
+  },
+  giantTapSubtext: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  batchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  batchBtn: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    marginHorizontal: 3,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+  },
+  batchBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  undoBtn: {
+    flex: 1.1,
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 14,
+    marginHorizontal: 3,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FECACA',
+  },
+  undoBtnText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#DC2626',
+    marginLeft: 4,
+  },
+  detailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  detailsToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailsToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailsToggleTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginLeft: 8,
+  },
+  detailsInputContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  inputGroup: {
+    marginBottom: 10,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 4,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  saveButton: {
+    backgroundColor: '#16834A',
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+    shadowColor: '#16834A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  historyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  historyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginLeft: 6,
+  },
+  historyCountBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  historyCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  emptyHistoryText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  historyItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  historyTypeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  historyProductName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  historySub: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  historyItemRight: {
+    alignItems: 'flex-end',
+  },
+  historyCountValue: {
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+});
