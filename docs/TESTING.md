@@ -1,210 +1,224 @@
 # CALMandi Testing Guide & Verification Checklist
 
-This document details the test procedures, manual testing checklist, validation scenarios, and device testing workflows for the **CALMandi** mobile application.
+This document details the test procedures, manual testing checklist, validation scenarios, and mobile testing workflows for all features of the **CALMandi** mobile application.
 
 ---
 
 ## 1. Test Environment Summary
 
 - **Development Platform**: Windows 11
-- **Framework**: React Native 0.88.1 + Expo SDK 58 (~58.0.21)
+- **Framework**: React Native 0.88.1 + Expo SDK 58 (~58.0.22)
 - **Language**: TypeScript 6.0.3 (Strict Type Checking)
-- **Navigation**: React Navigation Native Stack v7
+- **Navigation**: React Navigation Native Stack v7 (21 routes)
+- **Local Database**: Expo SQLite (`expo-sqlite`) with robust in-memory fallback
+- **Network Monitor**: `@react-native-community/netinfo`
 - **Icons**: Expo Vector Icons (Ionicons)
-- **Local Tooling Verification**:
+- **Quality Verification**:
   - `npx tsc --noEmit`: **PASSED (0 errors)**
-  - Navigation route tree resolution: **PASSED (all 10 routes mapped including Staff & Role Permissions)**
-  - State management & context reactivity: **PASSED (MandiContext with Role-Based Access Control)**
+  - `npx expo lint`: **PASSED (0 errors, 0 warnings)**
 
 ---
 
-## 2. Feature Verification Checklist
+## 2. Implemented Features Overview
 
-### A. Login & Role Authentication Module
-- [x] **Screen Rendering**: CALMandi branding, title "Welcome!", subtitle, role demo logins, and mobile number input.
-- [x] **Quick Role-Based Demo Login**:
-  - **👑 Login as Mandi Owner**: One-tap demo login as Ramesh Patel (Patel Krishi Mandi, Bangalore) with full administrative rights.
-  - **👷 Login as Counter Operator**: One-tap demo login as Suresh Kumar with operations desk privileges.
-- [x] **Input Formatting**: Filters non-digit characters; numeric keyboard configured (`keyboardType="number-pad"`).
-- [x] **10-Digit Validation**: Shows alert if empty or not exactly 10 digits (`Alert: Please enter a valid 10-digit mobile number.`).
-- [x] **OTP Verification with Role Recognition**:
-  - Demo OTP generation with 30s resend timer and 1-tap autofill.
-  - Automatically identifies existing owner/operator accounts or routes new users to profile registration.
+### Feature 1: Customer-Wise Cash & Debt Management (रोकड़ एवं उधारी प्रबंधन)
+- **Individual Financial Ledgers**: Farmers, Buyers, Traders, Other customers.
+- **Double-Entry Accounting Model**:
+  - `DEBIT`: Increases what customer owes Mandi (credit sales, cash paid out to farmers/customers).
+  - `CREDIT`: Decreases what customer owes Mandi / increases what Mandi owes farmer (cash received, farmer produce credits).
+- **Balance Invariants**:
+  - `Net Balance = Opening Balance + Total Debits - Total Credits`
+  - Balance indicator badges: `CUSTOMER OWES MANDI (लेने)` vs `MANDI OWES CUSTOMER (देने)` vs `ALL DUES SETTLED`.
+- **Payment Recording**:
+  - Record Cash Received (जमा) & Make Payment (निकासी).
+  - Payment methods: Cash, UPI / Online, Bank Transfer, Cheque.
+  - Partial payments, advance payments, and outstanding adjustments supported.
+  - Duplicate submission prevention locks.
+- **Summary Cards**: Total Receivables, Total Payables, Cash Inflow, Cash Outflow, Net Market Position.
+- **Filters**: By Date Range (Today, Last 7D, Last 30D, All Time), Customer Type (Farmers, Buyers, Traders), Search by name/shop/mobile.
 
-### B. Registration Module with Role Assignment
-- [x] **Prefilled Mobile**: Mobile number passed from Login is prefilled in the Mobile Number field.
-- [x] **Owner / Operator Role Toggle**:
-  - Clear selectable buttons for "Owner" and "Operator".
-  - Active selection highlighted in CALMandi primary green (`#16834A`) with white text.
-  - Inactive role clearly outlined.
-- [x] **Profile Activation**: Creates `UserProfile` and activates the selected role in `MandiContext`.
-- [x] **Stack Replacement on Submit**: Replaces stack with `Home` dashboard loaded in the selected role.
+### Feature 2: Product Grading and Wastage Management (उत्पाद ग्रेडिंग एवं खराबी प्रबंधन)
+- **Configurable Product Grades**:
+  - Multiple quality grades per commodity (e.g. Grade A, Grade B, Grade C, Grade D).
+  - Configurable grade name, quality description, default unit rate, and active/inactive toggle.
+  - Independent grade inventory tracking.
+- **Sorting & Wastage Processing**:
+  - Original Quantity input (produce received for grading).
+  - Grade-wise quantity allotment fields.
+  - Wastage quantity input with categorized reason chips (Transportation Damage, Spoiled/Rotten, Pest/Disease, Under-sized, Sorting Residue).
+  - **Strict Conservation Math Invariant**:
+    $$\text{Total Processed} = \sum(\text{Grade Quantities}) + \text{Wastage} \le \text{Original Quantity}$$
+    $$\text{Remaining Ungraded} = \text{Original Quantity} - \text{Total Processed}$$
+    $$\text{Wastage } \% = \left(\frac{\text{Wastage Quantity}}{\text{Original Quantity}}\right) \times 100$$
+  - Real-time validation warning prevents submission if processed exceeds original.
+  - Immediate grade inventory increment and separate wastage tracking.
 
-### C. Role-Based Home Dashboard
-- [x] **Active Profile Banner**:
-  - Displays user name, business name, and location.
-  - Role Badge: `👑 Owner` (Full Control) vs `👷 Operator` (Counter Desk).
-  - **Dynamic Role Switcher Pill**: Lets users and evaluators toggle between Owner and Operator views in real-time with visual toast confirmation.
-- [x] **👑 Mandi Owner Dashboard View**:
-  - **Financial Valuation Card**: Live inventory value (`₹ 2,14,500`) calculated from `products.reduce(qty * price)`.
-  - **Stock Inventory Counter**: Total physical units and distinct commodities.
-  - **Customer Accounts Counter**: Total registered mandi buyers.
-  - **Low Stock Alerts**: Identifies commodities with stock < 30 units.
-  - **Staff & Permissions Matrix Card**: Dedicated module for team and counter management.
-- [x] **👷 Counter Operator Dashboard View**:
-  - **Counter Desk Shift Card**: Displays shift status (`COUNTER DESK ACTIVE`) and updates counter (`⚡ 14 Stock updates recorded today`).
-  - **Operational Floor Cards**: Highlights Daily Stock In/Out and Customer Directory lookups.
-  - **Permission Guard Notice**: Clearly informs operator about protected master catalog actions.
+### Feature 3: Customer-Wise and Product-Wise Pricing (ग्राहक दर सूची)
+- **Pricing Rule Engine**:
+  - Match hierarchy: Customer + Product + Grade.
+  - Configurable agreed price, effective date, optional expiry, and active status.
+- **Automated Sale Workflow**:
+  - In `RecordSaleScreen`, selecting Customer + Product + Grade automatically queries the pricing engine.
+  - If a rule matches: applies the custom rate with a **"★ Agreed Customer Rate"** badge.
+  - If no rule matches: falls back to the grade's default price with a **"✓ Default Grade Rate"** badge.
+  - Prevents selling more than available grade stock.
+  - Deducts stock specifically from the chosen grade.
+  - Automatically posts debit or credit entries to the customer's financial ledger.
+  - Generates sale bill and invoice slip (`PattiReceipt`).
 
-### D. Products Module with Role-Based Access Control
-- [x] **Role Banner**: Top banner shows whether user is in Owner Mode or Operator Mode.
-- [x] **👑 Owner Capabilities**:
-  - Add New Product: Enabled (`+ Add New Product`).
-  - Delete Product: Active trash button with destructive confirmation dialog.
-  - Valuation Display: Displays calculated inventory valuation for each item (`Stock Value: ₹ 30,000`).
-- [x] **👷 Operator Capabilities**:
-  - Quantity Steppers: Fast increment/decrement (+ / -) for daily arrivals and dispatches.
-  - Fast Batch Counting: `+10` batch button for rapid crate/bag entry.
-  - Protected Deletion: Delete button replaced by lock icon; tapping triggers informative alert: *"Only the Mandi Owner has authority to remove products from the catalog."*
-  - Protected Master Additions: Tapping Add Product displays: *"Adding new commodities requires Mandi Owner authorization."*
+### Feature 4: Farmer Patti & Buyer Invoices (किसान पर्ची एवं बिल)
+- Official Mandi APMC slip generation.
+- Farmer Patti: Gross value, 5% Mandi commission deduction, Hamali / labor charges, weighment cess, Net Payable to farmer.
+- Buyer Invoice: Commodity, grade, applied custom rate, total amount, payment terms.
+- Print and WhatsApp share simulation.
 
-### E. Categories Module with Role-Based Access Control
-- [x] **👑 Owner Capabilities**: Full authority to create, configure, and manage master categories.
-- [x] **👷 Operator Capabilities**:
-  - Informative Read-Only banner: *"Master categories are configured by the Mandi Owner."*
-  - Add Category button shows *"Add Category (Owner Protected)"*; tapping triggers permission alert.
-  - Category inspection: Displays products categorized under each department.
+### Feature 5: Reports & Analytics Hub (मंडी रिपोर्ट एवं विश्लेषण)
+- **Financial Reports Tab**:
+  - Customer-wise outstanding balance table.
+  - Total cash received, cash paid, receivables, payables.
+  - Filters by date range and customer type.
+- **Product Reports Tab**:
+  - Grade-wise available stock and valuations.
+  - Grade-wise sales volumes and revenue earned.
+  - Product-wise wastage quantities and loss percentages.
+  - Export/download summary report simulation.
 
-### F. Customers Module with Role-Based Access Control
-- [x] **Search & Directory Filter**: Real-time search by customer name, mobile, or shop/business name.
-- [x] **👑 Owner Capabilities**: Ledger and payment balance visibility (`₹ 12,400 Pending`, `Settled`).
-- [x] **👷 Operator Capabilities**: Quick call/contact desk button to confirm shipments and dispatches with buyers.
-
-### G. Team & Role Permissions Module (`StaffScreen`)
-- [x] **Staff Directory**: Lists all mandi operators, counter assignments, and phone numbers.
-- [x] **Add Staff Member Modal**: Owners can onboard new operators and assign floor counters.
-- [x] **Role Permissions Matrix Table**: Clear comparison table illustrating exact feature permissions between Owner and Operator.
-  2. **Categories Card**: `pricetags-outline` icon, title, description ("Manage product categories"), forward chevron.
-  3. **Products Card**: `cube-outline` icon, title, description ("Add and manage products"), forward chevron.
-- [x] **Card Navigation**: Tapping each card navigates to `Customers`, `Categories`, and `Products` respectively.
-- [x] **Safe Area Insets**: Top and bottom padding dynamically adjust using `useSafeAreaInsets` to avoid notch / home indicator overlaps.
-
-### D. Customers Module
-- [x] **View Customers**:
-  - Header displays `‹ Home` back button and CALMandi logo.
-  - List displays total count badge (`X Customers`).
-  - Preloaded with sample customers:
-    - *Ravi Kumar* (9876543210 - Ravi Traders)
-    - *Lakshmi* (9876501234 - Sri Lakshmi Fruits)
-    - *Manjunath* (9876512340 - M K Vegetables)
-  - Customer cards display avatar circle with initials, name, mobile, and business name.
-  - Empty state displays fallback message if all customers are cleared.
-- [x] **Add Customer (`AddCustomerScreen`)**:
-  - Tapping `+ Add Customer` navigates cleanly to `AddCustomerScreen`.
-  - Header provides `‹ Customers` back navigation.
-  - Input fields: Customer Name, 10-digit Mobile Number, Business / Mandi Name.
-  - Validates required fields and 10-digit phone number.
-  - Tapping `Save Customer` adds new record to shared `MandiContext`.
-  - Displays success dialog and returns to `CustomersScreen`.
-  - Newly added customer immediately appears at top of list and updates customer count.
-  - `Cancel` button returns without saving.
-
-### E. Categories Module
-- [x] **View Categories**:
-  - Header displays `‹ Home` back button and CALMandi logo.
-  - Displays category count badge (`X Categories`).
-  - Preloaded with sample categories:
-    - *Fruits*
-    - *Vegetables*
-    - *Leafy Vegetables*
-    - *Dry Fruits*
-  - Clean card representation with green icon badge and checkmark.
-- [x] **Add Category (`AddCategoryScreen`)**:
-  - Tapping `+ Add Category` navigates to `AddCategoryScreen`.
-  - Header provides `‹ Categories` back navigation.
-  - Input: Category Name.
-  - **Empty Validation**: Alerts if user attempts to save an empty name.
-  - **Duplicate Prevention**: Case-insensitive duplicate checking prevents creating existing categories (e.g., adding "fruits" or "FRUITS" is blocked).
-  - Tapping `Save Category` adds new category to shared `MandiContext`.
-  - Displays success confirmation and navigates back to `CategoriesScreen`.
-  - Newly created category is immediately available in category selection on `AddProductScreen`.
-  - `Cancel` button returns without saving.
-
-### F. Products Module
-- [x] **Products Dashboard**:
-  - Header displays `‹ Home` back button and CALMandi logo.
-  - Displays product count badge (`X Products`).
-  - Preloaded with required sample products:
-    - *Banana* (Category: Fruits, Unit: Crate)
-    - *Apple* (Category: Fruits, Unit: Box)
-    - *Tomato* (Category: Vegetables, Unit: Kg)
-    - *Spinach* (Category: Leafy Vegetables, Unit: Bunch)
-    - *Almonds* (Category: Dry Fruits, Unit: Kg)
-  - Product cards feature:
-    - Cube icon in green container
-    - Prominent product name
-    - Category badge with icon
-    - Measuring unit badge
-  - Empty state fallback if list is empty.
-- [x] **Add Product Form (`AddProductScreen`)**:
-  - Tapping `+ Add Product` navigates to `AddProductScreen`.
-  - Header provides `‹ Products` back navigation.
-  - **Field 1: Product Name**: Text input for product title.
-  - **Field 2: Category Selector**:
-    - Dynamically renders all categories from `MandiContext` (including newly created ones).
-    - Large touch-friendly selection chips.
-    - Active category highlighted in primary green with checkmark.
-  - **Field 3: Unit Selector**:
-    - Selectable options: `Kg`, `Crate`, `Box`, `Bag`, `Bunch`, `Piece`, `Dozen`.
-    - Touch-friendly chips with active selection styling.
-  - **Validation**:
-    - Requires Product Name.
-    - Requires Category selection.
-    - Requires Unit selection.
-  - **Immediate Update**:
-    - On `Save Product`, record is prepended to `MandiContext`.
-    - Success dialog confirms addition.
-    - Returns to `ProductsScreen` where new product and updated count are visible immediately.
-  - `Cancel` button cleanly exits without saving.
+### Feature 6: Offline Mode & Data Sync Integration
+- SQLite persistent storage for arrivals, sales, ledger entries, product grades, wastage records, pricing rules, and pattis.
+- Zero network interruption: saves locally and updates stock immediately.
+- Automatic background synchronization when network returns.
 
 ---
 
-## 3. Physical Device & Simulator Testing Guide
+## 3. Step-by-Step Testing Instructions
 
-### A. Android Testing Procedure
-1. **With Physical Android Device**:
-   - Install **Expo Go** from Google Play Store on your device.
-   - Connect phone to same Wi-Fi network as development PC (or connect via USB and run `adb reverse tcp:8081 tcp:8081`).
-   - Run `npx expo start` in project root.
-   - Scan the terminal QR code using Expo Go or Android Camera.
-2. **With Android Emulator (Android Studio)**:
-   - Launch an AVD (e.g. Pixel 8 with API 34/35).
-   - Run `npx expo start --android`.
-   - The app will automatically launch in the emulator.
-3. **What to Verify**:
-   - Hardware Back button navigates back on all stack levels.
-   - Soft keyboard dismisses on outside tap or continue.
-   - Number pad displays for mobile inputs.
+### Test Scenario 1: Cash & Debt Management
+1. Open the app and log in (e.g. Owner Login).
+2. On the **HomeScreen**, observe the new **Dashboard Shortcuts**:
+   - `Cash & Debt (रोकड़ एवं उधारी)`
+   - `Product Grades (गुणवत्ता ग्रेडिंग)`
+   - `Customer Pricing (ग्राहक दर सूची)`
+   - `Reports & Analytics (व्यापार रिपोर्ट)`
+3. Tap **"Cash & Debt"**.
+4. **Verify Summary Tiles**: Check Total Receivables, Total Payables, Cash Inflow, Cash Outflow.
+5. In the directory, filter by **"Farmers"** or **"Buyers"**.
+6. Tap on a customer card (e.g. **Ravi Kumar**):
+   - Notice the badge: `OWES MANDI (लेने)` with ₹12,400.
+7. Tap **"View Full Ledger"**:
+   - Verify opening balance (₹6,400), credit sales, running balance.
+   - Filter by `Today`, `Last 7D`, `Last 30D`, `All Time`.
+8. Tap **"Record Payment Received"**:
+   - Direction defaults to "Payment Received (जमा)".
+   - Select quick chip `+₹2000` or enter custom amount.
+   - Choose method: `Cash` or `UPI / Online`.
+   - Observe the real-time **Balance Calculation Preview**.
+   - Tap **"Confirm & Receive"**.
+   - Observe success alert and verify ledger immediately reflects the reduction in balance.
 
-### B. iOS Testing Procedure
-1. **With Physical iPhone**:
-   - Install **Expo Go** from the iOS App Store.
-   - Connect iPhone to same local network.
-   - Run `npx expo start`.
-   - Open iPhone Camera app and scan the QR code to open in Expo Go.
-2. **With macOS / iOS Simulator**:
-   - Note: Requires a macOS machine with Xcode installed.
-   - Run `npx expo start --ios`.
-3. **What to Verify**:
-   - Safe areas clear Dynamic Island, notch, and home indicator bar.
-   - `KeyboardAvoidingView` pans smoothly on iOS without hiding inputs or action buttons.
-   - Slide-from-right transitions render smoothly.
+### Test Scenario 2: Paying a Farmer (Disbursement)
+1. On the Cash & Debt screen, filter by **"Farmers"**.
+2. Select **Rameshwar Reddy**:
+   - Notice the badge: `MANDI OWES (देने)` with ₹8,500.
+3. Tap **"Pay Farmer (भुगतान)"**.
+4. Enter amount `₹5000` via Cash or Bank Transfer.
+5. Tap **"Confirm & Pay"**.
+6. **Result**: Mandi owes reduces to ₹3,500. A `CASH_PAID` debit entry is appended to the farmer's ledger.
 
----
+### Test Scenario 3: Product Grades & Quality Configuration
+1. On HomeScreen, tap **"Product Grades"**.
+2. Select commodity **"Tomato"**.
+3. Observe configured grades:
+   - Grade A (Prime salad quality): Rate ₹35/kg, Stock 60 kg.
+   - Grade B (Kitchen cooking): Rate ₹28/kg, Stock 70 kg.
+   - Grade C (Soft/small): Rate ₹18/kg, Stock 20 kg.
+   - Grade D (Culled): Rate ₹5/kg, Stock 0 kg.
+4. Tap **"+ Grade"** at the top right to create a new custom grade:
+   - Enter Grade Name: `Grade Export`
+   - Description: `Uniform 80mm greenhouse tomatoes`
+   - Rate: `45`
+   - Stock: `25`
+   - Tap **"Create Grade"**.
+5. **Result**: The new grade appears immediately under Tomato with rate ₹45/kg and stock 25 kg.
 
-## 4. Current Environment Limitations & Disclosure
+### Test Scenario 4: Recording a Grading & Wastage Batch
+1. From Product Grades (or HomeScreen shortcut), tap **"Record Grading & Wastage"**.
+2. Select **Tomato**.
+3. Set **Original Quantity Received**: `100` Kg.
+4. In Step 2 (Grade Allotment):
+   - Grade A: `40`
+   - Grade B: `35`
+   - Grade C: `15`
+5. In Step 3 (Wastage Tracking):
+   - Wastage Quantity: `10`
+   - Reason: Select chip **"Transportation Damage / Overripe"**.
+6. Check Step 4 (Calculations):
+   - Total Graded: `90` Kg
+   - Wastage: `10` Kg (10.0%)
+   - Total Processed: `100` / `100` Kg
+   - Remaining Ungraded: `0` Kg
+7. **Validation Check**: Temporarily change Wastage to `20` Kg:
+   - Notice the Red Error Banner: `Allocated quantity (110) exceeds original (100)!`
+   - The submit button is automatically disabled.
+8. Revert Wastage to `10` Kg and tap **"Confirm & Update Grade Stocks"**.
+9. **Result**: Grade A stock increases by 40 kg, Grade B by 35 kg, Grade C by 15 kg, and the batch is recorded in the Wastage History log.
 
-In accordance with project guidelines:
-1. **Host Environment**: This project was built and validated on a Windows-based development machine.
-2. **iOS Simulator**: An Xcode iOS Simulator cannot run natively on Windows; physical iPhone testing via Expo Go or cloud-based EAS Build should be used for iOS verification.
-3. **Android Hardware / Emulator**: In environments where Android Studio SDK or an active AVD is not initialized, Expo Go on a physical phone offers the most accurate real-world test.
+### Test Scenario 5: Customer-Specific Pricing & Sale Workflow
+1. On HomeScreen, tap **"Customer Pricing"**.
+2. Notice existing configured rates:
+   - Ravi Kumar -> Tomato Grade A @ ₹32/kg (₹3 discount vs ₹35 standard).
+   - Ravi Kumar -> Tomato Grade B @ ₹25/kg (₹3 discount vs ₹28 standard).
+   - Lakshmi -> Apple Grade A @ ₹1,750/box.
+3. Tap **"+ Add Rate"**:
+   - Customer: `Manjunath`
+   - Product: `Banana`
+   - Grade: `Grade A`
+   - Custom Price: `1300` (vs standard ₹1400)
+   - Tap **"Confirm & Set Custom Rate"**.
+4. Go to **Record Sale** (from HomeScreen or ProductsScreen):
+   - Select Buyer: **Ravi Kumar**.
+   - Select Commodity: **Tomato**.
+   - Select Grade: **Grade A**.
+   - **Verify**: The unit price auto-populates as **₹32** with the badge **`★ Agreed Customer Rate`**!
+   - Now switch Grade to **Grade B**:
+     - The unit price auto-populates as **₹25**!
+   - Now switch Buyer to **Lakshmi** or **Walk-In / Other**:
+     - The unit price switches to the standard default grade price **₹28** with the badge **`✓ Default Grade Rate`**!
+5. Select Buyer: **Ravi Kumar**, Commodity: **Tomato**, Grade: **Grade A**, Quantity: `20` kg, Terms: **Credit**.
+6. Tap **"Confirm Sale"**:
+   - Grade A stock decreases by 20 kg.
+   - Ravi Kumar's ledger receives a `CREDIT_SALE` debit entry of ₹640 (20 × ₹32).
+   - Tap **"View Receipt / Bill"** to view the Tax Invoice & Dispatch Memo.
+
+### Test Scenario 6: Inward Arrival to Farmer Patti Workflow
+1. On HomeScreen, tap **"Record Arrival"**.
+2. Select Commodity: **Tomato**, Quantity: `50` Kg.
+3. Tap quick farmer chip: **🌾 Rameshwar Reddy**.
+4. Enter vehicle KA-04-E-4512 and tap **"Confirm Arrival & Add to Stock"**.
+5. In the confirmation dialog, tap **"Generate Patti"**:
+   - The app navigates to **PattiReceiptScreen** showing the official APMC Farmer Settlement Patti:
+   - Gross Value: ₹1,750
+   - Less 5% Commission: -₹87.50
+   - Less Hamali: -₹30
+   - **Net Payable to Farmer: ₹1,632.50**
+   - Automatically posts ₹1,632.50 to Rameshwar Reddy's ledger.
+
+### Test Scenario 7: Reports & Analytics Hub
+1. On HomeScreen, tap **"Reports & Analytics"**.
+2. In the **Financial Reports** tab:
+   - Review Customer-Wise Balances table.
+   - Check Net Market Position.
+   - Filter by `Today`, `This Week`, `This Month`, `All Time`.
+3. Switch to the **Product & Grades** tab:
+   - Filter by commodity (e.g. `Tomato` or `All Products`).
+   - Observe **Grade-Wise Available Stock** with estimated values.
+   - Observe **Grade-Wise Sales & Revenue**.
+   - Observe **Product Wastage Summary** with loss percentages.
+4. Tap the **Download / Export** button in the top right to verify export generation.
+
+### Test Scenario 8: Offline-to-Online Synchronization
+1. Tap **"Test Offline"** on HomeScreen banner. Banner switches to amber `⚡ OFFLINE MODE`.
+2. Record an Arrival of 20 crates of Bananas.
+3. Record a Sale of 10 kg Tomatoes.
+4. Verify both transactions save locally, stocks update immediately, and Pending Sync counts increment.
+5. Tap **"Go Online"** (or toggle simulated offline off).
+6. **Result**: Background synchronization automatically uploads the pending arrival and sale records idempotently to Mandi Cloud without duplicates.

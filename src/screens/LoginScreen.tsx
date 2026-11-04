@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
+import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
 export default function LoginScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -83,6 +84,9 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={styles.subtitle}>
             Manage your mandi business with role-based operations.
           </Text>
+
+          {/* Network Status & Offline Simulator Banner */}
+          <NetworkStatusBanner />
 
           {/* Quick Demo Role Logins */}
           <View style={styles.quickLoginCard}>

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { UserRole } from '../types';
+import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -27,6 +28,13 @@ export default function HomeScreen({ navigation }: any) {
     customers,
     categories,
     products,
+    pendingArrivalsCount,
+    pendingSalesCount,
+    failedRecordsCount,
+    pendingSyncCount,
+    syncPendingRecords,
+    financialSummary,
+    pricingRules,
   } = useMandi();
 
   const handleLogout = () => {
@@ -76,6 +84,13 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 1. CLEARLY VISIBLE ONLINE/OFFLINE STATUS BANNER AT TOP OF HOMESCREEN */}
+      {/* 2. INCLUDES "TEST OFFLINE" BUTTON & "DATA SYNC CENTER" BUTTON */}
+      <NetworkStatusBanner
+        onOpenSyncCenter={() => navigation.navigate('SyncCenter')}
+        onSyncPress={() => syncPendingRecords()}
+      />
 
       {/* User Profile & Role Banner Card */}
       <View
@@ -217,7 +232,7 @@ export default function HomeScreen({ navigation }: any) {
                 <View style={styles.pulseDot} />
                 <Text style={styles.shiftBadgeText}>COUNTER DESK ACTIVE</Text>
               </View>
-              <Text style={styles.shiftTimeText}>Today's Shift</Text>
+              <Text style={styles.shiftTimeText}>{"Today's Shift"}</Text>
             </View>
 
             <Text style={styles.shiftCardTitle}>Operational Stock Counter</Text>
@@ -228,28 +243,261 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.shiftStatsRow}>
               <View style={styles.shiftStatItem}>
                 <Text style={styles.shiftStatNumber}>{shiftUpdatesCount}</Text>
-                <Text style={styles.shiftStatLabel}>Stock Updates Today</Text>
+                <Text style={styles.shiftStatLabel}>Updates Today</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.shiftStatItem}>
                 <Text style={styles.shiftStatNumber}>{products.length}</Text>
-                <Text style={styles.shiftStatLabel}>Commodities on Floor</Text>
+                <Text style={styles.shiftStatLabel}>Floor Items</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.shiftStatItem}>
+                <Text
+                  style={[
+                    styles.shiftStatNumber,
+                    pendingSyncCount > 0 ? { color: '#D97706' } : { color: '#16834A' },
+                  ]}
+                >
+                  {pendingSyncCount}
+                </Text>
+                <Text style={styles.shiftStatLabel}>Offline Queue</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.shiftStatItem}>
                 <Text style={[styles.shiftStatNumber, { color: '#D97706' }]}>
                   {lowStockCount}
                 </Text>
-                <Text style={styles.shiftStatLabel}>Items Low Stock</Text>
+                <Text style={styles.shiftStatLabel}>Low Stock</Text>
               </View>
             </View>
           </View>
         </View>
       )}
 
-      {/* Main Action Modules */}
+      {/* 3. VISIBLE DATA SYNC CENTER & OFFLINE OPERATIONS */}
       <Text style={styles.sectionTitle}>
-        {isOwner ? 'Mandi Management Modules' : 'Counter Operations'}
+        {isOwner ? 'Mandi Operations & Offline Sync' : 'Floor Operations (Offline Ready)'}
+      </Text>
+
+      {/* Data Sync Center Card (Requirement 3) */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.syncMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('SyncCenter')}
+      >
+        <View style={[styles.iconContainer, styles.syncIconContainer]}>
+          <Ionicons name="cloud-upload" size={28} color="#D97706" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Data Sync Center</Text>
+            <View
+              style={[
+                styles.moduleTag,
+                pendingSyncCount > 0 ? styles.amberTag : styles.syncedTag,
+              ]}
+            >
+              <Text
+                style={
+                  pendingSyncCount > 0 ? styles.amberTagText : styles.syncedTagText
+                }
+              >
+                {pendingSyncCount > 0
+                  ? `⚡ ${pendingSyncCount} Pending Sync`
+                  : failedRecordsCount > 0
+                  ? `⚠️ ${failedRecordsCount} Failed`
+                  : '✓ Synced to Cloud'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Manage offline arrivals & sales, view sync history, and upload records to Mandi Cloud
+          </Text>
+
+          <View style={styles.syncMiniStatsRow}>
+            <Text style={styles.syncMiniStatItem}>
+              Inward: <Text style={{ fontWeight: 'bold' }}>{pendingArrivalsCount} pending</Text>
+            </Text>
+            <Text style={styles.syncMiniStatDot}>•</Text>
+            <Text style={styles.syncMiniStatItem}>
+              Outward: <Text style={{ fontWeight: 'bold' }}>{pendingSalesCount} pending</Text>
+            </Text>
+          </View>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* Record Arrival Card */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.arrivalMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('RecordArrival')}
+      >
+        <View style={[styles.iconContainer, styles.arrivalIconContainer]}>
+          <Ionicons name="arrow-down-circle" size={28} color="#16834A" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Record Arrival (आवक)</Text>
+            <View style={[styles.moduleTag, styles.offlineTag]}>
+              <Text style={styles.offlineTagText}>⚡ Works Offline</Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Record incoming farmer produce, lot numbers, and add crates to stock without internet
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* Record Sale Card */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.saleMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('RecordSale')}
+      >
+        <View style={[styles.iconContainer, styles.saleIconContainer]}>
+          <Ionicons name="receipt-outline" size={28} color="#0284C7" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Record Sale (जावक / Bikri)</Text>
+            <View style={[styles.moduleTag, styles.offlineTag]}>
+              <Text style={styles.offlineTagText}>⚡ Works Offline</Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Dispatch produce to buyers, calculate totals, and record cash/credit bills with zero network
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* DASHBOARD SHORTCUTS: FEATURE 1, 2, 3 & ANALYTICS */}
+      <Text style={styles.sectionTitle}>
+        {isOwner ? 'Financials, Grades & Pricing' : 'Mandi Services & Ledgers'}
+      </Text>
+
+      {/* 1. Cash & Debt Management Shortcut */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.cashDebtMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('CashDebt')}
+      >
+        <View style={[styles.iconContainer, styles.cashDebtIconWrap]}>
+          <Ionicons name="wallet-outline" size={28} color="#16834A" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Cash & Debt (रोकड़ एवं उधारी)</Text>
+            <View style={[styles.moduleTag, styles.cashDebtTag]}>
+              <Text style={styles.cashDebtTagText}>
+                {financialSummary.totalReceivable > 0
+                  ? `₹${financialSummary.totalReceivable.toLocaleString()} Due`
+                  : 'Balances Settled'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Individual customer ledgers, debt balance tracking, receive payments & farmer disbursements
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* 2. Product Grades Shortcut */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.gradesMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('ProductGrades')}
+      >
+        <View style={[styles.iconContainer, styles.gradesIconWrap]}>
+          <Ionicons name="ribbon-outline" size={28} color="#0284C7" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Product Grades (गुणवत्ता ग्रेडिंग)</Text>
+            <View style={[styles.moduleTag, styles.gradesTag]}>
+              <Text style={styles.gradesTagText}>Grades A, B, C, D</Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Configure grade quality price tiers, record sorting batches, and track culled wastage
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* 3. Customer Pricing Shortcut */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.pricingMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('CustomerPricing')}
+      >
+        <View style={[styles.iconContainer, styles.pricingIconWrap]}>
+          <Ionicons name="pricetag-outline" size={28} color="#D97706" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Customer Pricing (ग्राहक दर सूची)</Text>
+            <View style={[styles.moduleTag, styles.pricingTag]}>
+              <Text style={styles.pricingTagText}>{pricingRules.length} Custom Rates</Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Negotiated selling rates by customer, commodity & quality grade with automatic dispatch lookup
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* 4. Reports & Analytics Shortcut */}
+      <TouchableOpacity
+        style={[styles.menuCard, styles.reportsMenuCard]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('Reports')}
+      >
+        <View style={[styles.iconContainer, styles.reportsIconWrap]}>
+          <Ionicons name="bar-chart-outline" size={28} color="#7C3AED" />
+        </View>
+
+        <View style={styles.cardText}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Reports & Analytics (व्यापार रिपोर्ट)</Text>
+            <View style={[styles.moduleTag, styles.reportsTag]}>
+              <Text style={styles.reportsTagText}>Financials & Wastage</Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardDescription}>
+            Customer balance sheets, cash flow summaries, grade sales revenue & wastage loss reports
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={22} color="#888888" />
+      </TouchableOpacity>
+
+      {/* Main Master Management Modules */}
+      <Text style={styles.sectionTitle}>
+        {isOwner ? 'Mandi Catalog & Management' : 'Mandi Catalog Directory'}
       </Text>
 
       {/* Products Module Card */}
@@ -397,7 +645,7 @@ export default function HomeScreen({ navigation }: any) {
           <View style={styles.operatorNoticeContent}>
             <Text style={styles.operatorNoticeTitle}>Operator Privileges Notice</Text>
             <Text style={styles.operatorNoticeText}>
-              You have operational access for stock tracking, customer directory lookups, and shipment updates. Master category configurations and product deletions are restricted to the Mandi Owner.
+              You have operational access for recording offline arrivals, dispatches, stock tracking, and customer lookups. Master category additions and commodity removals require Mandi Owner authorization.
             </Text>
           </View>
         </View>
@@ -418,7 +666,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 14,
   },
   logo: {
     fontSize: 26,
@@ -443,7 +691,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 18,
-    marginBottom: 22,
+    marginBottom: 20,
     borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -536,7 +784,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   ownerMetricsSection: {
-    marginBottom: 22,
+    marginBottom: 20,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -650,7 +898,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   operatorShiftSection: {
-    marginBottom: 22,
+    marginBottom: 20,
   },
   operatorShiftCard: {
     backgroundColor: '#FFFFFF',
@@ -721,15 +969,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E1',
   },
   shiftStatNumber: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#0284C7',
     marginBottom: 2,
   },
   shiftStatLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
   menuCard: {
@@ -747,6 +995,79 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  arrivalMenuCard: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#FCFDFD',
+  },
+  saleMenuCard: {
+    borderColor: '#BAE6FD',
+    backgroundColor: '#FCFDFD',
+  },
+  syncMenuCard: {
+    borderColor: '#FCD34D',
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1.5,
+  },
+  cashDebtMenuCard: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#FCFDFD',
+  },
+  cashDebtIconWrap: {
+    backgroundColor: '#E8F5EC',
+  },
+  cashDebtTag: {
+    backgroundColor: '#FEF2F2',
+  },
+  cashDebtTagText: {
+    color: '#DC2626',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  gradesMenuCard: {
+    borderColor: '#BAE6FD',
+    backgroundColor: '#FCFDFD',
+  },
+  gradesIconWrap: {
+    backgroundColor: '#E0F2FE',
+  },
+  gradesTag: {
+    backgroundColor: '#E0F2FE',
+  },
+  gradesTagText: {
+    color: '#0284C7',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  pricingMenuCard: {
+    borderColor: '#FCD34D',
+    backgroundColor: '#FFFDF7',
+  },
+  pricingIconWrap: {
+    backgroundColor: '#FEF3C7',
+  },
+  pricingTag: {
+    backgroundColor: '#FEF3C7',
+  },
+  pricingTagText: {
+    color: '#B45309',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  reportsMenuCard: {
+    borderColor: '#DDD6FE',
+    backgroundColor: '#FAF5FF',
+  },
+  reportsIconWrap: {
+    backgroundColor: '#F3E8FF',
+  },
+  reportsTag: {
+    backgroundColor: '#F3E8FF',
+  },
+  reportsTagText: {
+    color: '#7C3AED',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   specialMenuCard: {
     borderColor: '#DDD6FE',
     backgroundColor: '#FAF5FF',
@@ -759,6 +1080,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
+  },
+  arrivalIconContainer: {
+    backgroundColor: '#E8F5EC',
+  },
+  saleIconContainer: {
+    backgroundColor: '#E0F2FE',
+  },
+  syncIconContainer: {
+    backgroundColor: '#FEF3C7',
   },
   specialIconContainer: {
     backgroundColor: '#F3E8FF',
@@ -783,6 +1113,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 18,
   },
+  syncMiniStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  syncMiniStatItem: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  syncMiniStatDot: {
+    fontSize: 11,
+    color: '#CBD5E1',
+  },
   moduleTag: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -790,6 +1134,30 @@ const styles = StyleSheet.create({
   },
   moduleTagText: {
     fontSize: 11,
+    fontWeight: '700',
+  },
+  offlineTag: {
+    backgroundColor: '#FEF3C7',
+  },
+  offlineTagText: {
+    color: '#B45309',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  amberTag: {
+    backgroundColor: '#FEF3C7',
+  },
+  amberTagText: {
+    color: '#B45309',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  syncedTag: {
+    backgroundColor: '#DCFCE7',
+  },
+  syncedTagText: {
+    color: '#15803D',
+    fontSize: 10,
     fontWeight: '700',
   },
   ownerTag: {

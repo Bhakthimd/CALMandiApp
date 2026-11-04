@@ -11,11 +11,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
 export default function ProductsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const {
     products,
+    productGrades,
     updateProductQuantity,
     deleteProduct,
     isOwner,
@@ -100,13 +102,16 @@ export default function ProductsScreen({ navigation }: any) {
           <Text style={styles.logo}>CALMandi</Text>
         </View>
 
-        <Text style={styles.title}>Products</Text>
+        <Text style={styles.title}>Products & Stock</Text>
 
         <Text style={styles.subtitle}>
           {isOwner
             ? 'Full catalog control: Add, price, and manage mandi inventory.'
             : 'Counter operations desk: Record arrivals, dispatches, and daily counts.'}
         </Text>
+
+        {/* Network & Offline Status Banner */}
+        <NetworkStatusBanner onSyncPress={() => navigation.navigate('SyncCenter')} />
 
         {/* Role Mode Banner */}
         <View
@@ -137,6 +142,48 @@ export default function ProductsScreen({ navigation }: any) {
                 : 'Stock adjustments (+/-) enabled. Master deletions locked by Owner'}
             </Text>
           </View>
+        </View>
+
+        {/* Quick Offline Operations (Arrival & Sale) Row */}
+        <View style={styles.quickOpsRow}>
+          <TouchableOpacity
+            style={styles.quickOpArrivalBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('RecordArrival')}
+          >
+            <Ionicons name="arrow-down-circle" size={17} color="#FFFFFF" />
+            <Text style={styles.quickOpBtnText}>Record Arrival</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickOpSaleBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('RecordSale')}
+          >
+            <Ionicons name="receipt" size={17} color="#FFFFFF" />
+            <Text style={styles.quickOpBtnText}>Record Sale</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Feature 2 & 3 Quick Links Row */}
+        <View style={styles.gradeFeatureShortcutsRow}>
+          <TouchableOpacity
+            style={styles.gradeFeatureBtn}
+            onPress={() => navigation.navigate('ProductGrades')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ribbon-outline" size={16} color="#0284C7" />
+            <Text style={styles.gradeFeatureBtnText}>Product Grades (ग्रेडिंग)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gradeFeatureBtn}
+            onPress={() => navigation.navigate('CustomerPricing')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="pricetag-outline" size={16} color="#D97706" />
+            <Text style={styles.gradeFeatureBtnText}>Customer Rates (दर सूची)</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Add Product Button */}
@@ -187,7 +234,7 @@ export default function ProductsScreen({ navigation }: any) {
             <Ionicons name="cube-outline" size={48} color="#CCCCCC" />
             <Text style={styles.emptyText}>No products in catalog.</Text>
             <Text style={styles.emptySubtext}>
-              Tap "Add New Product" to list your fruits, vegetables, and commodities.
+              {'Tap "Add New Product" to list your fruits, vegetables, and commodities.'}
             </Text>
             {isOwner && (
               <TouchableOpacity
@@ -319,6 +366,66 @@ export default function ProductsScreen({ navigation }: any) {
                       <Text style={styles.unitDisplayText}>{product.unit}</Text>
                     </View>
                   </View>
+
+                  {/* Item Quick Transaction Buttons */}
+                  <View style={styles.cardQuickActionsRow}>
+                    <TouchableOpacity
+                      style={styles.cardQuickArrivalBtn}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('RecordArrival', {
+                          productId: product.id,
+                        })
+                      }
+                    >
+                      <Ionicons name="arrow-down" size={13} color="#16834A" />
+                      <Text style={styles.cardQuickArrivalText}>+ Inward Arrival</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.cardQuickSaleBtn}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('RecordSale', {
+                          productId: product.id,
+                        })
+                      }
+                    >
+                      <Ionicons name="arrow-up" size={13} color="#0284C7" />
+                      <Text style={styles.cardQuickSaleText}>- Outward Sale</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Quality Grades & Wastage Quick Buttons */}
+                  <View style={styles.cardGradesRow}>
+                    <TouchableOpacity
+                      style={styles.cardGradeBtn}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('ProductGrades', {
+                          productId: product.id,
+                        })
+                      }
+                    >
+                      <Ionicons name="ribbon-outline" size={13} color="#0284C7" />
+                      <Text style={styles.cardGradeBtnText}>
+                        Grades ({productGrades.filter((g) => g.productId === product.id && g.isActive).length})
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.cardWastageBtn}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('GradingWastage', {
+                          productId: product.id,
+                        })
+                      }
+                    >
+                      <Ionicons name="funnel-outline" size={13} color="#D97706" />
+                      <Text style={styles.cardWastageBtnText}>Sort & Wastage</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             );
@@ -341,7 +448,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   backButton: {
     paddingVertical: 8,
@@ -375,7 +482,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   ownerBannerBg: {
     backgroundColor: '#E8F5EC',
@@ -399,6 +506,36 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     lineHeight: 16,
   },
+  quickOpsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  quickOpArrivalBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16834A',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  quickOpSaleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0284C7',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  quickOpBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
   addButton: {
     flexDirection: 'row',
     backgroundColor: '#16834A',
@@ -407,7 +544,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     shadowColor: '#16834A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -661,5 +798,105 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#374151',
+  },
+  cardQuickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  cardQuickArrivalBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5EC',
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  cardQuickArrivalText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16834A',
+  },
+  cardQuickSaleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E0F2FE',
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  cardQuickSaleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  gradeFeatureShortcutsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  gradeFeatureBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  gradeFeatureBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#333333',
+  },
+  cardGradesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  cardGradeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  cardGradeBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0284C7',
+  },
+  cardWastageBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  cardWastageBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#D97706',
   },
 });

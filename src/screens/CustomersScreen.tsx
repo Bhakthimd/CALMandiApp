@@ -14,19 +14,23 @@ import { useMandi } from '../context/MandiContext';
 
 export default function CustomersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { customers, isOwner, isOperator } = useMandi();
+  const { customers, isOwner, getCustomerBalance } = useMandi();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'Farmer' | 'Buyer' | 'Trader'>('ALL');
 
-  const filteredCustomers = customers.filter(
-    (c) =>
+  const filteredCustomers = customers.filter((c) => {
+    const matchesSearch =
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.mobile.includes(searchQuery) ||
-      c.business.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      c.business.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType =
+      selectedFilter === 'ALL' || (c.customerType || 'Buyer') === selectedFilter;
+    return matchesSearch && matchesType;
+  });
 
   const handleCallCustomer = (name: string, mobile: string) => {
     Alert.alert(
-      'Buyer Contact Desk',
+      'Customer Contact Desk',
       `Dialing ${name} (${mobile}) to confirm dispatch & mandi arrival.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -60,12 +64,12 @@ export default function CustomersScreen({ navigation }: any) {
           <Text style={styles.logo}>CALMandi</Text>
         </View>
 
-        <Text style={styles.title}>Customers</Text>
+        <Text style={styles.title}>Customers & Farmers</Text>
 
         <Text style={styles.subtitle}>
           {isOwner
-            ? 'Manage mandi buyers, ledger balances, and credit accounts.'
-            : 'Fast customer directory: Look up buyers & confirm dispatch.'}
+            ? 'Manage mandi buyers, farmer ledgers, balances, and credit accounts.'
+            : 'Fast directory: Look up buyers & farmers, check balance & confirm dispatch.'}
         </Text>
 
         {/* Role Banner */}
@@ -89,11 +93,11 @@ export default function CustomersScreen({ navigation }: any) {
             >
               {isOwner
                 ? '👑 Owner: Customer Ledgers & Balances'
-                : '👷 Operator: Buyer Verification Desk'}
+                : '👷 Operator: Customer Directory & Quick Calling'}
             </Text>
             <Text style={styles.roleBannerDesc}>
               {isOwner
-                ? 'View balance status, pending payments, and register buyers'
+                ? 'View balance status, pending dues, financial ledgers, and register customers'
                 : 'Quick search by name or mobile & one-tap calling for floor dispatches'}
             </Text>
           </View>
@@ -104,7 +108,7 @@ export default function CustomersScreen({ navigation }: any) {
           <Ionicons name="search-outline" size={18} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by buyer name, phone, or shop..."
+            placeholder="Search by buyer or farmer name, phone, shop..."
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -116,22 +120,50 @@ export default function CustomersScreen({ navigation }: any) {
           )}
         </View>
 
+        {/* Type Filter Tabs */}
+        <View style={styles.filterTabsRow}>
+          {[
+            { id: 'ALL', label: 'All' },
+            { id: 'Buyer', label: '🛒 Buyers' },
+            { id: 'Farmer', label: '🌾 Farmers' },
+            { id: 'Trader', label: '🏢 Traders' },
+          ].map((item) => {
+            const isSel = selectedFilter === item.id;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.filterTab, isSel && styles.filterTabActive]}
+                onPress={() => setSelectedFilter(item.id as any)}
+              >
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    isSel && styles.filterTabTextActive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {/* Add Customer Button */}
         <TouchableOpacity
           style={styles.addButton}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('AddCustomer')}
         >
-          <Text style={styles.addButtonText}>+ Add New Customer</Text>
+          <Text style={styles.addButtonText}>+ Add New Customer / Farmer</Text>
         </TouchableOpacity>
 
         {/* Customer List Header */}
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Customer Directory</Text>
+          <Text style={styles.listTitle}>Registered Directory</Text>
           <View style={styles.countBadge}>
             <Text style={styles.count}>
               {filteredCustomers.length}{' '}
-              {filteredCustomers.length === 1 ? 'Buyer' : 'Buyers'}
+              {filteredCustomers.length === 1 ? 'Contact' : 'Contacts'}
             </Text>
           </View>
         </View>
@@ -140,67 +172,140 @@ export default function CustomersScreen({ navigation }: any) {
         {filteredCustomers.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={42} color="#CCCCCC" />
-            <Text style={styles.emptyText}>No customers found.</Text>
+            <Text style={styles.emptyText}>No contacts found.</Text>
             <Text style={styles.emptySubtext}>
               {searchQuery
                 ? 'Try a different search query.'
-                : 'Tap "+ Add Customer" to get started.'}
+                : 'Tap "+ Add New Customer / Farmer" to get started.'}
             </Text>
           </View>
         ) : (
-          filteredCustomers.map((customer) => (
-            <View key={customer.id} style={styles.customerCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {customer.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
+          filteredCustomers.map((customer) => {
+            const bal = getCustomerBalance(customer.id);
+            const isRec = bal.currentBalance > 0;
+            const isPay = bal.currentBalance < 0;
+            const cType = customer.customerType || 'Buyer';
 
-              <View style={styles.customerInfo}>
-                <View style={styles.customerTitleRow}>
-                  <Text style={styles.customerName}>{customer.name}</Text>
-                  {isOwner && customer.balance && (
-                    <View
-                      style={[
-                        styles.balanceTag,
-                        customer.balance.includes('Pending')
-                          ? styles.balancePendingTag
-                          : styles.balanceSettledTag,
-                      ]}
-                    >
-                      <Text
+            return (
+              <View key={customer.id} style={styles.customerCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {customer.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfo}>
+                    <View style={styles.customerTitleRow}>
+                      <Text style={styles.customerName}>{customer.name}</Text>
+                      {/* Customer Type Tag */}
+                      <View
                         style={[
-                          styles.balanceTagText,
-                          customer.balance.includes('Pending')
-                            ? styles.balancePendingText
-                            : styles.balanceSettledText,
+                          styles.typeTag,
+                          cType === 'Farmer'
+                            ? styles.typeFarmer
+                            : cType === 'Buyer'
+                            ? styles.typeBuyer
+                            : styles.typeTrader,
                         ]}
                       >
-                        {customer.balance}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.typeTagText,
+                            cType === 'Farmer'
+                              ? styles.typeFarmerText
+                              : cType === 'Buyer'
+                              ? styles.typeBuyerText
+                              : styles.typeTraderText,
+                          ]}
+                        >
+                          {cType}
+                        </Text>
+                      </View>
                     </View>
-                  )}
+
+                    <Text style={styles.customerBusiness}>{customer.business}</Text>
+                    <Text style={styles.customerMobile}>
+                      <Ionicons name="call-outline" size={13} color="#666666" />{' '}
+                      {customer.mobile}
+                    </Text>
+                  </View>
+
+                  {/* Call Action Button */}
+                  <TouchableOpacity
+                    style={styles.callButton}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      handleCallCustomer(customer.name, customer.mobile)
+                    }
+                  >
+                    <Ionicons name="call" size={16} color="#16834A" />
+                  </TouchableOpacity>
                 </View>
 
-                <Text style={styles.customerBusiness}>{customer.business}</Text>
-                <Text style={styles.customerMobile}>
-                  <Ionicons name="call-outline" size={13} color="#666666" />{' '}
-                  {customer.mobile}
-                </Text>
-              </View>
+                {/* Balance Status & Actions Row */}
+                <View style={styles.cardBottomRow}>
+                  <View style={styles.balanceInfoCol}>
+                    <Text style={styles.balanceStatusLabel}>
+                      {isRec
+                        ? 'Owes Mandi (उधारी)'
+                        : isPay
+                        ? 'Mandi Owes (देय)'
+                        : 'Account Settled'}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.balanceStatusVal,
+                        isRec
+                          ? { color: '#DC2626' }
+                          : isPay
+                          ? { color: '#16834A' }
+                          : { color: '#6B7280' },
+                      ]}
+                    >
+                      ₹ {Math.abs(bal.currentBalance).toLocaleString()}
+                    </Text>
+                  </View>
 
-              {/* Call Action Button */}
-              <TouchableOpacity
-                style={styles.callButton}
-                activeOpacity={0.7}
-                onPress={() =>
-                  handleCallCustomer(customer.name, customer.mobile)
-                }
-              >
-                <Ionicons name="call" size={16} color="#16834A" />
-              </TouchableOpacity>
-            </View>
-          ))
+                  <View style={styles.actionBtnsWrap}>
+                    <TouchableOpacity
+                      style={styles.actionBtnSmall}
+                      onPress={() =>
+                        navigation.navigate('CustomerLedger', { customerId: customer.id })
+                      }
+                    >
+                      <Ionicons name="document-text-outline" size={14} color="#16834A" />
+                      <Text style={styles.actionBtnSmallText}>Ledger</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionBtnSmall, styles.actionBtnSmallHighlight]}
+                      onPress={() =>
+                        navigation.navigate('AddPayment', {
+                          customerId: customer.id,
+                          defaultType: isPay ? 'PAY' : 'RECEIVE',
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="cash-outline"
+                        size={14}
+                        color={isPay ? '#D97706' : '#16834A'}
+                      />
+                      <Text
+                        style={[
+                          styles.actionBtnSmallText,
+                          { color: isPay ? '#D97706' : '#16834A' },
+                        ]}
+                      >
+                        {isPay ? 'Pay' : 'Receive'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -286,7 +391,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   searchInput: {
     flex: 1,
@@ -294,31 +399,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F2937',
   },
+  filterTabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    alignItems: 'center',
+  },
+  filterTabActive: {
+    backgroundColor: '#16834A',
+    borderColor: '#16834A',
+  },
+  filterTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#555555',
+  },
+  filterTabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
   addButton: {
     backgroundColor: '#16834A',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 22,
-    shadowColor: '#16834A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    marginBottom: 18,
     elevation: 3,
   },
   addButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   listTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333333',
   },
@@ -357,26 +485,25 @@ const styles = StyleSheet.create({
   customerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#EEEEEE',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
     elevation: 2,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#E8F4EC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   avatarText: {
     fontSize: 18,
@@ -390,56 +517,105 @@ const styles = StyleSheet.create({
   customerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
     marginBottom: 2,
   },
   customerName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#222222',
   },
+  typeTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  typeTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  typeFarmer: {
+    backgroundColor: '#ECFDF5',
+  },
+  typeFarmerText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  typeBuyer: {
+    backgroundColor: '#EFF6FF',
+  },
+  typeBuyerText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1E40AF',
+  },
+  typeTrader: {
+    backgroundColor: '#FFFBEB',
+  },
+  typeTraderText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+  },
   customerBusiness: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666666',
     marginBottom: 2,
   },
   customerMobile: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#888888',
   },
-  balanceTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  balanceTagText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  balancePendingTag: {
-    backgroundColor: '#FEF3C7',
-  },
-  balanceSettledTag: {
-    backgroundColor: '#E8F5EC',
-  },
-  balancePendingText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#D97706',
-  },
-  balanceSettledText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#16834A',
-  },
   callButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#E8F5EC',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#C7E8D3',
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  balanceInfoCol: {},
+  balanceStatusLabel: {
+    fontSize: 10,
+    color: '#777777',
+  },
+  balanceStatusVal: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  actionBtnsWrap: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionBtnSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F7F9F7',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+  },
+  actionBtnSmallHighlight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#A7F3D0',
+  },
+  actionBtnSmallText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#16834A',
   },
 });

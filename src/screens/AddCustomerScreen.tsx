@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMandi } from '../context/MandiContext';
+import { CustomerType } from '../types';
 
 export default function AddCustomerScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -21,6 +22,17 @@ export default function AddCustomerScreen({ navigation }: any) {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [business, setBusiness] = useState('');
+  const [customerType, setCustomerType] = useState<CustomerType>('Buyer');
+  const [openingBalance, setOpeningBalance] = useState('');
+  const [balanceDirection, setBalanceDirection] = useState<'RECEIVABLE' | 'PAYABLE'>('RECEIVABLE');
+  const [address, setAddress] = useState('');
+
+  const customerTypes: { type: CustomerType; label: string; sub: string }[] = [
+    { type: 'Buyer', label: 'Buyer', sub: 'खरीदार' },
+    { type: 'Farmer', label: 'Farmer', sub: 'किसान' },
+    { type: 'Trader', label: 'Trader', sub: 'व्यापारी' },
+    { type: 'Other', label: 'Other', sub: 'अन्य' },
+  ];
 
   const handleSave = () => {
     const cleanName = name.trim();
@@ -28,7 +40,7 @@ export default function AddCustomerScreen({ navigation }: any) {
     const cleanBusiness = business.trim();
 
     if (!cleanName || !cleanMobile || !cleanBusiness) {
-      Alert.alert('Missing Details', 'Please fill all customer fields.');
+      Alert.alert('Missing Details', 'Please fill customer name, mobile, and business name.');
       return;
     }
 
@@ -40,17 +52,24 @@ export default function AddCustomerScreen({ navigation }: any) {
       return;
     }
 
+    const numBal = parseFloat(openingBalance) || 0;
+    // If PAYABLE (Mandi owes customer), store as negative opening balance
+    const finalOpeningBal = balanceDirection === 'PAYABLE' ? -numBal : numBal;
+
     const success = addCustomer({
       name: cleanName,
       mobile: cleanMobile,
       business: cleanBusiness,
+      customerType,
+      openingBalance: finalOpeningBal,
+      address: address.trim() || undefined,
     });
 
     if (success) {
       Keyboard.dismiss();
       Alert.alert(
         'Success',
-        `${cleanName} has been added to your customer list.`,
+        `${cleanName} (${customerType}) has been added to your Mandi directory.`,
         [
           {
             text: 'OK',
@@ -93,18 +112,54 @@ export default function AddCustomerScreen({ navigation }: any) {
           <Text style={styles.logo}>CALMandi</Text>
         </View>
 
-        <Text style={styles.title}>Add Customer</Text>
+        <Text style={styles.title}>Add Customer / Farmer</Text>
 
         <Text style={styles.subtitle}>
-          Enter customer details to add them to your mandi directory.
+          Register a buyer, farmer, or commission trader with initial ledger balance.
         </Text>
 
         {/* Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.label}>Customer Name *</Text>
+          {/* Customer Type Selector */}
+          <Text style={styles.label}>Customer Type (प्रकार) *</Text>
+          <View style={styles.typeGrid}>
+            {customerTypes.map((item) => {
+              const isSelected = customerType === item.type;
+              return (
+                <TouchableOpacity
+                  key={item.type}
+                  style={[
+                    styles.typeChip,
+                    isSelected && styles.typeChipActive,
+                  ]}
+                  onPress={() => setCustomerType(item.type)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.typeChipLabel,
+                      isSelected && styles.typeChipLabelActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.typeChipSub,
+                      isSelected && styles.typeChipSubActive,
+                    ]}
+                  >
+                    {item.sub}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={styles.label}>Full Name (नाम) *</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Ramesh Patel"
+            placeholder="e.g. Rameshwar Reddy"
             placeholderTextColor="#999999"
             value={name}
             onChangeText={setName}
@@ -112,7 +167,7 @@ export default function AddCustomerScreen({ navigation }: any) {
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Mobile Number *</Text>
+          <Text style={styles.label}>Mobile Number (मोबाइल) *</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter 10-digit mobile number"
@@ -126,14 +181,72 @@ export default function AddCustomerScreen({ navigation }: any) {
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Business / Mandi Name *</Text>
+          <Text style={styles.label}>Business / Shop / Farm Name *</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Patel Vegetable Store"
+            placeholder="e.g. Reddy Farm / Sri Lakshmi Fruits"
             placeholderTextColor="#999999"
             value={business}
             onChangeText={setBusiness}
             autoCapitalize="words"
+            returnKeyType="next"
+          />
+
+          {/* Opening Balance */}
+          <Text style={styles.label}>Opening Balance (प्रारंभिक शेष ₹)</Text>
+          <View style={styles.balanceDirectionRow}>
+            <TouchableOpacity
+              style={[
+                styles.balDirBtn,
+                balanceDirection === 'RECEIVABLE' && styles.balDirBtnRecActive,
+              ]}
+              onPress={() => setBalanceDirection('RECEIVABLE')}
+            >
+              <Text
+                style={[
+                  styles.balDirText,
+                  balanceDirection === 'RECEIVABLE' && styles.balDirTextActive,
+                ]}
+              >
+                Customer Owes Mandi (लेने)
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.balDirBtn,
+                balanceDirection === 'PAYABLE' && styles.balDirBtnPayActive,
+              ]}
+              onPress={() => setBalanceDirection('PAYABLE')}
+            >
+              <Text
+                style={[
+                  styles.balDirText,
+                  balanceDirection === 'PAYABLE' && styles.balDirTextActive,
+                ]}
+              >
+                Mandi Owes (देने)
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TextInput
+            style={styles.input}
+            placeholder="0 (Enter 0 if account is settled)"
+            placeholderTextColor="#999999"
+            keyboardType="numeric"
+            value={openingBalance}
+            onChangeText={setOpeningBalance}
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>Address / APMC Shop Location (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Stall #4, APMC Block B"
+            placeholderTextColor="#999999"
+            value={address}
+            onChangeText={setAddress}
             returnKeyType="done"
           />
 
@@ -143,7 +256,7 @@ export default function AddCustomerScreen({ navigation }: any) {
             activeOpacity={0.7}
             onPress={handleSave}
           >
-            <Text style={styles.saveButtonText}>Save Customer</Text>
+            <Text style={styles.saveButtonText}>Save Customer & Ledger</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -188,15 +301,15 @@ const styles = StyleSheet.create({
     color: '#16834A',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#222222',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#777777',
     marginTop: 6,
-    marginBottom: 22,
+    marginBottom: 20,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -204,50 +317,111 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     elevation: 2,
   },
   label: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333333',
     marginTop: 14,
     marginBottom: 8,
   },
+  typeGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  typeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    alignItems: 'center',
+  },
+  typeChipActive: {
+    backgroundColor: '#16834A',
+    borderColor: '#16834A',
+  },
+  typeChipLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#333333',
+  },
+  typeChipLabelActive: {
+    color: '#FFFFFF',
+  },
+  typeChipSub: {
+    fontSize: 10,
+    color: '#777777',
+    marginTop: 2,
+  },
+  typeChipSubActive: {
+    color: '#E8F4EC',
+  },
+  balanceDirectionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  balDirBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    alignItems: 'center',
+  },
+  balDirBtnRecActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#F87171',
+  },
+  balDirBtnPayActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#34D399',
+  },
+  balDirText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#555555',
+  },
+  balDirTextActive: {
+    fontWeight: '700',
+    color: '#222222',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#DDDDDD',
     borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
+    padding: 14,
+    fontSize: 15,
     color: '#222222',
     backgroundColor: '#FFFFFF',
   },
   saveButton: {
     backgroundColor: '#16834A',
-    padding: 17,
+    padding: 16,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 26,
+    marginTop: 24,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   cancelButton: {
     backgroundColor: '#F3F4F6',
-    padding: 15,
+    padding: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
   },
   cancelButtonText: {
     color: '#555555',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
 });
