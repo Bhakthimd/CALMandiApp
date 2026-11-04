@@ -43,3 +43,7 @@ yarn-error.*
 # IDE / editor
 .claude/
 
+
+# Build artifacts
+build/
+*.apk
