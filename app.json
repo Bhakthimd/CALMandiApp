@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.calmandi.app",
       "adaptiveIcon": {
         "backgroundColor": "#16834A",
         "foregroundImage": "./assets/calmandi_logo.png",
@@ -24,6 +25,12 @@
     "plugins": [
       "expo-sqlite",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f2daa4b5-705f-41fe-9b56-ce2ee2a6c173"
+      }
+    },
+    "owner": "bhakthi_md"
   }
 }
