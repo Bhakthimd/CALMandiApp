@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -12,11 +13,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { UserRole } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ThemeColors } from '../styles/theme';
+import LanguageSelectorModal from '../components/LanguageSelectorModal';
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { isDark, toggleTheme, colors } = useTheme();
+  const { t, currentLanguageOption } = useLanguage();
+  const [langModalVisible, setLangModalVisible] = React.useState(false);
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const {
     slips,
@@ -30,303 +35,337 @@ export default function HomeScreen({ navigation }: any) {
     lowStockCount,
     shiftUpdatesCount,
     customers,
-    categories,
     products,
     financialSummary,
     pricingRules,
   } = useMandi();
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to log out of CALMandi?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: () => {
-          logout();
-          navigation.replace('Welcome');
+    Alert.alert(
+      t('logoutConfirmTitle', 'Logout'),
+      t('logoutConfirmMsg', 'Are you sure you want to log out of CALMandi?'),
+      [
+        { text: t('cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('logout', 'Logout'),
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            navigation.replace('Welcome');
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleToggleRole = () => {
     const nextRole: UserRole = isOwner ? 'Operator' : 'Owner';
     switchRole(nextRole);
     Alert.alert(
-      'Role Switched',
-      `You are now viewing as ${nextRole}.\nNotice the updated dashboard, metrics, and permissions.`
+      t('roleSwitched', 'Role Switched'),
+      t('roleSwitchedMsg', `You are now viewing as ${nextRole}. Dashboard metrics and permissions updated.`, {
+        role: nextRole === 'Owner' ? t('owner', 'Owner') : t('operator', 'Operator'),
+      })
     );
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: Math.max(insets.top + 16, 40),
-          paddingBottom: Math.max(insets.bottom + 25, 30),
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Top Header Bar */}
-      <View style={styles.topHeader}>
-        <View style={styles.logoRow}>
-          <Text style={styles.logo}>CALMandi</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TouchableOpacity
-            style={styles.themeToggleBtn}
-            activeOpacity={0.7}
-            onPress={toggleTheme}
-          >
-            <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#D97706" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      
-      {/* User Profile & Role Banner Card */}
-      <View
-        style={[
-          styles.profileCard,
-          isOwner ? styles.ownerCardBorder : styles.operatorCardBorder,
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top + 16, 40),
+            paddingBottom: Math.max(insets.bottom + 25, 36),
+          },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileHeaderRow}>
-          <View style={styles.profileInfo}>
-            <Text style={styles.welcomeGreeting}>Welcome,</Text>
-            <Text style={styles.userName}>{currentUser?.name || 'Mandi User'}</Text>
-            <Text style={styles.mandiBusiness}>
-              {currentUser?.business || 'CALMandi APMC'} • {currentUser?.location || 'Bangalore'}
-            </Text>
+        {/* Top Header Bar */}
+        <View style={styles.topHeader}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoIconContainer}>
+              <Image
+                source={require('../../assets/app_logo.png')}
+                style={styles.logoIcon}
+                resizeMode="cover"
+              />
+            </View>
           </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {/* Top Language Switcher (Only language setting option on Home Page) */}
+            <TouchableOpacity
+              style={styles.topLangBtn}
+              activeOpacity={0.7}
+              onPress={() => setLangModalVisible(true)}
+            >
+              <Ionicons name="globe-outline" size={15} color="#16834A" />
+              <Text style={styles.topLangText}>
+                {currentLanguageOption.nativeName}
+              </Text>
+              <Ionicons name="chevron-down" size={12} color={isDark ? '#94A3B8' : '#64748B'} />
+            </TouchableOpacity>
 
-          {/* Role Badge */}
-          <View
-            style={[
-              styles.roleBadge,
-              isOwner ? styles.ownerBadgeBg : styles.operatorBadgeBg,
-            ]}
-          >
-            <Ionicons
-              name={isOwner ? 'shield-checkmark' : 'briefcase'}
-              size={15}
-              color="#FFFFFF"
-            />
-            <Text style={styles.roleBadgeText}>
-              {isOwner ? '👑 Owner' : '👷 Operator'}
-            </Text>
+            {/* Theme Toggle */}
+            <TouchableOpacity
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+              onPress={toggleTheme}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#D97706" />
+            </TouchableOpacity>
+
+            {/* Settings Screen Shortcut */}
+            <TouchableOpacity
+              style={styles.settingsToggleBtn}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Ionicons name="settings-outline" size={18} color={isDark ? '#CBD5E1' : '#475569'} />
+            </TouchableOpacity>
+
+            {/* Logout */}
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={17} color="#DC2626" />
+              <Text style={styles.logoutText}>{t('logout', 'Logout')}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Quick Role Switcher Banner */}
-        <View style={styles.roleSwitcherRow}>
-          <View style={styles.roleDescContainer}>
-            <Text style={styles.roleTagline}>
-              {isOwner
-                ? 'Full Administrative & Financial Access'
-                : 'Stock Counter & Daily Operations Desk'}
-            </Text>
+        {/* User Profile & Role Banner Card */}
+        <View
+          style={[
+            styles.profileCard,
+            isOwner ? styles.ownerCardBorder : styles.operatorCardBorder,
+          ]}
+        >
+          <View style={styles.profileHeaderRow}>
+            <View style={styles.profileInfo}>
+              <Text style={styles.welcomeGreeting}>{t('welcome', 'Welcome')},</Text>
+              <Text style={styles.userName}>{currentUser?.name || 'Mandi User'}</Text>
+              <Text style={styles.mandiBusiness}>
+                {currentUser?.business || 'CALMandi APMC'} • {currentUser?.location || 'Bangalore'}
+              </Text>
+            </View>
+
+            {/* Role Badge */}
+            <View
+              style={[
+                styles.roleBadge,
+                isOwner ? styles.ownerBadgeBg : styles.operatorBadgeBg,
+              ]}
+            >
+              <Ionicons
+                name={isOwner ? 'shield-checkmark' : 'briefcase'}
+                size={15}
+                color="#FFFFFF"
+              />
+              <Text style={styles.roleBadgeText}>
+                {isOwner ? t('ownerBadge', '👑 Owner') : t('operatorBadge', '👷 Operator')}
+              </Text>
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.roleSwitchBtn}
-            activeOpacity={0.7}
-            onPress={handleToggleRole}
-          >
-            <Ionicons name="swap-horizontal" size={15} color="#16834A" />
-            <Text style={styles.roleSwitchBtnText}>
-              Test as {isOwner ? 'Operator' : 'Owner'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Role-Specific Metric Overview */}
-      {isOwner ? (
-        /* OWNER OVERVIEW: Financials & Business Insights */
-        <View style={styles.ownerMetricsSection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Business Overview</Text>
-            <View style={styles.liveIndicator}>
-              <View style={styles.greenDot} />
-              <Text style={styles.liveText}>Live Analytics</Text>
-            </View>
-          </View>
-
-          <View style={styles.metricsGrid}>
-            {/* Total Inventory Value */}
-            <View style={[styles.metricCard, styles.metricCardPrimary]}>
-              <View style={styles.metricIconWrapPrimary}>
-                <Ionicons name="cash-outline" size={20} color="#16834A" />
-              </View>
-              <Text style={styles.metricLabel}>Total Inventory Value</Text>
-              <Text style={styles.metricValueLarge}>
-                ₹ {totalInventoryValue.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.metricSubtext}>Across {products.length} products</Text>
-            </View>
-
-            {/* Total Stock Units */}
-            <View style={styles.metricCard}>
-              <View style={styles.metricIconWrapBlue}>
-                <Ionicons name="cube-outline" size={20} color="#0284C7" />
-              </View>
-              <Text style={styles.metricLabel}>Total Stock Units</Text>
-              <Text style={styles.metricValue}>{totalStockUnits}</Text>
-              <Text style={styles.metricSubtext}>Physical quantity in mandi</Text>
-            </View>
-
-            {/* Customers Count */}
-            <View style={styles.metricCard}>
-              <View style={styles.metricIconWrapPurple}>
-                <Ionicons name="people-outline" size={20} color="#7C3AED" />
-              </View>
-              <Text style={styles.metricLabel}>Active Buyers</Text>
-              <Text style={styles.metricValue}>{customers.length}</Text>
-              <Text style={styles.metricSubtext}>Registered mandi accounts</Text>
-            </View>
-
-            {/* Low Stock Alert */}
-            <View style={[styles.metricCard, lowStockCount > 0 && styles.metricCardAlert]}>
-              <View
-                style={[
-                  styles.metricIconWrapAmber,
-                  lowStockCount > 0 && styles.metricIconWrapRed,
-                ]}
-              >
-                <Ionicons
-                  name={lowStockCount > 0 ? 'warning-outline' : 'checkmark-done'}
-                  size={20}
-                  color={lowStockCount > 0 ? '#DC2626' : '#16834A'}
-                />
-              </View>
-              <Text style={styles.metricLabel}>Stock Status</Text>
-              <Text
-                style={[
-                  styles.metricValue,
-                  lowStockCount > 0 && { color: '#DC2626' },
-                ]}
-              >
-                {lowStockCount > 0 ? `${lowStockCount} Low` : 'Healthy'}
-              </Text>
-              <Text style={styles.metricSubtext}>
-                {lowStockCount > 0 ? 'Reorder needed soon' : 'All items well stocked'}
+          {/* Quick Role Switcher Banner */}
+          <View style={styles.roleSwitcherRow}>
+            <View style={styles.roleDescContainer}>
+              <Text style={styles.roleTagline}>
+                {isOwner
+                  ? t('roleOwnerDesc', 'Full Administrative & Financial Access')
+                  : t('roleOperatorDesc', 'Stock Counter & Daily Operations Desk')}
               </Text>
             </View>
+
+            <TouchableOpacity
+              style={styles.roleSwitchBtn}
+              activeOpacity={0.7}
+              onPress={handleToggleRole}
+            >
+              <Ionicons name="swap-horizontal" size={15} color="#16834A" />
+              <Text style={styles.roleSwitchBtnText}>
+                {isOwner ? t('testAsOperator', 'Test as Operator') : t('testAsOwner', 'Test as Owner')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
-      ) : (
-        /* OPERATOR OVERVIEW: Shift & Counter Operations Desk */
-        <View style={styles.operatorShiftSection}>
-          <View style={styles.operatorShiftCard}>
-            <View style={styles.operatorShiftHeader}>
-              <View style={styles.shiftBadge}>
-                <View style={styles.pulseDot} />
-                <Text style={styles.shiftBadgeText}>COUNTER DESK ACTIVE</Text>
+
+        {/* Role-Specific Metric Overview */}
+        {isOwner ? (
+          /* OWNER OVERVIEW: Financials & Business Insights */
+          <View style={styles.ownerMetricsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{t('businessOverview', 'Business Overview')}</Text>
+              <View style={styles.liveIndicator}>
+                <View style={styles.greenDot} />
+                <Text style={styles.liveText}>{t('liveAnalytics', 'Live Analytics')}</Text>
               </View>
-              <Text style={styles.shiftTimeText}>{"Today's Shift"}</Text>
             </View>
 
-            <Text style={styles.shiftCardTitle}>Operational Stock Counter</Text>
-            <Text style={styles.shiftCardDesc}>
-              Quick adjustments for crates, boxes, and bags arriving from farmers or departing to buyers.
-            </Text>
+            <View style={styles.metricsGrid}>
+              {/* Total Inventory Value */}
+              <View style={[styles.metricCard, styles.metricCardPrimary]}>
+                <View style={styles.metricIconWrapPrimary}>
+                  <Ionicons name="cash-outline" size={20} color="#16834A" />
+                </View>
+                <Text style={styles.metricLabel}>{t('totalInventoryValue', 'Total Inventory Value')}</Text>
+                <Text style={styles.metricValueLarge}>
+                  ₹ {totalInventoryValue.toLocaleString('en-IN')}
+                </Text>
+                <Text style={styles.metricSubtext}>
+                  {t('acrossProducts', `Across ${products.length} products`, { count: products.length })}
+                </Text>
+              </View>
 
-            <View style={styles.shiftStatsRow}>
-              <View style={styles.shiftStatItem}>
-                <Text style={styles.shiftStatNumber}>{shiftUpdatesCount}</Text>
-                <Text style={styles.shiftStatLabel}>Updates Today</Text>
+              {/* Total Stock Units */}
+              <View style={styles.metricCard}>
+                <View style={styles.metricIconWrapBlue}>
+                  <Ionicons name="cube-outline" size={20} color="#0284C7" />
+                </View>
+                <Text style={styles.metricLabel}>{t('totalStockUnits', 'Total Stock Units')}</Text>
+                <Text style={styles.metricValue}>{totalStockUnits}</Text>
+                <Text style={styles.metricSubtext}>{t('physicalQuantity', 'Physical quantity in mandi')}</Text>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.shiftStatItem}>
-                <Text style={styles.shiftStatNumber}>{products.length}</Text>
-                <Text style={styles.shiftStatLabel}>Floor Items</Text>
+
+              {/* Customers Count */}
+              <View style={styles.metricCard}>
+                <View style={styles.metricIconWrapPurple}>
+                  <Ionicons name="people-outline" size={20} color="#7C3AED" />
+                </View>
+                <Text style={styles.metricLabel}>{t('activeBuyers', 'Active Buyers')}</Text>
+                <Text style={styles.metricValue}>{customers.length}</Text>
+                <Text style={styles.metricSubtext}>{t('registeredAccounts', 'Registered mandi accounts')}</Text>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.shiftStatItem}>
-                <Text
+
+              {/* Low Stock Alert */}
+              <View style={[styles.metricCard, lowStockCount > 0 && styles.metricCardAlert]}>
+                <View
                   style={[
-                    styles.shiftStatNumber, { color: '#16834A' }
+                    styles.metricIconWrapAmber,
+                    lowStockCount > 0 && styles.metricIconWrapRed,
                   ]}
                 >
-                  {slips ? slips.length : 0}
+                  <Ionicons
+                    name={lowStockCount > 0 ? 'warning-outline' : 'checkmark-done'}
+                    size={20}
+                    color={lowStockCount > 0 ? '#DC2626' : '#16834A'}
+                  />
+                </View>
+                <Text style={styles.metricLabel}>{t('stockStatus', 'Stock Status')}</Text>
+                <Text
+                  style={[
+                    styles.metricValue,
+                    lowStockCount > 0 && { color: '#DC2626' },
+                  ]}
+                >
+                  {lowStockCount > 0 ? t('lowStockNotice', `${lowStockCount} Low`, { count: lowStockCount }) : t('healthyStock', 'Healthy')}
                 </Text>
-                <Text style={styles.shiftStatLabel}>Active Slips</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.shiftStatItem}>
-                <Text style={[styles.shiftStatNumber, { color: '#D97706' }]}>
-                  {lowStockCount}
+                <Text style={styles.metricSubtext}>
+                  {lowStockCount > 0 ? t('reorderNeeded', 'Reorder needed soon') : t('allStocked', 'All items well stocked')}
                 </Text>
-                <Text style={styles.shiftStatLabel}>Low Stock</Text>
               </View>
             </View>
           </View>
-        </View>
-      )}
+        ) : (
+          /* OPERATOR OVERVIEW: Shift & Counter Operations Desk */
+          <View style={styles.operatorShiftSection}>
+            <View style={styles.operatorShiftCard}>
+              <View style={styles.operatorShiftHeader}>
+                <View style={styles.shiftBadge}>
+                  <View style={styles.pulseDot} />
+                  <Text style={styles.shiftBadgeText}>{t('counterDeskActive', 'COUNTER DESK ACTIVE')}</Text>
+                </View>
+                <Text style={styles.shiftTimeText}>{t('todayShift', "Today's Shift")}</Text>
+              </View>
 
-      {/* 3. VISIBLE DATA SYNC CENTER & OFFLINE OPERATIONS */}
-      <Text style={styles.sectionTitle}>
-        {isOwner ? 'Mandi Daily Operations' : 'Floor Operations'}
-      </Text>
+              <Text style={styles.shiftCardTitle}>{t('operationalStockCounter', 'Operational Stock Counter')}</Text>
+              <Text style={styles.shiftCardDesc}>
+                {t('operatorShiftDesc', 'Quick adjustments for crates, boxes, and bags arriving from farmers or departing to buyers.')}
+              </Text>
 
-      {/* Record Arrival Card */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.arrivalMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('RecordArrival')}
-      >
-        <View style={[styles.iconContainer, styles.arrivalIconContainer]}>
-          <Ionicons name="arrow-down-circle" size={28} color="#16834A" />
-        </View>
+              <View style={styles.shiftStatsRow}>
+                <View style={styles.shiftStatItem}>
+                  <Text style={styles.shiftStatNumber}>{shiftUpdatesCount}</Text>
+                  <Text style={styles.shiftStatLabel}>{t('updatesToday', 'Updates Today')}</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.shiftStatItem}>
+                  <Text style={styles.shiftStatNumber}>{products.length}</Text>
+                  <Text style={styles.shiftStatLabel}>{t('floorItems', 'Floor Items')}</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.shiftStatItem}>
+                  <Text style={[styles.shiftStatNumber, { color: '#16834A' }]}>
+                    {slips ? slips.length : 0}
+                  </Text>
+                  <Text style={styles.shiftStatLabel}>{t('activeSlips', 'Active Slips')}</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.shiftStatItem}>
+                  <Text style={[styles.shiftStatNumber, { color: '#D97706' }]}>
+                    {lowStockCount}
+                  </Text>
+                  <Text style={styles.shiftStatLabel}>{t('lowStock', 'Low Stock')}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Record Arrival (आवक)</Text>
+        {/* 1. VISIBLE DATA SYNC CENTER & OFFLINE OPERATIONS */}
+        <Text style={styles.sectionTitle}>
+          {isOwner ? t('dailyOperations', 'Mandi Daily Operations') : t('floorOperations', 'Floor Operations')}
+        </Text>
+
+        {/* Record Arrival Card */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.arrivalMenuCard]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('RecordArrival')}
+        >
+          <View style={[styles.iconContainer, styles.arrivalIconContainer]}>
+            <Ionicons name="arrow-down-circle" size={28} color="#16834A" />
+          </View>
+
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('recordArrival', 'Record Arrival')}</Text>
             </View>
 
-          <Text style={styles.cardDescription}>
-            Record incoming farmer produce, lot numbers, and add crates to stock to live inventory
-          </Text>
-        </View>
+            <Text style={styles.cardDescription}>
+              {t('recordArrivalDesc', 'Record incoming farmer produce, lot numbers, and add crates to stock to live inventory')}
+            </Text>
+          </View>
 
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
 
-      {/* Record Sale Card */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.saleMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('RecordSale')}
-      >
-        <View style={[styles.iconContainer, styles.saleIconContainer]}>
-          <Ionicons name="receipt-outline" size={28} color="#0284C7" />
-        </View>
+        {/* Record Sale Card */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.saleMenuCard]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('RecordSale')}
+        >
+          <View style={[styles.iconContainer, styles.saleIconContainer]}>
+            <Ionicons name="receipt-outline" size={28} color="#0284C7" />
+          </View>
 
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Record Sale (जावक / Bikri)</Text>
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('recordSale', 'Record Sale')}</Text>
             </View>
 
-          <Text style={styles.cardDescription}>
-            Dispatch produce to buyers, calculate totals, and record cash/credit bills at the counter
-          </Text>
-        </View>
+            <Text style={styles.cardDescription}>
+              {t('recordSaleDesc', 'Dispatch produce to buyers, calculate totals, and record cash/credit bills at the counter')}
+            </Text>
+          </View>
 
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
 
         {/* Floor Crate Tally Clicker Card */}
         <TouchableOpacity
@@ -339,130 +378,134 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.cardText}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Floor Crate Tally</Text>
+              <Text style={styles.cardTitle}>{t('floorCrateTally', 'Floor Crate Tally')}</Text>
               <View style={[styles.moduleTag, { backgroundColor: '#E0F2FE' }]}>
-                <Text style={[styles.moduleTagText, { color: '#0284C7' }]}>Live Clicker</Text>
+                <Text style={[styles.moduleTagText, { color: '#0284C7' }]}>{t('floorCrateTallyTag', 'Live Clicker')}</Text>
               </View>
             </View>
             <Text style={styles.cardDescription}>
-              High-speed tactile counter for loading/unloading crates & bags on the mandi floor.
+              {t('floorCrateTallyDesc', 'High-speed tactile counter for loading/unloading crates & bags on the mandi floor.')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
         </TouchableOpacity>
 
-      {/* DASHBOARD SHORTCUTS: FEATURE 1, 2, 3 & ANALYTICS */}
-      <Text style={styles.sectionTitle}>
-        {isOwner ? 'Financials, Grades & Pricing' : 'Mandi Services & Ledgers'}
-      </Text>
+        {/* 2. DASHBOARD SHORTCUTS: FEATURE 1, 2, 3 & ANALYTICS */}
+        <Text style={styles.sectionTitle}>
+          {isOwner ? t('financialsAndPricing', 'Financials, Grades & Pricing') : t('mandiServices', 'Mandi Services & Ledgers')}
+        </Text>
 
-      {/* 1. Cash & Debt Management Shortcut */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.cashDebtMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('CashDebt')}
-      >
-        <View style={[styles.iconContainer, styles.cashDebtIconWrap]}>
-          <Ionicons name="wallet-outline" size={28} color="#16834A" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Cash & Debt (रोकड़ एवं उधारी)</Text>
-            <View style={[styles.moduleTag, styles.cashDebtTag]}>
-              <Text style={styles.cashDebtTagText}>
-                {financialSummary.totalReceivable > 0
-                  ? `₹${financialSummary.totalReceivable.toLocaleString()} Due`
-                  : 'Balances Settled'}
-              </Text>
-            </View>
+        {/* Cash & Debt Management Shortcut */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.cashDebtMenuCard]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('CashDebt')}
+        >
+          <View style={[styles.iconContainer, styles.cashDebtIconWrap]}>
+            <Ionicons name="wallet-outline" size={28} color="#16834A" />
           </View>
 
-          <Text style={styles.cardDescription}>
-            Individual customer ledgers, debt balance tracking, receive payments & farmer disbursements
-          </Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
-
-      {/* 2. Product Grades Shortcut */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.gradesMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('ProductGrades')}
-      >
-        <View style={[styles.iconContainer, styles.gradesIconWrap]}>
-          <Ionicons name="ribbon-outline" size={28} color="#0284C7" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Product Grades (गुणवत्ता ग्रेडिंग)</Text>
-            <View style={[styles.moduleTag, styles.gradesTag]}>
-              <Text style={styles.gradesTagText}>Grades A, B, C, D</Text>
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('cashDebt', 'Cash & Debt')}</Text>
+              <View style={[styles.moduleTag, styles.cashDebtTag]}>
+                <Text style={styles.cashDebtTagText}>
+                  {financialSummary.totalReceivable > 0
+                    ? t('dueAmount', `₹${financialSummary.totalReceivable.toLocaleString('en-IN')} Due`, {
+                        amount: financialSummary.totalReceivable.toLocaleString('en-IN'),
+                      })
+                    : t('balancesSettled', 'Balances Settled')}
+                </Text>
+              </View>
             </View>
+
+            <Text style={styles.cardDescription}>
+              {t('cashDebtDesc', 'Individual customer ledgers, debt balance tracking, receive payments & farmer disbursements')}
+            </Text>
           </View>
 
-          <Text style={styles.cardDescription}>
-            Configure grade quality price tiers, record sorting batches, and track culled wastage
-          </Text>
-        </View>
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
 
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
-
-      {/* 3. Customer Pricing Shortcut */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.pricingMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('CustomerPricing')}
-      >
-        <View style={[styles.iconContainer, styles.pricingIconWrap]}>
-          <Ionicons name="pricetag-outline" size={28} color="#D97706" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Customer Pricing (ग्राहक दर सूची)</Text>
-            <View style={[styles.moduleTag, styles.pricingTag]}>
-              <Text style={styles.pricingTagText}>{pricingRules.length} Custom Rates</Text>
-            </View>
+        {/* Product Grades Shortcut */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.gradesMenuCard]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('ProductGrades')}
+        >
+          <View style={[styles.iconContainer, styles.gradesIconWrap]}>
+            <Ionicons name="ribbon-outline" size={28} color="#0284C7" />
           </View>
 
-          <Text style={styles.cardDescription}>
-            Negotiated selling rates by customer, commodity & quality grade with automatic dispatch lookup
-          </Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
-
-      {/* 4. Reports & Analytics Shortcut */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.reportsMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('Reports')}
-      >
-        <View style={[styles.iconContainer, styles.reportsIconWrap]}>
-          <Ionicons name="bar-chart-outline" size={28} color="#7C3AED" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Reports & Analytics (व्यापार रिपोर्ट)</Text>
-            <View style={[styles.moduleTag, styles.reportsTag]}>
-              <Text style={styles.reportsTagText}>Financials & Wastage</Text>
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('productGrades', 'Product Grades')}</Text>
+              <View style={[styles.moduleTag, styles.gradesTag]}>
+                <Text style={styles.gradesTagText}>{t('productGradesTag', 'Grades A, B, C, D')}</Text>
+              </View>
             </View>
+
+            <Text style={styles.cardDescription}>
+              {t('productGradesDesc', 'Configure grade quality price tiers, record sorting batches, and track culled wastage')}
+            </Text>
           </View>
 
-          <Text style={styles.cardDescription}>
-            Customer balance sheets, cash flow summaries, grade sales revenue & wastage loss reports
-          </Text>
-        </View>
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
 
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
+        {/* Customer Pricing Shortcut */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.pricingMenuCard]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('CustomerPricing')}
+        >
+          <View style={[styles.iconContainer, styles.pricingIconWrap]}>
+            <Ionicons name="pricetag-outline" size={28} color="#D97706" />
+          </View>
+
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('customerPricing', 'Customer Pricing')}</Text>
+              <View style={[styles.moduleTag, styles.pricingTag]}>
+                <Text style={styles.pricingTagText}>
+                  {t('customerPricingTag', `${pricingRules.length} Custom Rates`, { count: pricingRules.length })}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.cardDescription}>
+              {t('customerPricingDesc', 'Negotiated selling rates by customer, commodity & quality grade with automatic dispatch lookup')}
+            </Text>
+          </View>
+
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
+
+        {/* Reports & Analytics Shortcut */}
+        <TouchableOpacity
+          style={[styles.menuCard, styles.reportsMenuCard]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Reports')}
+        >
+          <View style={[styles.iconContainer, styles.reportsIconWrap]}>
+            <Ionicons name="bar-chart-outline" size={28} color="#7C3AED" />
+          </View>
+
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('reportsAnalytics', 'Reports & Analytics')}</Text>
+              <View style={[styles.moduleTag, styles.reportsTag]}>
+                <Text style={styles.reportsTagText}>{t('reportsAnalyticsTag', 'Financials & Wastage')}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.cardDescription}>
+              {t('reportsAnalyticsDesc', 'Customer balance sheets, cash flow summaries, grade sales revenue & wastage loss reports')}
+            </Text>
+          </View>
+
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
 
         {/* Mandi Slips & Invoices Card */}
         <TouchableOpacity
@@ -475,174 +518,170 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.cardText}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Mandi Slips & Receipts</Text>
+              <Text style={styles.cardTitle}>{t('mandiSlipsReceipts', 'Mandi Slips & Receipts')}</Text>
               <View style={[styles.moduleTag, { backgroundColor: '#DCFCE7' }]}>
-                <Text style={[styles.moduleTagText, { color: '#15803D' }]}>{slips ? slips.length : 0} Slips</Text>
+                <Text style={[styles.moduleTagText, { color: '#15803D' }]}>
+                  {t('slipsCount', `${slips ? slips.length : 0} Slips`, { count: slips ? slips.length : 0 })}
+                </Text>
               </View>
             </View>
             <Text style={styles.cardDescription}>
-              View, search, print and WhatsApp digital arrival/dispatch patti slips.
+              {t('mandiSlipsDesc', 'View, search, print and WhatsApp digital arrival/dispatch patti slips.')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
         </TouchableOpacity>
 
-      {/* Main Master Management Modules */}
-      <Text style={styles.sectionTitle}>
-        {isOwner ? 'Mandi Catalog & Management' : 'Mandi Catalog Directory'}
-      </Text>
+        {/* 3. MAIN MASTER MANAGEMENT MODULES */}
+        <Text style={styles.sectionTitle}>
+          {isOwner
+            ? t('mandiCatalogManagement', 'Mandi Catalog & Management')
+            : t('mandiCatalogDirectory', 'Mandi Catalog Directory')}
+        </Text>
 
-      {/* Products Module Card */}
-      <TouchableOpacity
-        style={styles.menuCard}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('Products')}
-      >
-        <View style={styles.iconContainer}>
-          <Ionicons name="cube-outline" size={28} color="#16834A" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Products & Categories</Text>
-            <View
-              style={[
-                styles.moduleTag,
-                isOwner ? styles.ownerTag : styles.operatorTag,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.moduleTagText,
-                  isOwner ? styles.ownerTagText : styles.operatorTagText,
-                ]}
-              >
-                {isOwner ? 'Full Control' : 'Daily Stock Entry'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.cardDescription}>
-            {isOwner
-              ? 'Browse commodities with photos, categories, pricing & catalog'
-              : 'Adjust stock quantities (+ / -), view photos & check category stock'}
-          </Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
-
-      {/* Customers Module Card */}
-      <TouchableOpacity
-        style={styles.menuCard}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('Customers')}
-      >
-        <View style={styles.iconContainer}>
-          <Ionicons name="people-outline" size={28} color="#16834A" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Customers</Text>
-            <View style={[styles.moduleTag, styles.commonTag]}>
-              <Text style={styles.commonTagText}>
-                {isOwner ? 'Accounts & Ledgers' : 'Directory & Calling'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.cardDescription}>
-            {isOwner
-              ? 'View customer directory, balances, and add new mandi buyers'
-              : 'Search registered buyers & quickly verify for dispatch and billing'}
-          </Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
-
-      {/* Categories Module Card */}
-      <TouchableOpacity
-        style={styles.menuCard}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('Categories')}
-      >
-        <View style={styles.iconContainer}>
-          <Ionicons name="pricetags-outline" size={28} color="#16834A" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Categories</Text>
-            <View
-              style={[
-                styles.moduleTag,
-                isOwner ? styles.ownerTag : styles.readOnlyTag,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.moduleTagText,
-                  isOwner ? styles.ownerTagText : styles.readOnlyTagText,
-                ]}
-              >
-                {isOwner ? `${categories.length} Categories` : '🔒 View Only'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.cardDescription}>
-            {isOwner
-              ? 'Add and configure product categories and department sections'
-              : 'View category classification (Master additions managed by Owner)'}
-          </Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
-
-      {/* Staff & Permissions Matrix (Owner Feature) */}
-      {isOwner && (
+        {/* Products Module Card */}
         <TouchableOpacity
-          style={[styles.menuCard, styles.specialMenuCard]}
+          style={styles.menuCard}
           activeOpacity={0.7}
-          onPress={() => navigation.navigate('Staff')}
+          onPress={() => navigation.navigate('Products')}
         >
-          <View style={[styles.iconContainer, styles.specialIconContainer]}>
-            <Ionicons name="shield-outline" size={28} color="#7C3AED" />
+          <View style={styles.iconContainer}>
+            <Ionicons name="cube-outline" size={28} color="#16834A" />
           </View>
 
           <View style={styles.cardText}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Team & Permissions</Text>
-              <View style={[styles.moduleTag, styles.purpleTag]}>
-                <Text style={styles.purpleTagText}>Owner Only</Text>
+              <Text style={styles.cardTitle}>{t('productsAndCategories', 'Products & Categories')}</Text>
+              <View
+                style={[
+                  styles.moduleTag,
+                  isOwner ? styles.ownerTag : styles.operatorTag,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.moduleTagText,
+                    isOwner ? styles.ownerTagText : styles.operatorTagText,
+                  ]}
+                >
+                  {isOwner ? t('fullControl', 'Full Control') : t('dailyStockEntry', 'Daily Stock Entry')}
+                </Text>
               </View>
             </View>
 
             <Text style={styles.cardDescription}>
-              Manage mandi operators, desk assignments, and role access permissions
+              {isOwner
+                ? t('productsOwnerDesc', 'Browse commodities with photos, categories, pricing & catalog')
+                : t('productsOperatorDesc', 'Adjust stock quantities (+ / -), view photos & check category stock')}
             </Text>
           </View>
 
           <Ionicons name="chevron-forward" size={22} color="#888888" />
         </TouchableOpacity>
-      )}
 
-      {/* Operator Permission Guidance Banner */}
-      {isOperator && (
-        <View style={styles.operatorNoticeCard}>
-          <Ionicons name="information-circle" size={24} color="#0284C7" />
-          <View style={styles.operatorNoticeContent}>
-            <Text style={styles.operatorNoticeTitle}>Operator Privileges Notice</Text>
-            <Text style={styles.operatorNoticeText}>
-              You have operational access for recording arrivals, dispatches, stock tracking, and customer lookups. Master category additions and commodity removals require Mandi Owner authorization.
+        {/* Customers Module Card */}
+        <TouchableOpacity
+          style={styles.menuCard}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Customers')}
+        >
+          <View style={styles.iconContainer}>
+            <Ionicons name="people-outline" size={28} color="#16834A" />
+          </View>
+
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('customers', 'Customers')}</Text>
+              <View style={[styles.moduleTag, styles.commonTag]}>
+                <Text style={styles.commonTagText}>
+                  {isOwner
+                    ? t('ownerAccountsLedgersTag', 'Accounts & Ledgers')
+                    : t('operatorDirectoryCallingTag', 'Directory & Calling')}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.cardDescription}>
+              {isOwner
+                ? t('customersOwnerDesc', 'View customer directory, balances, and add new mandi buyers')
+                : t('customersOperatorDesc', 'Search registered buyers & quickly verify for dispatch and billing')}
             </Text>
           </View>
-        </View>
-      )}
-    </ScrollView>
+
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
+
+        {/* Staff & Permissions Matrix (Owner Feature) */}
+        {isOwner && (
+          <TouchableOpacity
+            style={[styles.menuCard, styles.specialMenuCard]}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Staff')}
+          >
+            <View style={[styles.iconContainer, styles.specialIconContainer]}>
+              <Ionicons name="shield-outline" size={28} color="#7C3AED" />
+            </View>
+
+            <View style={styles.cardText}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardTitle}>{t('teamAndPermissions', 'Team & Permissions')}</Text>
+                <View style={[styles.moduleTag, styles.purpleTag]}>
+                  <Text style={styles.purpleTagText}>{t('ownerOnly', 'Owner Only')}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.cardDescription}>
+                {t('staffTeamDesc', 'Manage mandi operators, desk assignments, and role access permissions')}
+              </Text>
+            </View>
+
+            <Ionicons name="chevron-forward" size={22} color="#888888" />
+          </TouchableOpacity>
+        )}
+
+        {/* Operator Permission Guidance Banner */}
+        {isOperator && (
+          <View style={styles.operatorNoticeCard}>
+            <Ionicons name="information-circle" size={24} color="#0284C7" />
+            <View style={styles.operatorNoticeContent}>
+              <Text style={styles.operatorNoticeTitle}>{t('operatorNoticeTitle', 'Operator Privileges Notice')}</Text>
+              <Text style={styles.operatorNoticeText}>
+                {t('operatorNoticeText', 'You have operational access for recording arrivals, dispatches, stock tracking, and customer lookups. Master category additions and commodity removals require Mandi Owner authorization.')}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Settings Screen Shortcut Card */}
+        <TouchableOpacity
+          style={[styles.menuCard, { borderColor: isDark ? '#334155' : '#E2E8F0', marginTop: 10 }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: isDark ? '#064E3B' : '#DCFCE7' }]}>
+            <Ionicons name="settings-outline" size={24} color="#16834A" />
+          </View>
+
+          <View style={styles.cardText}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{t('settingsTitle', 'Settings & Preferences')}</Text>
+            </View>
+
+            <Text style={styles.cardDescription}>
+              {t('settingsSubtitle', 'Configure display theme, offline sync, and user profile')}
+            </Text>
+          </View>
+
+          <Ionicons name="chevron-forward" size={22} color="#888888" />
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* LANGUAGE SELECTOR MODAL (6 OPTIONS: English, हिन्दी, ಕನ್ನಡ, मराठी, తెలుగు, தமிழ்) */}
+      <LanguageSelectorModal
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
+      />
+    </View>
   );
 }
 
@@ -650,6 +689,31 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topLangBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+    backgroundColor: isDark ? '#064E3B40' : '#ECFDF5',
+    borderWidth: 1,
+    borderColor: isDark ? '#059669' : '#A7F3D0',
+  },
+  topLangText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#4ADE80' : '#15803D',
+  },
+  settingsToggleBtn: {
+    padding: 7,
+    borderRadius: 8,
+    backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: isDark ? '#334155' : '#E2E8F0',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   themeToggleBtn: {
@@ -672,10 +736,23 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     alignItems: 'center',
     marginBottom: 14,
   },
-  logo: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#16834A',
+  logoIconContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#050D0A',
+    borderWidth: 1.5,
+    borderColor: isDark ? '#16834A' : '#86EFAC',
+    shadowColor: '#16834A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoIcon: {
+    width: '100%',
+    height: '100%',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -1117,20 +1194,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  syncMiniStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 6,
-  },
-  syncMiniStatItem: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  syncMiniStatDot: {
-    fontSize: 11,
-    color: '#CBD5E1',
-  },
   moduleTag: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1138,30 +1201,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   moduleTagText: {
     fontSize: 11,
-    fontWeight: '700',
-  },
-  offlineTag: {
-    backgroundColor: '#FEF3C7',
-  },
-  offlineTagText: {
-    color: '#B45309',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  amberTag: {
-    backgroundColor: '#FEF3C7',
-  },
-  amberTagText: {
-    color: '#B45309',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  syncedTag: {
-    backgroundColor: '#DCFCE7',
-  },
-  syncedTagText: {
-    color: '#15803D',
-    fontSize: 10,
     fontWeight: '700',
   },
   ownerTag: {
@@ -1187,14 +1226,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
-  },
-  readOnlyTag: {
-    backgroundColor: '#FEF3C7',
-  },
-  readOnlyTagText: {
-    color: '#B45309',
-    fontSize: 11,
-    fontWeight: '700',
   },
   purpleTag: {
     backgroundColor: '#F3E8FF',

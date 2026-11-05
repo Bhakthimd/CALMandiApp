@@ -29,6 +29,12 @@ function getDb(): SQLite.SQLiteDatabase | null {
   try {
     if (typeof SQLite.openDatabaseSync === 'function') {
       dbInstance = SQLite.openDatabaseSync('mandi_offline_v2.db');
+      dbInstance.execSync(`
+        CREATE TABLE IF NOT EXISTS sync_meta (
+          key TEXT PRIMARY KEY,
+          value TEXT
+        );
+      `);
       return dbInstance;
     }
   } catch (err) {

@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 import { MandiProvider } from './src/context/MandiContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -46,9 +47,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <MandiProvider>
-          <MainApp />
-        </MandiProvider>
+        <LanguageProvider>
+          <MandiProvider>
+            <MainApp />
+          </MandiProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

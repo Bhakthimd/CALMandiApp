@@ -42,6 +42,9 @@ import SlipsScreen from '../screens/SlipsScreen';
 import KhataScreen from '../screens/KhataScreen';
 import CrateTallyScreen from '../screens/CrateTallyScreen';
 
+// Settings & Preferences
+import SettingsScreen from '../screens/SettingsScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
@@ -92,6 +95,9 @@ export default function AppNavigator() {
       <Stack.Screen name="Slips" component={SlipsScreen} />
       <Stack.Screen name="Khata" component={KhataScreen} />
       <Stack.Screen name="CrateTally" component={CrateTallyScreen} />
+
+      {/* Settings & Language */}
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 }

@@ -13,13 +13,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { UserRole } from '../types';
 import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
 import CALMandiLogo from '../components/CALMandiLogo';
+import LanguageSelectorModal from '../components/LanguageSelectorModal';
 
 export default function WelcomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { loginUser } = useMandi();
   const { isDark, colors, setThemeMode, theme } = useTheme();
+  const { currentLanguageOption, t } = useLanguage();
+  const [langModalVisible, setLangModalVisible] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Owner');
 
   const handleLogin = () => {
@@ -61,25 +65,8 @@ export default function WelcomeScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Top Bar: APMC Tag & Theme Switcher */}
+          {/* Top Bar: Theme Switcher & Language Selector */}
           <View style={styles.topControlRow}>
-            <View
-              style={[
-                styles.tagBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(23, 36, 28, 0.92)'
-                    : 'rgba(255, 255, 255, 0.94)',
-                  borderColor: isDark ? colors.border : 'rgba(255, 255, 255, 0.6)',
-                },
-              ]}
-            >
-              <Ionicons name="sparkles" size={13} color={colors.gold} />
-              <Text style={[styles.tagBadgeText, { color: colors.primaryDark }]}>
-                Smart Krishi APMC
-              </Text>
-            </View>
-
             {/* Interactive Light / Dark Theme Segmented Switcher */}
             <View
               style={[
@@ -142,6 +129,26 @@ export default function WelcomeScreen({ navigation }: any) {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Language Selector Button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.langBtnWelcome,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(15, 25, 20, 0.95)'
+                    : 'rgba(255, 255, 255, 0.95)',
+                  borderColor: isDark ? colors.border : '#E2E8F0',
+                },
+              ]}
+              onPress={() => setLangModalVisible(true)}
+            >
+              <Ionicons name="globe-outline" size={13} color="#16834A" />
+              <Text style={[styles.langBtnWelcomeText, { color: colors.textPrimary }]}>
+                {currentLanguageOption.flagEmoji} {currentLanguageOption.nativeName}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Official CALMandi Logo & Tagline Header */}
@@ -154,7 +161,7 @@ export default function WelcomeScreen({ navigation }: any) {
                 {theme.typography.tagline}
               </Text>
               <Text style={styles.subTaglineText}>
-                Daily auctions, live crate tally, digital khata & slips
+                {t('welcomeSubTagline', 'Daily auctions, live crate tally, digital khata & slips')}
               </Text>
             </View>
           </View>
@@ -172,11 +179,11 @@ export default function WelcomeScreen({ navigation }: any) {
             <View style={styles.sectionTitleRow}>
               <Ionicons name="people-circle-outline" size={20} color={colors.primary} />
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                Select Your Role
+                {t('selectYourRole', 'Select Your Role')}
               </Text>
             </View>
             <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              Tailored experience for business owners & floor staff
+              {t('roleSubtitle', 'Tailored experience for business owners & floor staff')}
             </Text>
 
             {/* Owner Role Card */}
@@ -220,7 +227,7 @@ export default function WelcomeScreen({ navigation }: any) {
                         selectedRole === 'Owner' && { color: colors.primaryDark },
                       ]}
                     >
-                      Owner / Vyapari
+                      {t('ownerRoleTitle', 'Owner / Vyapari')}
                     </Text>
                     <View
                       style={[
@@ -229,12 +236,12 @@ export default function WelcomeScreen({ navigation }: any) {
                       ]}
                     >
                       <Text style={[styles.roleBadgeOwnerText, { color: colors.ownerBadgeText }]}>
-                        मंडी आढ़ती
+                        {t('ownerBadgeWelcome', 'Mandi Vyapari')}
                       </Text>
                     </View>
                   </View>
                   <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>
-                    Complete business control: Khata, udhaar ledger, profit & staff management.
+                    {t('ownerRoleDesc', 'Complete business control: Khata, udhaar ledger, profit & staff management.')}
                   </Text>
                 </View>
               </View>
@@ -301,7 +308,7 @@ export default function WelcomeScreen({ navigation }: any) {
                         selectedRole === 'Operator' && { color: colors.operatorBadgeText },
                       ]}
                     >
-                      Floor Operator
+                      {t('operatorRoleTitle', 'Floor Operator')}
                     </Text>
                     <View
                       style={[
@@ -315,12 +322,12 @@ export default function WelcomeScreen({ navigation }: any) {
                           { color: colors.operatorBadgeText },
                         ]}
                       >
-                        मुनीम / स्टाफ
+                        {t('operatorBadgeWelcome', 'Clerk / Staff')}
                       </Text>
                     </View>
                   </View>
                   <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>
-                    Fast floor operations: Live crate clicker, gate in/out slips & cash drawer.
+                    {t('operatorRoleDesc', 'Fast floor operations: Live crate clicker, gate in/out slips & cash drawer.')}
                   </Text>
                 </View>
               </View>
@@ -363,7 +370,9 @@ export default function WelcomeScreen({ navigation }: any) {
             >
               <Ionicons name="log-in-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
               <Text style={styles.primaryBtnText}>
-                Login as {selectedRole}
+                {t('loginAsRole', `Login as ${selectedRole}`, {
+                  role: selectedRole === 'Owner' ? t('owner', 'Owner') : t('operator', 'Operator'),
+                })}
               </Text>
               <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
             </TouchableOpacity>
@@ -387,13 +396,13 @@ export default function WelcomeScreen({ navigation }: any) {
                 style={{ marginRight: 8 }}
               />
               <Text style={[styles.secondaryBtnText, { color: colors.secondaryBtnText }]}>
-                Register New Mandi Account
+                {t('registerButtonText', 'Register New Mandi Account')}
               </Text>
             </TouchableOpacity>
 
             {/* Quick 1-Tap Demo Shortcuts for Fast Evaluation */}
             <View style={styles.demoBar}>
-              <Text style={styles.demoBarLabel}>Or test instantly:</Text>
+              <Text style={styles.demoBarLabel}>{t('quickDemoAccess', 'Or test instantly:')}</Text>
               <View style={styles.demoButtonsRow}>
                 <TouchableOpacity
                   activeOpacity={0.75}
@@ -407,7 +416,7 @@ export default function WelcomeScreen({ navigation }: any) {
                   onPress={() => handleInstantDemo('Owner')}
                 >
                   <Text style={[styles.demoChipText, { color: colors.primaryDark }]}>
-                    👑 Owner Demo
+                    {t('ownerDemo', '👑 Owner Demo')}
                   </Text>
                 </TouchableOpacity>
 
@@ -428,7 +437,7 @@ export default function WelcomeScreen({ navigation }: any) {
                       { color: colors.operatorBadgeText },
                     ]}
                   >
-                    👷 Operator Demo
+                    {t('operatorDemo', '👷 Operator Demo')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -441,6 +450,12 @@ export default function WelcomeScreen({ navigation }: any) {
           </Text>
         </ScrollView>
       </ImageBackground>
+
+      {/* Language Selector Modal */}
+      <LanguageSelectorModal
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
+      />
     </View>
   );
 }
@@ -470,26 +485,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  tagBadge: {
+  langBtnWelcome: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 9999,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  tagBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginLeft: 6,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+  langBtnWelcomeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   themeSegmentContainer: {
     flexDirection: 'row',

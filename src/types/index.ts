@@ -1,5 +1,15 @@
 export type UserRole = 'Owner' | 'Operator';
 
+export type SupportedLanguage = 'en' | 'hi' | 'kn' | 'mr' | 'te' | 'ta';
+
+export interface LanguageOption {
+  code: SupportedLanguage;
+  name: string;
+  nativeName: string;
+  subText: string;
+  flagEmoji: string;
+}
+
 export type UserProfile = {
   id: string;
   name: string;
@@ -306,6 +316,9 @@ export type RootStackParamList = {
 
   // Reports & Analytics Hub
   Reports: { initialTab?: 'financial' | 'product' } | undefined;
+
+  // Settings & Preferences
+  Settings: undefined;
 
   // Patti & Invoices
   PattiReceipt: { pattiId?: string; saleId?: string; type: 'PATTI' | 'INVOICE' };
