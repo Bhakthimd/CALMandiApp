@@ -10,10 +10,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
+import { CATEGORY_EMOJIS } from '../utils/productImages';
 
 export default function CategoriesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { categories, products, isOwner, isOperator, canAddCategory } = useMandi();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const { categories, products, isOwner, canAddCategory } = useMandi();
 
   const handleAddCategoryPress = () => {
     if (!canAddCategory) {
@@ -45,10 +50,20 @@ export default function CategoriesScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Home</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Home</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>Categories</Text>
@@ -58,6 +73,24 @@ export default function CategoriesScreen({ navigation }: any) {
             ? 'Configure product classifications and market departments.'
             : 'View active mandi categories configured by the Mandi Owner.'}
         </Text>
+
+        {/* Combined Catalog Shortcut Banner */}
+        <TouchableOpacity
+          style={styles.combinedBanner}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Products')}
+        >
+          <View style={styles.combinedBannerLeft}>
+            <Ionicons name="apps" size={20} color="#16834A" />
+            <View>
+              <Text style={styles.combinedBannerTitle}>View Combined Products & Categories</Text>
+              <Text style={styles.combinedBannerSub}>
+                See all {products.length} products with photos categorized
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#16834A" />
+        </TouchableOpacity>
 
         {/* Role Banner */}
         <View
@@ -95,7 +128,7 @@ export default function CategoriesScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.addButton}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('AddCategory')}
+            onPress={handleAddCategoryPress}
           >
             <Text style={styles.addButtonText}>+ Add Category</Text>
           </TouchableOpacity>
@@ -124,13 +157,21 @@ export default function CategoriesScreen({ navigation }: any) {
         ) : (
           categories.map((category) => {
             const matchingProducts = products.filter(
-              (p) => p.category.toLowerCase() === category.name.toLowerCase()
+              (p) => (p.category || '').toLowerCase() === category.name.toLowerCase()
             );
+            const emoji = CATEGORY_EMOJIS[category.name.toLowerCase()] || '🏷️';
 
             return (
-              <View key={category.id} style={styles.categoryCard}>
+              <TouchableOpacity
+                key={category.id}
+                style={styles.categoryCard}
+                activeOpacity={0.7}
+                onPress={() =>
+                  navigation.navigate('Products', { category: category.name })
+                }
+              >
                 <View style={styles.iconContainer}>
-                  <Ionicons name="pricetag-outline" size={24} color="#16834A" />
+                  <Text style={{ fontSize: 24 }}>{emoji}</Text>
                 </View>
 
                 <View style={styles.categoryInfo}>
@@ -147,12 +188,15 @@ export default function CategoriesScreen({ navigation }: any) {
                   </Text>
                 </View>
 
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={20}
-                  color="#16834A"
-                />
-              </View>
+                <View style={styles.viewProductsBadge}>
+                  <Text style={styles.viewProductsText}>View Items</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color="#16834A"
+                  />
+                </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -161,7 +205,15 @@ export default function CategoriesScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -192,14 +244,41 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 6,
-    marginBottom: 16,
+    marginBottom: 14,
     lineHeight: 21,
+  },
+  combinedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  combinedBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  combinedBannerTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#065F46',
+  },
+  combinedBannerSub: {
+    fontSize: 11,
+    color: '#047857',
+    marginTop: 1,
   },
   roleBanner: {
     flexDirection: 'row',
@@ -238,16 +317,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     shadowColor: '#16834A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
-  },
-  addButtonLocked: {
-    backgroundColor: '#64748B',
-    shadowColor: '#64748B',
   },
   addButtonText: {
     color: '#FFFFFF',
@@ -264,7 +339,7 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 19,
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   countBadge: {
     backgroundColor: '#E8F4EC',
@@ -278,34 +353,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 30,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#555555',
+    color: colors.textPrimary,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 20,
   },
   categoryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -319,19 +394,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F4EC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   categoryInfo: {
     flex: 1,
   },
   categoryName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   categoryProductsText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 3,
+  },
+  viewProductsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 3,
+  },
+  viewProductsText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16834A',
   },
 });

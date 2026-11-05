@@ -11,9 +11,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 
 export default function CustomersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customers, isOwner, getCustomerBalance } = useMandi();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'Farmer' | 'Buyer' | 'Trader'>('ALL');
@@ -58,10 +62,20 @@ export default function CustomersScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Home</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Home</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>Customers & Farmers</Text>
@@ -109,7 +123,7 @@ export default function CustomersScreen({ navigation }: any) {
           <TextInput
             style={styles.searchInput}
             placeholder="Search by buyer or farmer name, phone, shop..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -322,10 +336,18 @@ export default function CustomersScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
   },
   content: {
     padding: 20,
@@ -353,11 +375,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 6,
     marginBottom: 16,
     lineHeight: 21,
@@ -395,19 +417,19 @@ const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   filterTabsRow: {
     flexDirection: 'row',
@@ -418,9 +440,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     alignItems: 'center',
   },
   filterTabActive: {
@@ -458,7 +480,7 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   countBadge: {
     backgroundColor: '#E8F4EC',
@@ -472,12 +494,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 30,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
   },
   emptyText: {
     fontSize: 18,
@@ -487,18 +509,18 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 20,
   },
   customerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
     elevation: 2,
   },
   cardHeaderRow: {
@@ -533,7 +555,7 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   typeTag: {
     paddingHorizontal: 6,
@@ -570,12 +592,12 @@ const styles = StyleSheet.create({
   },
   customerBusiness: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   customerMobile: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.textMuted,
   },
   callButton: {
     width: 36,
@@ -593,12 +615,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   balanceInfoCol: {},
   balanceStatusLabel: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   balanceStatusVal: {
     fontSize: 14,
@@ -615,12 +637,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   actionBtnSmallHighlight: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderColor: '#A7F3D0',
   },
   actionBtnSmallText: {

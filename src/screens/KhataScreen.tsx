@@ -14,10 +14,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { Customer } from '../types';
 
 export default function KhataScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customers, totalUdhaar, settleCustomerBalance, isOwner } = useMandi();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -241,10 +245,18 @@ Thank you,
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAF8',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -280,12 +292,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -340,16 +352,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   khataCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -365,16 +377,16 @@ const styles = StyleSheet.create({
   buyerName: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   businessName: {
     fontSize: 13,
-    color: '#4B5563',
+    color: colors.textSecondary,
     marginTop: 1,
   },
   mobileText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 3,
   },
   statusPill: {
@@ -407,7 +419,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   reminderBtn: {
     flex: 1,
@@ -448,25 +460,25 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 22,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   modalSub: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   modalLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   modalInput: {
@@ -476,7 +488,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 20,
   },
   modalBtnsRow: {
@@ -487,12 +499,12 @@ const styles = StyleSheet.create({
   cancelBtn: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderRadius: 8,
   },
   cancelBtnText: {
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   confirmSettleBtn: {
     paddingVertical: 10,

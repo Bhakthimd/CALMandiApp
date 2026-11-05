@@ -12,10 +12,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { CustomerPricingRule } from '../types';
 
 export default function CustomerPricingScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customerId: initialCustomerId } = route.params || {};
   const {
     customers,
@@ -154,7 +158,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Customer-Specific Pricing</Text>
@@ -558,7 +562,15 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -568,7 +580,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -582,7 +594,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
@@ -634,7 +646,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: '#DDDDDD',
   },
@@ -660,7 +672,7 @@ const styles = StyleSheet.create({
   rulesListTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   rulesListAddLink: {
     fontSize: 13,
@@ -670,7 +682,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     padding: 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E5E5',
@@ -688,7 +700,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   ruleCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -696,7 +708,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ruleCardInactive: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     opacity: 0.7,
   },
   ruleTopRow: {
@@ -711,11 +723,11 @@ const styles = StyleSheet.create({
   ruleCustName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   productBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -724,7 +736,7 @@ const styles = StyleSheet.create({
   productBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   rulePriceCol: {
     alignItems: 'flex-end',
@@ -746,7 +758,7 @@ const styles = StyleSheet.create({
   },
   ruleNotesBox: {
     marginTop: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     padding: 6,
     borderRadius: 6,
   },
@@ -761,7 +773,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   ruleEffectiveText: {
     fontSize: 11,
@@ -794,7 +806,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 18,
     maxHeight: '85%',
@@ -808,7 +820,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   formLabel: {
     fontSize: 12,
@@ -825,7 +837,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
     borderColor: '#DDDDDD',
   },
@@ -844,7 +856,7 @@ const styles = StyleSheet.create({
   modalInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
     borderColor: '#DDDDDD',
     borderRadius: 8,
@@ -855,24 +867,24 @@ const styles = StyleSheet.create({
   modalRupee: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginRight: 6,
   },
   modalPriceInput: {
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   modalNotesInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
     borderColor: '#DDDDDD',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   modalSubmitBtn: {

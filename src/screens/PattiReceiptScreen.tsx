@@ -10,9 +10,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 
 export default function PattiReceiptScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { pattiId, saleId, type = 'PATTI' } = route.params || {};
   const { pattis, sales, currentUser } = useMandi();
 
@@ -53,7 +57,7 @@ export default function PattiReceiptScreen({ route, navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>
@@ -268,7 +272,15 @@ export default function PattiReceiptScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -278,7 +290,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -292,7 +304,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
@@ -307,7 +319,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   slipCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 18,
     borderWidth: 1,
@@ -333,7 +345,7 @@ const styles = StyleSheet.create({
   slipBadgeTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
     backgroundColor: '#E8F4EC',
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -368,11 +380,11 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -392,7 +404,7 @@ const styles = StyleSheet.create({
   },
   td: {
     fontSize: 12,
-    color: '#222222',
+    color: colors.textPrimary,
   },
   calcLine: {
     flexDirection: 'row',
@@ -406,7 +418,7 @@ const styles = StyleSheet.create({
   calcVal: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   netLine: {
     flexDirection: 'row',
@@ -417,7 +429,7 @@ const styles = StyleSheet.create({
   netLabel: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   netVal: {
     fontSize: 18,

@@ -10,20 +10,58 @@ import {
   Keyboard,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
+import { getProductImage, DEFAULT_PRODUCT_IMAGES } from '../utils/productImages';
 
-export default function AddProductScreen({ navigation }: any) {
+const POPULAR_PRESETS = [
+  { name: 'Banana', emoji: '🍌' },
+  { name: 'Apple', emoji: '🍎' },
+  { name: 'Tomato', emoji: '🍅' },
+  { name: 'Potato', emoji: '🥔' },
+  { name: 'Onion', emoji: '🧅' },
+  { name: 'Mango', emoji: '🥭' },
+  { name: 'Carrot', emoji: '🥕' },
+  { name: 'Spinach', emoji: '🥬' },
+  { name: 'Almonds', emoji: '🥜' },
+  { name: 'Chilli', emoji: '🌶️' },
+  { name: 'Garlic', emoji: '🧄' },
+];
+
+export default function AddProductScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { categories, units, addProduct } = useMandi();
 
+  const initialCat = route?.params?.initialCategory || '';
+
   const [name, setName] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCat);
   const [selectedUnit, setSelectedUnit] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
   const [price, setPrice] = useState<string>('');
+  const [customImage, setCustomImage] = useState<string>('');
+  const [showImageInput, setShowImageInput] = useState<boolean>(false);
+
+  const previewImageUrl = getProductImage({
+    name,
+    category: selectedCategory,
+    image: customImage,
+  });
+
+  const handleSelectPreset = (presetName: string) => {
+    setName(presetName);
+    const key = presetName.toLowerCase();
+    if (DEFAULT_PRODUCT_IMAGES[key]) {
+      setCustomImage(DEFAULT_PRODUCT_IMAGES[key]);
+    }
+  };
 
   const handleSave = () => {
     const cleanName = name.trim();
@@ -49,6 +87,7 @@ export default function AddProductScreen({ navigation }: any) {
       unit: selectedUnit,
       quantity: quantity.trim() || '0',
       price: price.trim(),
+      image: customImage.trim() || previewImageUrl,
     });
 
     if (success) {
@@ -56,7 +95,7 @@ export default function AddProductScreen({ navigation }: any) {
       const qtyMsg = quantity.trim() ? `${quantity.trim()} ${selectedUnit}` : selectedUnit;
       Alert.alert(
         'Product Added',
-        `${cleanName} (${selectedCategory}, ${qtyMsg}) has been added successfully.`,
+        `${cleanName} (${selectedCategory}, ${qtyMsg}) has been added successfully with photo.`,
         [
           {
             text: 'OK',
@@ -93,26 +132,108 @@ export default function AddProductScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Products</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Products</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>Add Product</Text>
 
         <Text style={styles.subtitle}>
-          Add a new product with its category and measuring unit.
+          Add a new commodity with product image, category, and measuring unit.
         </Text>
 
         {/* Form Card */}
         <View style={styles.formCard}>
+          {/* Product Image Preview Card */}
+          <View style={styles.imagePreviewContainer}>
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+            <View style={styles.imagePreviewTextWrap}>
+              <Text style={styles.imagePreviewTitle}>Product Photo</Text>
+              <Text style={styles.imagePreviewDesc}>
+                {customImage
+                  ? 'Custom photo attached'
+                  : 'Auto-matched fresh produce photo'}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.customImageToggleBtn}
+                activeOpacity={0.7}
+                onPress={() => setShowImageInput(!showImageInput)}
+              >
+                <Ionicons name="camera-outline" size={14} color="#16834A" />
+                <Text style={styles.customImageToggleText}>
+                  {showImageInput ? 'Hide Image URL' : 'Set Custom Image URL'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {showImageInput && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={styles.helperText}>Custom Photo Image URL (HTTPS):</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="https://images.unsplash.com/photo-..."
+                placeholderTextColor={colors.textMuted}
+                value={customImage}
+                onChangeText={setCustomImage}
+                autoCapitalize="none"
+              />
+            </View>
+          )}
+
+          {/* Quick Preset Selector */}
+          <Text style={styles.label}>Quick Commodity Presets</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.presetScroll}
+          >
+            {POPULAR_PRESETS.map((preset) => (
+              <TouchableOpacity
+                key={preset.name}
+                style={[
+                  styles.presetChip,
+                  name.toLowerCase() === preset.name.toLowerCase() && styles.presetChipActive,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPreset(preset.name)}
+              >
+                <Text style={styles.presetEmoji}>{preset.emoji}</Text>
+                <Text
+                  style={[
+                    styles.presetText,
+                    name.toLowerCase() === preset.name.toLowerCase() && styles.presetTextActive,
+                  ]}
+                >
+                  {preset.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
           {/* Product Name */}
           <Text style={styles.label}>Product Name *</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g. Mango, Potato, Coriander"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -140,7 +261,7 @@ export default function AddProductScreen({ navigation }: any) {
           ) : (
             <View style={styles.chipGrid}>
               {categories.map((cat) => {
-                const isSelected = selectedCategory === cat.name;
+                const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase();
                 return (
                   <TouchableOpacity
                     key={cat.id}
@@ -217,14 +338,14 @@ export default function AddProductScreen({ navigation }: any) {
           </View>
 
           {/* Numbers / Quantity Input */}
-          <Text style={styles.label}>Quantity / Stock Count (Numbers) *</Text>
+          <Text style={styles.label}>Initial Available Quantity (Numbers) *</Text>
           <Text style={styles.helperText}>
-            Enter available quantity in {selectedUnit || 'selected unit'}:
+            Enter starting count in {selectedUnit || 'selected unit'}:
           </Text>
           <TextInput
             style={styles.input}
             placeholder={selectedUnit ? `e.g. 25 (${selectedUnit})` : 'e.g. 25, 50, 100'}
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             keyboardType="number-pad"
             value={quantity}
             onChangeText={(val) => setQuantity(val.replace(/\D/g, ''))}
@@ -239,7 +360,7 @@ export default function AddProductScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder={selectedUnit ? `e.g. 40 (₹ per ${selectedUnit})` : 'e.g. 40, 1200'}
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             keyboardType="number-pad"
             value={price}
             onChangeText={(val) => setPrice(val.replace(/\D/g, ''))}
@@ -268,10 +389,18 @@ export default function AddProductScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
   },
   content: {
     padding: 20,
@@ -299,62 +428,135 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 6,
-    marginBottom: 22,
+    marginBottom: 20,
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
-    padding: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  label: {
-    fontSize: 15,
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAF9',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  imagePreview: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+  },
+  imagePreviewTextWrap: {
+    flex: 1,
+  },
+  imagePreviewTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  imagePreviewDesc: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  customImageToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 4,
+  },
+  customImageToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16834A',
+  },
+  presetScroll: {
+    paddingVertical: 6,
+    gap: 6,
+    marginBottom: 6,
+  },
+  presetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 4,
+  },
+  presetChipActive: {
+    backgroundColor: '#E8F5EC',
+    borderColor: '#16834A',
+  },
+  presetEmoji: {
+    fontSize: 14,
+  },
+  presetText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#333333',
-    marginTop: 14,
+    color: '#374151',
+  },
+  presetTextActive: {
+    color: '#16834A',
+    fontWeight: '700',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: 12,
     marginBottom: 6,
   },
   helperText: {
-    fontSize: 13,
-    color: '#777777',
-    marginBottom: 10,
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-    color: '#222222',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 8,
+    padding: 13,
+    fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: colors.cardBackground,
+    marginBottom: 6,
   },
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     borderWidth: 1.5,
-    borderColor: '#DDDDDD',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 10,
     gap: 6,
   },
@@ -363,9 +565,9 @@ const styles = StyleSheet.create({
     borderColor: '#16834A',
   },
   categoryChipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   categoryChipTextSelected: {
     color: '#FFFFFF',
@@ -374,11 +576,11 @@ const styles = StyleSheet.create({
   unitChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     borderWidth: 1.5,
-    borderColor: '#DDDDDD',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
   },
   unitChipSelected: {
@@ -386,9 +588,9 @@ const styles = StyleSheet.create({
     borderColor: '#16834A',
   },
   unitChipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   unitChipTextSelected: {
     color: '#FFFFFF',
@@ -421,26 +623,26 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#16834A',
-    padding: 17,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 26,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#F3F4F6',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelButton: {
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
+    padding: 13,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
   },
   cancelButtonText: {
-    color: '#555555',
-    fontSize: 16,
+    color: colors.textSecondary,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

@@ -12,14 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { UserRole } from '../types';
 import { useTheme } from '../context/ThemeContext';
-import NetworkStatusBanner from '../components/NetworkStatusBanner';
+import { ThemeColors } from '../styles/theme';
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { isDark, toggleTheme, colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const {
-    tallyRecords,
-    totalUdhaar,
     slips,
     currentUser,
     isOwner,
@@ -33,11 +32,6 @@ export default function HomeScreen({ navigation }: any) {
     customers,
     categories,
     products,
-    pendingArrivalsCount,
-    pendingSalesCount,
-    failedRecordsCount,
-    pendingSyncCount,
-    syncPendingRecords,
     financialSummary,
     pricingRules,
   } = useMandi();
@@ -101,13 +95,7 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* 1. CLEARLY VISIBLE ONLINE/OFFLINE STATUS BANNER AT TOP OF HOMESCREEN */}
-      {/* 2. INCLUDES "TEST OFFLINE" BUTTON & "DATA SYNC CENTER" BUTTON */}
-      <NetworkStatusBanner
-        onOpenSyncCenter={() => navigation.navigate('SyncCenter')}
-        onSyncPress={() => syncPendingRecords()}
-      />
-
+      
       {/* User Profile & Role Banner Card */}
       <View
         style={[
@@ -270,13 +258,12 @@ export default function HomeScreen({ navigation }: any) {
               <View style={styles.shiftStatItem}>
                 <Text
                   style={[
-                    styles.shiftStatNumber,
-                    pendingSyncCount > 0 ? { color: '#D97706' } : { color: '#16834A' },
+                    styles.shiftStatNumber, { color: '#16834A' }
                   ]}
                 >
-                  {pendingSyncCount}
+                  {slips ? slips.length : 0}
                 </Text>
-                <Text style={styles.shiftStatLabel}>Offline Queue</Text>
+                <Text style={styles.shiftStatLabel}>Active Slips</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.shiftStatItem}>
@@ -292,59 +279,8 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* 3. VISIBLE DATA SYNC CENTER & OFFLINE OPERATIONS */}
       <Text style={styles.sectionTitle}>
-        {isOwner ? 'Mandi Operations & Offline Sync' : 'Floor Operations (Offline Ready)'}
+        {isOwner ? 'Mandi Daily Operations' : 'Floor Operations'}
       </Text>
-
-      {/* Data Sync Center Card (Requirement 3) */}
-      <TouchableOpacity
-        style={[styles.menuCard, styles.syncMenuCard]}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('SyncCenter')}
-      >
-        <View style={[styles.iconContainer, styles.syncIconContainer]}>
-          <Ionicons name="cloud-upload" size={28} color="#D97706" />
-        </View>
-
-        <View style={styles.cardText}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Data Sync Center</Text>
-            <View
-              style={[
-                styles.moduleTag,
-                pendingSyncCount > 0 ? styles.amberTag : styles.syncedTag,
-              ]}
-            >
-              <Text
-                style={
-                  pendingSyncCount > 0 ? styles.amberTagText : styles.syncedTagText
-                }
-              >
-                {pendingSyncCount > 0
-                  ? `⚡ ${pendingSyncCount} Pending Sync`
-                  : failedRecordsCount > 0
-                  ? `⚠️ ${failedRecordsCount} Failed`
-                  : '✓ Synced to Cloud'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.cardDescription}>
-            Manage offline arrivals & sales, view sync history, and upload records to Mandi Cloud
-          </Text>
-
-          <View style={styles.syncMiniStatsRow}>
-            <Text style={styles.syncMiniStatItem}>
-              Inward: <Text style={{ fontWeight: 'bold' }}>{pendingArrivalsCount} pending</Text>
-            </Text>
-            <Text style={styles.syncMiniStatDot}>•</Text>
-            <Text style={styles.syncMiniStatItem}>
-              Outward: <Text style={{ fontWeight: 'bold' }}>{pendingSalesCount} pending</Text>
-            </Text>
-          </View>
-        </View>
-
-        <Ionicons name="chevron-forward" size={22} color="#888888" />
-      </TouchableOpacity>
 
       {/* Record Arrival Card */}
       <TouchableOpacity
@@ -359,13 +295,10 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.cardText}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>Record Arrival (आवक)</Text>
-            <View style={[styles.moduleTag, styles.offlineTag]}>
-              <Text style={styles.offlineTagText}>⚡ Works Offline</Text>
             </View>
-          </View>
 
           <Text style={styles.cardDescription}>
-            Record incoming farmer produce, lot numbers, and add crates to stock without internet
+            Record incoming farmer produce, lot numbers, and add crates to stock to live inventory
           </Text>
         </View>
 
@@ -385,13 +318,10 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.cardText}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>Record Sale (जावक / Bikri)</Text>
-            <View style={[styles.moduleTag, styles.offlineTag]}>
-              <Text style={styles.offlineTagText}>⚡ Works Offline</Text>
             </View>
-          </View>
 
           <Text style={styles.cardDescription}>
-            Dispatch produce to buyers, calculate totals, and record cash/credit bills with zero network
+            Dispatch produce to buyers, calculate totals, and record cash/credit bills at the counter
           </Text>
         </View>
 
@@ -574,7 +504,7 @@ export default function HomeScreen({ navigation }: any) {
 
         <View style={styles.cardText}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Products</Text>
+            <Text style={styles.cardTitle}>Products & Categories</Text>
             <View
               style={[
                 styles.moduleTag,
@@ -594,8 +524,8 @@ export default function HomeScreen({ navigation }: any) {
 
           <Text style={styles.cardDescription}>
             {isOwner
-              ? 'Add products, update pricing, margins & manage master catalog'
-              : 'Adjust stock quantities (+ / -), record shipments & check prices'}
+              ? 'Browse commodities with photos, categories, pricing & catalog'
+              : 'Adjust stock quantities (+ / -), view photos & check category stock'}
           </Text>
         </View>
 
@@ -707,7 +637,7 @@ export default function HomeScreen({ navigation }: any) {
           <View style={styles.operatorNoticeContent}>
             <Text style={styles.operatorNoticeTitle}>Operator Privileges Notice</Text>
             <Text style={styles.operatorNoticeText}>
-              You have operational access for recording offline arrivals, dispatches, stock tracking, and customer lookups. Master category additions and commodity removals require Mandi Owner authorization.
+              You have operational access for recording arrivals, dispatches, stock tracking, and customer lookups. Master category additions and commodity removals require Mandi Owner authorization.
             </Text>
           </View>
         </View>
@@ -716,7 +646,8 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -730,7 +661,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -761,7 +692,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   profileCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 18,
     marginBottom: 20,
@@ -776,7 +707,7 @@ const styles = StyleSheet.create({
     borderColor: '#A7F3D0',
   },
   operatorCardBorder: {
-    borderColor: '#BAE6FD',
+    borderColor: isDark ? '#0284C7' : '#BAE6FD',
   },
   profileHeaderRow: {
     flexDirection: 'row',
@@ -790,18 +721,18 @@ const styles = StyleSheet.create({
   },
   welcomeGreeting: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   userName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginTop: 2,
   },
   mandiBusiness: {
     fontSize: 13,
-    color: '#4B5563',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   roleBadge: {
@@ -829,7 +760,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   roleDescContainer: {
     flex: 1,
@@ -837,7 +768,7 @@ const styles = StyleSheet.create({
   },
   roleTagline: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   roleSwitchBtn: {
@@ -868,7 +799,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 14,
   },
   liveIndicator: {
@@ -894,20 +825,20 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   metricCardPrimary: {
     width: '100%',
     borderColor: '#A7F3D0',
-    backgroundColor: '#F8FCF9',
+    backgroundColor: isDark ? '#143823' : '#F8FCF9',
   },
   metricCardAlert: {
     borderColor: '#FECACA',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: isDark ? '#3B1212' : '#FFF8F8',
   },
   metricIconWrapPrimary: {
     width: 36,
@@ -950,7 +881,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -963,22 +894,22 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   metricSubtext: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
   operatorShiftSection: {
     marginBottom: 20,
   },
   operatorShiftCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: '#BAE6FD',
+    borderColor: isDark ? '#0284C7' : '#BAE6FD',
   },
   operatorShiftHeader: {
     flexDirection: 'row',
@@ -1008,17 +939,17 @@ const styles = StyleSheet.create({
   },
   shiftTimeText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   shiftCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   shiftCardDesc: {
     fontSize: 13,
-    color: '#4B5563',
+    color: colors.textSecondary,
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -1026,11 +957,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F8FAFC',
     borderRadius: 12,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.border,
   },
   shiftStatItem: {
     alignItems: 'center',
@@ -1049,19 +980,19 @@ const styles = StyleSheet.create({
   },
   shiftStatLabel: {
     fontSize: 10,
-    color: '#64748B',
+    color: colors.textSecondary,
     fontWeight: '600',
     textAlign: 'center',
   },
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 18,
     marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -1070,20 +1001,20 @@ const styles = StyleSheet.create({
   },
   arrivalMenuCard: {
     borderColor: '#A7F3D0',
-    backgroundColor: '#FCFDFD',
+    backgroundColor: colors.cardBackground,
   },
   saleMenuCard: {
-    borderColor: '#BAE6FD',
-    backgroundColor: '#FCFDFD',
+    borderColor: isDark ? '#0284C7' : '#BAE6FD',
+    backgroundColor: colors.cardBackground,
   },
   syncMenuCard: {
     borderColor: '#FCD34D',
-    backgroundColor: '#FFFDF7',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1.5,
   },
   cashDebtMenuCard: {
     borderColor: '#A7F3D0',
-    backgroundColor: '#FCFDFD',
+    backgroundColor: colors.cardBackground,
   },
   cashDebtIconWrap: {
     backgroundColor: '#E8F5EC',
@@ -1097,8 +1028,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   gradesMenuCard: {
-    borderColor: '#BAE6FD',
-    backgroundColor: '#FCFDFD',
+    borderColor: isDark ? '#0284C7' : '#BAE6FD',
+    backgroundColor: colors.cardBackground,
   },
   gradesIconWrap: {
     backgroundColor: '#E0F2FE',
@@ -1113,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   pricingMenuCard: {
     borderColor: '#FCD34D',
-    backgroundColor: '#FFFDF7',
+    backgroundColor: colors.cardBackground,
   },
   pricingIconWrap: {
     backgroundColor: '#FEF3C7',
@@ -1128,7 +1059,7 @@ const styles = StyleSheet.create({
   },
   reportsMenuCard: {
     borderColor: '#DDD6FE',
-    backgroundColor: '#FAF5FF',
+    backgroundColor: colors.cardBackground,
   },
   reportsIconWrap: {
     backgroundColor: '#F3E8FF',
@@ -1143,7 +1074,7 @@ const styles = StyleSheet.create({
   },
   specialMenuCard: {
     borderColor: '#DDD6FE',
-    backgroundColor: '#FAF5FF',
+    backgroundColor: colors.cardBackground,
   },
   iconContainer: {
     width: 52,
@@ -1179,11 +1110,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   cardDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   syncMiniStatsRow: {
@@ -1194,7 +1125,7 @@ const styles = StyleSheet.create({
   },
   syncMiniStatItem: {
     fontSize: 11,
-    color: '#64748B',
+    color: colors.textSecondary,
   },
   syncMiniStatDot: {
     fontSize: 11,
@@ -1250,10 +1181,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   commonTag: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
   },
   commonTagText: {
-    color: '#4B5563',
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -1274,13 +1205,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   operatorNoticeCard: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: isDark ? '#082F49' : '#F0F9FF',
     borderRadius: 14,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: isDark ? '#0284C7' : '#BAE6FD',
     marginTop: 8,
     marginBottom: 20,
   },
@@ -1291,12 +1222,12 @@ const styles = StyleSheet.create({
   operatorNoticeTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0369A1',
+    color: isDark ? '#38BDF8' : '#0369A1',
     marginBottom: 4,
   },
   operatorNoticeText: {
     fontSize: 12,
-    color: '#334155',
+    color: isDark ? '#BAE6FD' : '#334155',
     lineHeight: 18,
   },
 });

@@ -13,9 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AddCategoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { addCategory } = useMandi();
   const [name, setName] = useState('');
 
@@ -71,10 +76,20 @@ export default function AddCategoryScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Categories</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Categories</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>Add Category</Text>
@@ -89,7 +104,7 @@ export default function AddCategoryScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="e.g. Exotic Fruits, Spices, Dairy"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -123,7 +138,15 @@ export default function AddCategoryScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -154,20 +177,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 6,
     marginBottom: 22,
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -177,22 +200,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textPrimary,
     marginTop: 10,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
-    color: '#222222',
-    backgroundColor: '#FFFFFF',
+    color: colors.textPrimary,
+    backgroundColor: colors.cardBackground,
   },
   hintText: {
     fontSize: 13,
-    color: '#888888',
+    color: colors.textMuted,
     marginTop: 10,
     lineHeight: 18,
   },
@@ -209,14 +232,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 12,
   },
   cancelButtonText: {
-    color: '#555555',
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },

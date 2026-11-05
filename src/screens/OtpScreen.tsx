@@ -14,11 +14,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
 
 export default function OtpScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { loginUser } = useMandi();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const mobile = route?.params?.mobile || '';
   const initialOtp = route?.params?.demoOtp || '1234';
   const detectedRole = route?.params?.detectedRole;
@@ -144,7 +148,7 @@ export default function OtpScreen({ route, navigation }: any) {
             activeOpacity={0.7}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="#16834A" />
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
             <Text style={styles.backText}>Change Number</Text>
           </TouchableOpacity>
         </View>
@@ -250,10 +254,11 @@ export default function OtpScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   content: {
     flexGrow: 1,
@@ -262,7 +267,9 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   backButton: {
     flexDirection: 'row',
@@ -273,37 +280,44 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 15,
     fontWeight: '600',
-    color: '#16834A',
+    color: colors.primary,
+  },
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   logo: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
     textAlign: 'center',
     marginBottom: 20,
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 15,
-    color: '#666666',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   boldText: {
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   demoBanner: {
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? colors.surfaceElevated : '#E8F4EC',
     borderWidth: 1,
-    borderColor: '#C2E5CD',
+    borderColor: isDark ? colors.border : '#C2E5CD',
     borderRadius: 12,
     padding: 14,
     marginBottom: 30,
@@ -317,29 +331,29 @@ const styles = StyleSheet.create({
   demoBannerTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
     marginLeft: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   demoBannerText: {
     fontSize: 15,
-    color: '#2E593E',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 10,
   },
   demoOtpCode: {
     fontWeight: '900',
     fontSize: 18,
-    color: '#0E5C32',
+    color: isDark ? '#4ADE80' : '#0E5C32',
     letterSpacing: 2,
   },
   autoFillButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#16834A',
+    borderColor: colors.primary,
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 20,
@@ -347,7 +361,7 @@ const styles = StyleSheet.create({
   autoFillText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#16834A',
+    color: colors.primary,
     marginLeft: 4,
   },
   otpBoxesContainer: {
@@ -361,29 +375,29 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#D4D4D4',
-    backgroundColor: '#FAFAFA',
+    borderColor: colors.border,
+    backgroundColor: isDark ? colors.surfaceElevated : '#FAFAFA',
     justifyContent: 'center',
     alignItems: 'center',
   },
   otpBoxActive: {
-    borderColor: '#16834A',
+    borderColor: colors.primary,
     borderWidth: 2,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#16834A',
+    backgroundColor: colors.surface,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
   },
   otpBoxFilled: {
-    borderColor: '#16834A',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
   },
   otpDigit: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
   },
   hiddenInput: {
     position: 'absolute',
@@ -400,11 +414,11 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: 14,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   timerCount: {
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
   },
   resendButton: {
     flexDirection: 'row',
@@ -414,22 +428,22 @@ const styles = StyleSheet.create({
   resendText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#16834A',
+    color: colors.primary,
     marginLeft: 6,
   },
   verifyButton: {
-    backgroundColor: '#16834A',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#16834A',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 3,
   },
   verifyButtonDisabled: {
-    backgroundColor: '#A0D2B4',
+    backgroundColor: isDark ? '#1C3E2B' : '#A0D2B4',
     shadowOpacity: 0,
     elevation: 0,
   },

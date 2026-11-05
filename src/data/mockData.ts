@@ -362,6 +362,7 @@ export const initialProducts: Product[] = [
     costPrice: '1000',
     ungradedStock: 0,
     grades: initialProductGrades.filter((g) => g.productId === '1'),
+    image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: '2',
@@ -373,6 +374,7 @@ export const initialProducts: Product[] = [
     costPrice: '1300',
     ungradedStock: 0,
     grades: initialProductGrades.filter((g) => g.productId === '2'),
+    image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: '3',
@@ -384,6 +386,7 @@ export const initialProducts: Product[] = [
     costPrice: '24',
     ungradedStock: 0,
     grades: initialProductGrades.filter((g) => g.productId === '3'),
+    image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: '4',
@@ -395,6 +398,7 @@ export const initialProducts: Product[] = [
     costPrice: '10',
     ungradedStock: 0,
     grades: initialProductGrades.filter((g) => g.productId === '4'),
+    image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: '5',
@@ -406,6 +410,7 @@ export const initialProducts: Product[] = [
     costPrice: '750',
     ungradedStock: 0,
     grades: initialProductGrades.filter((g) => g.productId === '5'),
+    image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=400&auto=format&fit=crop&q=80',
   },
 ];
 

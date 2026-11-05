@@ -9,14 +9,20 @@ import {
   Alert,
   Share,
   Linking,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { StockMovementType } from '../types';
+import { getProductImage } from '../utils/productImages';
 
 export default function CrateTallyScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { products, recordTally, tallyRecords, currentUser } = useMandi();
 
   const initialProductId = route?.params?.productId || (products[0] ? products[0].id : '');
@@ -36,7 +42,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
   const currentStock = selectedProduct ? parseFloat(selectedProduct.quantity || '0') || 0 : 0;
   const unitLabel = selectedProduct?.unit || 'Crates';
 
-  // Projected stock after this count is committed
+  // Projected final total available stock after this count is applied
   const projectedStock =
     mode === 'IN'
       ? currentStock + count
@@ -47,7 +53,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
     setCount((prev) => prev + 1);
   };
 
-  const handleAddBatch = (amount: number) => {
+  const handleAdjustCount = (amount: number) => {
     setCount((prev) => Math.max(0, prev + amount));
   };
 
@@ -69,7 +75,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
     if (count <= 0) {
       Alert.alert(
         'Zero Count',
-        'Please tap to count crates or bags before saving.'
+        `Please tap to count ${unitLabel.toLowerCase()} before saving.`
       );
       return;
     }
@@ -77,7 +83,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
     if (mode === 'OUT' && count > currentStock) {
       Alert.alert(
         'Insufficient Stock',
-        `Current stock is only ${currentStock} ${unitLabel}. You are attempting to dispatch ${count} ${unitLabel}.\n\nDo you want to proceed anyway?`,
+        `Current available stock is only ${currentStock} ${unitLabel}. You are attempting to dispatch ${count} ${unitLabel}.\n\nFinal available stock will be 0 ${unitLabel}.\n\nDo you want to proceed anyway?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -104,15 +110,19 @@ export default function CrateTallyScreen({ route, navigation }: any) {
       partyName: partyName.trim() || undefined,
     });
 
-    const actionText = mode === 'IN' ? 'Unloaded & Added to Stock' : 'Dispatched & Deducted from Stock';
+    const actionText =
+      mode === 'IN'
+        ? `Added to Stock (+${count} ${unitLabel})`
+        : `Deducted from Stock (-${count} ${unitLabel})`;
 
     Alert.alert(
-      '✅ Count Saved & Stock Updated',
-      `${count} ${unitLabel} of ${selectedProduct.name} ${actionText}.\n\nNew Live Stock: ${projectedStock} ${unitLabel}\nOperator: ${currentUser?.name || 'Suresh Kumar'}`,
+      '✅ Stock Count Updated',
+      `${selectedProduct.name}: ${actionText}\n\n🎯 FINAL TOTAL AVAILABLE COUNT: ${projectedStock} ${unitLabel}\nOperator: ${currentUser?.name || 'Suresh Kumar'}`,
       [
         {
           text: 'Share WhatsApp Slip',
-          onPress: () => shareWhatsAppSlip(savedRecord.count, savedRecord.vehicleNo, savedRecord.partyName),
+          onPress: () =>
+            shareWhatsAppSlip(savedRecord.count, savedRecord.vehicleNo, savedRecord.partyName),
         },
         {
           text: 'Done (Count Next)',
@@ -135,17 +145,19 @@ export default function CrateTallyScreen({ route, navigation }: any) {
   ) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const actionTitle = mode === 'IN' ? '📥 TRUCK UNLOAD (STOCK IN)' : '📤 TEMPO DISPATCH (STOCK OUT)';
+    const actionTitle =
+      mode === 'IN' ? '📥 TRUCK UNLOAD (STOCK ADDED)' : '📤 TEMPO DISPATCH (STOCK SUBTRACTED)';
 
     const message =
       `*CALMandi - Live Floor Crate Tally Slip*\n` +
       `--------------------------------\n` +
       `*Action:* ${actionTitle}\n` +
       `*Commodity:* ${selectedProduct?.name} (${unitLabel})\n` +
-      `*Counted Quantity:* ${tallyCount} ${unitLabel}\n` +
+      `*Starting Stock:* ${currentStock} ${unitLabel}\n` +
+      `*Counted Quantity:* ${mode === 'IN' ? '+' : '-'}${tallyCount} ${unitLabel}\n` +
+      `*FINAL TOTAL AVAILABLE COUNT:* ${projectedStock} ${unitLabel}\n` +
       (vehNo ? `*Vehicle No:* ${vehNo}\n` : '') +
       (party ? `*Party / Farmer:* ${party}\n` : '') +
-      `*Live Mandi Stock:* ${projectedStock} ${unitLabel}\n` +
       `*Operator:* ${currentUser?.name || 'Floor Operator'}\n` +
       `*Time:* Today, ${timeStr}\n` +
       `--------------------------------\n` +
@@ -184,28 +196,38 @@ export default function CrateTallyScreen({ route, navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Home</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
 
           <View style={styles.headerTitleBox}>
-            <Text style={styles.headerTitle}>Floor Crate Tally</Text>
+            <Text style={styles.headerTitle}>Tap Count (Crates & Kgs)</Text>
             <View style={styles.operatorTag}>
               <Ionicons name="finger-print" size={11} color="#0284C7" />
-              <Text style={styles.operatorTagText}>OPERATOR CLICKER</Text>
+              <Text style={styles.operatorTagText}>LIVE FLOOR CLICKER</Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.resetButton}
-            activeOpacity={0.7}
-            onPress={handleReset}
-          >
-            <Ionicons name="refresh-outline" size={16} color="#DC2626" />
-            <Text style={styles.resetButtonText}>Reset</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resetButton}
+              activeOpacity={0.7}
+              onPress={handleReset}
+            >
+              <Ionicons name="refresh-outline" size={16} color="#DC2626" />
+              <Text style={styles.resetButtonText}>Reset</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Mode Selector: Inward (Truck Unload) vs Outward (Tempo Dispatch) */}
+        {/* Mode Selector: Inward (Adding to Stock) vs Outward (Subtracting from Stock) */}
         <View style={styles.modeContainer}>
           <TouchableOpacity
             style={[
@@ -216,7 +238,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
             onPress={() => setMode('IN')}
           >
             <Ionicons
-              name="arrow-down-circle"
+              name="add-circle"
               size={18}
               color={mode === 'IN' ? '#FFFFFF' : '#16834A'}
             />
@@ -226,7 +248,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
                 mode === 'IN' ? styles.modeTabTextActive : styles.modeTabTextInactive,
               ]}
             >
-              Truck Unload (IN)
+              ➕ Add Crates/Kg (Inward)
             </Text>
           </TouchableOpacity>
 
@@ -239,7 +261,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
             onPress={() => setMode('OUT')}
           >
             <Ionicons
-              name="arrow-up-circle"
+              name="remove-circle"
               size={18}
               color={mode === 'OUT' ? '#FFFFFF' : '#0284C7'}
             />
@@ -249,7 +271,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
                 mode === 'OUT' ? styles.modeTabTextActive : styles.modeTabTextInactive,
               ]}
             >
-              Dispatch (OUT)
+              ➖ Subtract Crates/Kg (Sale)
             </Text>
           </TouchableOpacity>
         </View>
@@ -276,20 +298,34 @@ export default function CrateTallyScreen({ route, navigation }: any) {
                     setSelectedProductId(item.id);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.commodityChipText,
-                      isSelected && styles.commodityChipTextSelected,
-                    ]}
-                  >
-                    {item.name} ({item.unit})
-                  </Text>
+                  <Image
+                    source={{ uri: getProductImage(item) }}
+                    style={styles.chipThumbnail}
+                  />
+                  <View>
+                    <Text
+                      style={[
+                        styles.commodityChipText,
+                        isSelected && styles.commodityChipTextSelected,
+                      ]}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.chipSubtext,
+                        isSelected && styles.chipSubtextSelected,
+                      ]}
+                    >
+                      {item.quantity || 0} {item.unit}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          {/* Current Stock Banner */}
+          {/* Current vs Projected Live Bar */}
           <View style={styles.stockStatusRow}>
             <View style={styles.stockStatusLeft}>
               <Text style={styles.stockStatusLabel}>Current Stock in Mandi:</Text>
@@ -298,7 +334,9 @@ export default function CrateTallyScreen({ route, navigation }: any) {
               </Text>
             </View>
             <View style={styles.stockStatusRight}>
-              <Text style={styles.projectedLabel}>Projected Stock:</Text>
+              <Text style={styles.projectedLabel}>
+                {mode === 'IN' ? 'Projected Available (+)' : 'Projected Available (-)'}
+              </Text>
               <Text
                 style={[
                   styles.projectedValue,
@@ -311,7 +349,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {/* Giant Digital Counter Display */}
+        {/* Giant Digital Counter Display & Prominent Final Total Available Count */}
         <View style={styles.counterCard}>
           <View style={styles.counterTopRow}>
             <View
@@ -320,23 +358,90 @@ export default function CrateTallyScreen({ route, navigation }: any) {
                 mode === 'IN' ? styles.inPillBg : styles.outPillBg,
               ]}
             >
-              <Text style={styles.counterModePillText}>
-                {mode === 'IN' ? '📥 TRUCK UNLOADING' : '📤 TEMPO DISPATCH'}
+              <Text style={[styles.counterModePillText, mode === 'IN' ? { color: '#16834A' } : { color: '#0284C7' }]}>
+                {mode === 'IN' ? '📥 ADDING CRATES / KG' : '📤 SUBTRACTING CRATES / KG'}
               </Text>
             </View>
-            <Text style={styles.commodityNameHeader}>
-              {selectedProduct?.name}
-            </Text>
+
+            <View style={styles.selectedProductBadge}>
+              <Image
+                source={{ uri: getProductImage(selectedProduct) }}
+                style={styles.headerProductThumb}
+              />
+              <Text style={styles.commodityNameHeader}>
+                {selectedProduct?.name} ({unitLabel})
+              </Text>
+            </View>
           </View>
 
-          {/* Huge Number */}
-          <View style={styles.bigNumberRow}>
-            <Text style={styles.bigNumber}>{count}</Text>
-            <Text style={styles.unitText}>{unitLabel}</Text>
+          {/* Tap Delta Count Row */}
+          <View style={styles.tallyDeltaContainer}>
+            <Text style={styles.tallyDeltaLabel}>
+              {mode === 'IN' ? 'Quantity Adding to Stock:' : 'Quantity Deducting from Stock:'}
+            </Text>
+            <View style={styles.bigNumberRow}>
+              <Text
+                style={[
+                  styles.bigNumber,
+                  mode === 'IN' ? { color: '#16834A' } : { color: '#0284C7' },
+                ]}
+              >
+                {mode === 'IN' ? '+' : '-'}{count}
+              </Text>
+              <Text style={styles.unitText}>{unitLabel}</Text>
+            </View>
+          </View>
+
+          {/* 🎯 PROMINENT "FINAL TOTAL AVAILABLE COUNT" DISPLAY CARD */}
+          <View
+            style={[
+              styles.finalAvailableCard,
+              mode === 'IN' ? styles.finalAvailableInBorder : styles.finalAvailableOutBorder,
+            ]}
+          >
+            <View style={styles.finalAvailableHeaderRow}>
+              <Ionicons
+                name="cube"
+                size={18}
+                color={mode === 'IN' ? '#16834A' : '#0284C7'}
+              />
+              <Text style={styles.finalAvailableTitle}>
+                FINAL TOTAL AVAILABLE COUNT
+              </Text>
+            </View>
+
+            <View style={styles.finalNumberRow}>
+              <Text
+                style={[
+                  styles.finalAvailableBigNumber,
+                  mode === 'IN' ? { color: '#15803D' } : { color: '#0369A1' },
+                ]}
+              >
+                {projectedStock}
+              </Text>
+              <Text style={styles.finalAvailableUnitText}>{unitLabel}</Text>
+            </View>
+
+            <View style={styles.formulaPill}>
+              <Text style={styles.formulaText}>
+                {mode === 'IN'
+                  ? `Current: ${currentStock} ${unitLabel}  +  Counted: ${count} ${unitLabel}  =  ${projectedStock} ${unitLabel} Available`
+                  : `Current: ${currentStock} ${unitLabel}  -  Counted: ${count} ${unitLabel}  =  ${projectedStock} ${unitLabel} Available`}
+              </Text>
+            </View>
+
+            {mode === 'OUT' && count > currentStock && (
+              <View style={styles.stockAlertBanner}>
+                <Ionicons name="warning" size={14} color="#DC2626" />
+                <Text style={styles.stockAlertText}>
+                  Count exceeds in-hand stock ({currentStock} {unitLabel}). Stock will be 0.
+                </Text>
+              </View>
+            )}
           </View>
 
           <Text style={styles.clickerHint}>
-            Tap the giant button below for every {unitLabel.toLowerCase()} carried by laborers
+            Tap the button below for every {unitLabel.toLowerCase()} loaded or unloaded
           </Text>
         </View>
 
@@ -350,56 +455,97 @@ export default function CrateTallyScreen({ route, navigation }: any) {
           onPress={handleTapCount}
         >
           <View style={styles.giantTapInner}>
-            <Ionicons name="add" size={44} color="#FFFFFF" />
-            <Text style={styles.giantTapText}>TAP TO COUNT (+1)</Text>
+            <Ionicons
+              name={mode === 'IN' ? 'add' : 'remove'}
+              size={46}
+              color="#FFFFFF"
+            />
+            <Text style={styles.giantTapText}>
+              {mode === 'IN' ? 'TAP TO ADD (+1)' : 'TAP TO SUBTRACT (-1)'}
+            </Text>
           </View>
           <Text style={styles.giantTapSubtext}>
-            Quick Tap for each {unitLabel.slice(0, -1) || 'unit'}
+            {mode === 'IN'
+              ? `Adds 1 ${unitLabel.slice(0, -1) || 'unit'} • Final becomes ${projectedStock + 1} ${unitLabel}`
+              : `Subtracts 1 ${unitLabel.slice(0, -1) || 'unit'} • Final becomes ${Math.max(0, projectedStock - 1)} ${unitLabel}`}
           </Text>
         </TouchableOpacity>
 
-        {/* Quick Batch Increment Buttons */}
-        <View style={styles.batchRow}>
-          <TouchableOpacity
-            style={styles.batchBtn}
-            activeOpacity={0.7}
-            onPress={() => handleAddBatch(5)}
-          >
-            <Text style={styles.batchBtnText}>+5</Text>
-          </TouchableOpacity>
+        {/* Quick Batch Tap Buttons (Adding and Subtracting at your fingertips) */}
+        <View style={styles.batchContainer}>
+          <Text style={styles.batchSectionTitle}>Quick Tap Adjustments:</Text>
 
-          <TouchableOpacity
-            style={styles.batchBtn}
-            activeOpacity={0.7}
-            onPress={() => handleAddBatch(10)}
-          >
-            <Text style={styles.batchBtnText}>+10</Text>
-          </TouchableOpacity>
+          {/* Subtraction Steppers */}
+          <View style={styles.batchRow}>
+            <Text style={styles.batchRowLabel}>Subtract:</Text>
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnSubtract]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(-10)}
+            >
+              <Text style={styles.batchBtnSubText}>-10</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.batchBtn}
-            activeOpacity={0.7}
-            onPress={() => handleAddBatch(20)}
-          >
-            <Text style={styles.batchBtnText}>+20</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnSubtract]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(-5)}
+            >
+              <Text style={styles.batchBtnSubText}>-5</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.batchBtn}
-            activeOpacity={0.7}
-            onPress={() => handleAddBatch(50)}
-          >
-            <Text style={styles.batchBtnText}>+50</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnSubtract]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(-1)}
+            >
+              <Text style={styles.batchBtnSubText}>-1</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.undoBtn}
-            activeOpacity={0.7}
-            onPress={() => handleAddBatch(-1)}
-          >
-            <Ionicons name="arrow-undo" size={16} color="#DC2626" />
-            <Text style={styles.undoBtnText}>-1</Text>
-          </TouchableOpacity>
+          {/* Addition Steppers */}
+          <View style={styles.batchRow}>
+            <Text style={styles.batchRowLabel}>Add:</Text>
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnAdd]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(1)}
+            >
+              <Text style={styles.batchBtnAddText}>+1</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnAdd]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(5)}
+            >
+              <Text style={styles.batchBtnAddText}>+5</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnAdd]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(10)}
+            >
+              <Text style={styles.batchBtnAddText}>+10</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnAdd]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(20)}
+            >
+              <Text style={styles.batchBtnAddText}>+20</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.batchBtn, styles.batchBtnAdd]}
+              activeOpacity={0.7}
+              onPress={() => handleAdjustCount(50)}
+            >
+              <Text style={styles.batchBtnAddText}>+50</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Optional Vehicle & Party Details */}
@@ -429,7 +575,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. KA-04-E-1234"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textMuted}
                   value={vehicleNo}
                   onChangeText={setVehicleNo}
                   autoCapitalize="characters"
@@ -443,7 +589,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
                 <TextInput
                   style={styles.input}
                   placeholder={mode === 'IN' ? 'e.g. Basavaraj Farmer' : 'e.g. Ravi Traders'}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textMuted}
                   value={partyName}
                   onChangeText={setPartyName}
                 />
@@ -452,7 +598,7 @@ export default function CrateTallyScreen({ route, navigation }: any) {
           )}
         </View>
 
-        {/* Primary Action Buttons */}
+        {/* Primary Action Button: Save & Update Mandi Stock */}
         <TouchableOpacity
           style={[styles.saveButton, count === 0 && styles.saveButtonDisabled]}
           activeOpacity={0.8}
@@ -460,9 +606,14 @@ export default function CrateTallyScreen({ route, navigation }: any) {
           disabled={count === 0}
         >
           <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-          <Text style={styles.saveButtonText}>
-            Save {count} {unitLabel} & Update Mandi Stock
-          </Text>
+          <View style={{ marginLeft: 8 }}>
+            <Text style={styles.saveButtonText}>
+              Save {count} {unitLabel} & Update Stock
+            </Text>
+            <Text style={styles.saveButtonSubtext}>
+              🎯 Final Available Stock will be {projectedStock} {unitLabel}
+            </Text>
+          </View>
         </TouchableOpacity>
 
         {/* Shift History: Recent Tally Records */}
@@ -531,10 +682,18 @@ export default function CrateTallyScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAF8',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 16,
@@ -558,9 +717,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   operatorTag: {
     flexDirection: 'row',
@@ -616,41 +775,50 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   modeTabText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginLeft: 6,
+    marginLeft: 5,
   },
   modeTabTextActive: {
     color: '#FFFFFF',
   },
   modeTabTextInactive: {
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 14,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   sectionLabel: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#374151',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   commodityScroll: {
     paddingVertical: 4,
   },
   commodityChip: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
+    gap: 8,
+  },
+  chipThumbnail: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E5E7EB',
   },
   commodityChipSelected: {
     backgroundColor: '#E8F5EC',
@@ -658,17 +826,25 @@ const styles = StyleSheet.create({
   },
   commodityChipText: {
     fontSize: 13,
-    color: '#4B5563',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   commodityChipTextSelected: {
     color: '#16834A',
     fontWeight: '700',
   },
+  chipSubtext: {
+    fontSize: 10,
+    color: colors.textSecondary,
+  },
+  chipSubtextSelected: {
+    color: '#15803D',
+    fontWeight: '600',
+  },
   stockStatusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderRadius: 10,
     padding: 10,
     marginTop: 10,
@@ -680,12 +856,12 @@ const styles = StyleSheet.create({
   },
   stockStatusLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   stockStatusValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginTop: 1,
   },
   stockStatusRight: {
@@ -693,7 +869,7 @@ const styles = StyleSheet.create({
   },
   projectedLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   projectedValue: {
     fontSize: 14,
@@ -701,13 +877,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   counterCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
     marginBottom: 14,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -719,11 +895,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   counterModePill: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 12,
   },
   inPillBg: {
@@ -735,39 +911,135 @@ const styles = StyleSheet.create({
   counterModePillText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#16834A',
+  },
+  selectedProductBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 14,
+    gap: 6,
+  },
+  headerProductThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
   commodityNameHeader: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textPrimary,
+  },
+  tallyDeltaContainer: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  tallyDeltaLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 2,
   },
   bigNumberRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginVertical: 4,
   },
   bigNumber: {
-    fontSize: 72,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    fontSize: 48,
+    fontWeight: '900',
     letterSpacing: -1,
   },
   unitText: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#6B7280',
+    color: colors.textSecondary,
+    marginLeft: 6,
+  },
+  finalAvailableCard: {
+    width: '100%',
+    borderRadius: 14,
+    backgroundColor: isDark ? colors.surface : '#F8FAF9',
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 2,
+    marginVertical: 8,
+  },
+  finalAvailableInBorder: {
+    borderColor: '#16834A',
+    backgroundColor: '#F0FDF4',
+  },
+  finalAvailableOutBorder: {
+    borderColor: '#0284C7',
+    backgroundColor: '#F0F9FF',
+  },
+  finalAvailableHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  finalAvailableTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+  },
+  finalNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginVertical: 2,
+  },
+  finalAvailableBigNumber: {
+    fontSize: 54,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  finalAvailableUnitText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.textSecondary,
     marginLeft: 8,
+  },
+  formulaPill: {
+    backgroundColor: colors.cardBackground,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  formulaText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  stockAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 8,
+    gap: 6,
+  },
+  stockAlertText: {
+    fontSize: 11,
+    color: '#B91C1C',
+    fontWeight: '600',
   },
   clickerHint: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 6,
   },
   giantTapButton: {
     borderRadius: 18,
-    paddingVertical: 24,
+    paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -786,66 +1058,80 @@ const styles = StyleSheet.create({
   giantTapInner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   giantTapText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 0.5,
-    marginLeft: 6,
+    marginLeft: 4,
   },
   giantTapSubtext: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-    marginTop: 4,
-    fontWeight: '500',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 3,
+    fontWeight: '600',
+  },
+  batchContainer: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  batchSectionTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.textSecondary,
+    marginBottom: 8,
   },
   batchRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 6,
+  },
+  batchRowLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    width: 60,
   },
   batchBtn: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    marginHorizontal: 3,
-    borderRadius: 12,
-    alignItems: 'center',
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-  },
-  batchBtnText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  undoBtn: {
-    flex: 1.1,
-    backgroundColor: '#FEE2E2',
-    paddingVertical: 14,
-    marginHorizontal: 3,
-    borderRadius: 12,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
+  },
+  batchBtnSubtract: {
+    backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
   },
-  undoBtnText: {
-    fontSize: 15,
-    fontWeight: 'bold',
+  batchBtnSubText: {
+    fontSize: 13,
+    fontWeight: '800',
     color: '#DC2626',
-    marginLeft: 4,
+  },
+  batchBtnAdd: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  batchBtnAddText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#16834A',
   },
   detailsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
-    padding: 14,
+    padding: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   detailsToggleRow: {
     flexDirection: 'row',
@@ -855,16 +1141,16 @@ const styles = StyleSheet.create({
   detailsToggleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   detailsToggleTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
-    marginLeft: 8,
+    color: colors.textPrimary,
   },
   detailsInputContainer: {
     marginTop: 12,
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
@@ -874,50 +1160,55 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.textPrimary,
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
   },
   saveButton: {
+    flexDirection: 'row',
     backgroundColor: '#16834A',
     borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 18,
     shadowColor: '#16834A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 3,
   },
   saveButtonDisabled: {
     backgroundColor: '#9CA3AF',
     shadowOpacity: 0,
-    elevation: 0,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    marginLeft: 8,
+  },
+  saveButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
   },
   historyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   historyHeader: {
     flexDirection: 'row',
@@ -928,27 +1219,27 @@ const styles = StyleSheet.create({
   historyTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
   historyTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#1F2937',
-    marginLeft: 6,
+    color: colors.textPrimary,
   },
   historyCountBadge: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
   },
   historyCountBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#6B7280',
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   emptyHistoryText: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     textAlign: 'center',
     paddingVertical: 12,
   },
@@ -958,12 +1249,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   historyItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 10,
   },
   historyTypeIcon: {
     width: 32,
@@ -971,23 +1262,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   historyProductName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   historySub: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 1,
   },
   historyItemRight: {
     alignItems: 'flex-end',
   },
   historyCountValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

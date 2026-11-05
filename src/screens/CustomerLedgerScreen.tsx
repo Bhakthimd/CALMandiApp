@@ -10,9 +10,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 
 export default function CustomerLedgerScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customerId } = route.params || {};
   const { customers, getCustomerTransactions, getCustomerBalance } = useMandi();
 
@@ -92,7 +96,7 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
@@ -349,7 +353,15 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -359,7 +371,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -373,11 +385,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   shareBtn: {
     padding: 8,
@@ -388,11 +400,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   balanceCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 16,
   },
   statusRow: {
@@ -417,7 +429,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
   },
   pillGrey: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
   },
   statusPillText: {
     fontSize: 11,
@@ -434,7 +446,7 @@ const styles = StyleSheet.create({
   },
   mobileText: {
     fontSize: 12,
-    color: '#555555',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   balanceAmountRow: {
@@ -445,7 +457,7 @@ const styles = StyleSheet.create({
   balanceRupeeSymbol: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#555555',
+    color: colors.textSecondary,
     marginRight: 4,
   },
   balanceMainAmount: {
@@ -454,7 +466,7 @@ const styles = StyleSheet.create({
   },
   balanceHintText: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
     marginBottom: 14,
   },
@@ -473,13 +485,13 @@ const styles = StyleSheet.create({
   },
   miniStatLabel: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   miniStatValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   statDivider: {
     width: 1,
@@ -492,7 +504,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   filterTabs: {
@@ -508,12 +520,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   filterTabActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
   },
   filterTabText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   filterTabTextActive: {
     color: '#16834A',
@@ -522,15 +534,15 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     padding: 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
   },
   emptyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginTop: 8,
   },
   emptySub: {
@@ -538,11 +550,11 @@ const styles = StyleSheet.create({
     color: '#888888',
   },
   txCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 10,
   },
   txTopRow: {
@@ -574,11 +586,11 @@ const styles = StyleSheet.create({
   txTypeTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   txTypeSub: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   txAmountWrap: {
     alignItems: 'flex-end',
@@ -595,8 +607,8 @@ const styles = StyleSheet.create({
   },
   txMethodBadge: {
     fontSize: 10,
-    color: '#666666',
-    backgroundColor: '#F3F4F6',
+    color: colors.textSecondary,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -608,39 +620,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   txDate: {
     fontSize: 11,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   txRef: {
     fontSize: 11,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   txBalanceAfter: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#444444',
+    color: colors.textPrimary,
   },
   txNotesBox: {
     marginTop: 6,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     padding: 6,
     borderRadius: 6,
   },
   txNotesText: {
     fontSize: 11,
-    color: '#555555',
+    color: colors.textSecondary,
   },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: colors.border,
     paddingHorizontal: 16,
     paddingTop: 10,
   },

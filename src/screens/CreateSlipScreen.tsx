@@ -17,11 +17,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { StockMovementType, MandiSlip } from '../types';
 
 export default function CreateSlipScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { products, customers, recordSlip, isOwner } = useMandi();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const { products, customers, recordSlip } = useMandi();
 
   const initialType: StockMovementType = route?.params?.type || 'OUT';
   const initialProductId: string = route?.params?.productId || (products[0]?.id || '');
@@ -540,10 +544,18 @@ _Thank you for your business!_
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAF8',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -571,12 +583,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -592,7 +604,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1.5,
   },
   inBtn: {
@@ -610,7 +622,7 @@ const styles = StyleSheet.create({
   typeBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textPrimary,
     marginLeft: 6,
   },
   typeBtnTextActive: {
@@ -619,18 +631,18 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.textPrimary,
     marginBottom: 6,
     marginTop: 10,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 10,
   },
   largeNumberInput: {
@@ -644,7 +656,7 @@ const styles = StyleSheet.create({
   },
   chipHeader: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   customerChip: {
@@ -673,13 +685,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   productChip: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     minWidth: 100,
     alignItems: 'center',
   },
@@ -690,7 +702,7 @@ const styles = StyleSheet.create({
   productChipTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   productChipTitleActive: {
@@ -698,7 +710,7 @@ const styles = StyleSheet.create({
   },
   productChipUnit: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   productChipUnitActive: {
     color: '#16834A',
@@ -727,11 +739,11 @@ const styles = StyleSheet.create({
     color: '#0284C7',
   },
   billSummaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     marginTop: 8,
     marginBottom: 16,
   },
@@ -743,18 +755,18 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#4B5563',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   rateInput: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     minWidth: 90,
     textAlign: 'right',
   },
@@ -766,7 +778,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   totalValue: {
     fontSize: 20,
@@ -801,7 +813,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   slipCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 22,
     shadowColor: '#000',
@@ -834,12 +846,12 @@ const styles = StyleSheet.create({
   },
   slipNumberText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   slipDottedLine: {
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     marginVertical: 12,
   },
   slipDetailRow: {
@@ -849,22 +861,22 @@ const styles = StyleSheet.create({
   },
   slipDetailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   slipDetailValue: {
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   slipDetailValueBold: {
     fontSize: 15,
-    color: '#1F2937',
+    color: colors.textPrimary,
     fontWeight: 'bold',
   },
   slipTotalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   slipTotalValue: {
     fontSize: 20,
@@ -874,7 +886,7 @@ const styles = StyleSheet.create({
   slipNotesText: {
     fontSize: 12,
     fontStyle: 'italic',
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 8,
   },
   whatsAppShareBtn: {
@@ -898,7 +910,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   doneBtnText: {
-    color: '#4B5563',
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '600',
   },

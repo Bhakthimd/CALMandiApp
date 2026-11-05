@@ -13,11 +13,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { PaymentMethod } from '../types';
-import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
 export default function RecordSaleScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const {
     products,
     customers,
@@ -216,7 +219,7 @@ export default function RecordSaleScreen({ route, navigation }: any) {
       setIsSaving(false);
 
       Alert.alert(
-        saved.recordedOffline ? 'Sale Saved Offline 💾' : 'Sale Confirmed & Synced 🟢',
+        'Sale Confirmed ✅',
         `Sale recorded successfully!\n\n• ${qtyNum} ${selectedProduct.unit} ${selectedProduct.name} (${selectedGrade?.name || 'Standard'})\n• Unit Rate: ₹${priceNum} (${appliedPriceType})\n• Net Total: ₹${netTotal.toLocaleString('en-IN')} (${paymentMethod})\n• Buyer: ${buyerName}\n• Grade Stock Deducted: ${qtyNum} ${selectedProduct.unit}\n• Customer Ledger Updated.`,
         [
           {
@@ -262,22 +265,30 @@ export default function RecordSaleScreen({ route, navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Back</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         {/* Title & Subtitle */}
         <View style={styles.titleRow}>
           <Text style={styles.title}>Record Sale (जावक / Bikri)</Text>
           <Text style={styles.subtitle}>
-            Grade-aware dispatch with customer custom rates. Operates 100% offline.
+            Grade-aware dispatch with customer custom rates.
           </Text>
         </View>
 
-        {/* Network Status Banner */}
-        <NetworkStatusBanner />
-
+        
         {/* 1. Buyer / Customer Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>1. Select Buyer / Customer (ग्राहक) *</Text>
@@ -342,7 +353,7 @@ export default function RecordSaleScreen({ route, navigation }: any) {
             <TextInput
               style={styles.textInput}
               placeholder="Enter Buyer Name or Stall Number"
-              placeholderTextColor="#999999"
+              placeholderTextColor={colors.textMuted}
               value={customBuyerName}
               onChangeText={setCustomBuyerName}
             />
@@ -652,7 +663,15 @@ export default function RecordSaleScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -686,15 +705,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 13,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -704,7 +723,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   chipRow: {
@@ -718,9 +737,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     gap: 4,
   },
   customerChipSelected: {
@@ -729,7 +748,7 @@ const styles = StyleSheet.create({
   },
   customerChipText: {
     fontSize: 12,
-    color: '#333333',
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   customerChipTextSelected: {
@@ -739,9 +758,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   productChipSelected: {
     backgroundColor: '#16834A',
@@ -750,14 +769,14 @@ const styles = StyleSheet.create({
   productChipText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   productChipTextSelected: {
     color: '#FFFFFF',
   },
   productChipSub: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   productChipSubSelected: {
@@ -765,7 +784,7 @@ const styles = StyleSheet.create({
   },
   noGradesText: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   gradeGrid: {
@@ -777,9 +796,9 @@ const styles = StyleSheet.create({
     width: '48%',
     padding: 10,
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   gradeSelectCardActive: {
     backgroundColor: '#E8F4EC',
@@ -794,7 +813,7 @@ const styles = StyleSheet.create({
   gradeSelectName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   gradeSelectNameActive: {
     color: '#16834A',
@@ -805,7 +824,7 @@ const styles = StyleSheet.create({
   },
   gradeSelectDefPrice: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   priceHeaderRow: {
@@ -838,7 +857,7 @@ const styles = StyleSheet.create({
   priceInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1.5,
     borderColor: '#16834A',
     borderRadius: 10,
@@ -848,18 +867,18 @@ const styles = StyleSheet.create({
   rupeePrefix: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginRight: 4,
   },
   priceInput: {
     flex: 1,
     fontSize: 20,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   unitSuffix: {
     fontSize: 13,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   stockStatusRow: {
     flexDirection: 'row',
@@ -881,24 +900,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   qtyStepBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   qtyInput: {
     flex: 1,
     textAlign: 'center',
     fontSize: 20,
     fontWeight: '800',
-    color: '#222222',
-    backgroundColor: '#F9FAFB',
+    color: colors.textPrimary,
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     height: 44,
   },
@@ -910,9 +929,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     alignItems: 'center',
   },
   paymentMethodBtnActive: {
@@ -937,25 +956,25 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chargeInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 13,
   },
   textInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
   },
   billBreakdownBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -965,7 +984,7 @@ const styles = StyleSheet.create({
   billTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   billLine: {
@@ -975,12 +994,12 @@ const styles = StyleSheet.create({
   },
   billLabel: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   billVal: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   billDivider: {
     height: 1,
@@ -990,7 +1009,7 @@ const styles = StyleSheet.create({
   billTotalLabel: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   billTotalVal: {
     fontSize: 16,

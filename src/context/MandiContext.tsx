@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from 'react';
 import NetInfo from '@react-native-community/netinfo';
+import { getProductImage } from '../utils/productImages';
 import {
   Customer,
   Category,
@@ -243,7 +244,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
   const [arrivals, setArrivals] = useState<ArrivalRecord[]>(initialArrivals);
   const [sales, setSales] = useState<SaleRecord[]>(initialSales);
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [isSimulatedOffline, setIsSimulatedOffline] = useState<boolean>(false);
+  const [isSimulatedOffline] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const isSyncingLockRef = useRef<boolean>(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
@@ -484,9 +485,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [isEffectiveOnline, arrivals, sales, syncPendingRecords]);
 
-  const toggleOfflineSimulation = (forced?: boolean) => {
-    setIsSimulatedOffline((prev) => (typeof forced === 'boolean' ? forced : !prev));
-  };
+  const toggleOfflineSimulation = () => {};
 
   const loginUser = (user: UserProfile) => {
     setCurrentUser(user);
@@ -668,6 +667,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       price,
       grades: initialGrades,
       ungradedStock: 0,
+      image: productData.image || getProductImage({ name: cleanName, category }),
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -1149,16 +1149,15 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
   const recordArrival = async (
     data: Omit<ArrivalRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
   ): Promise<ArrivalRecord> => {
-    const offline = !isEffectiveOnline;
     const nowIso = new Date().toISOString();
 
     const newArrival: ArrivalRecord = {
       ...data,
       id: `arr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       timestamp: nowIso,
-      syncStatus: offline ? 'pending' : 'synced',
-      recordedOffline: offline,
-      syncedAt: offline ? undefined : nowIso,
+      syncStatus: 'synced',
+      recordedOffline: false,
+      syncedAt: nowIso,
     };
 
     // UPDATE PRODUCT & GRADE STOCK
@@ -1201,16 +1200,15 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
   const recordSale = async (
     data: Omit<SaleRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
   ): Promise<SaleRecord> => {
-    const offline = !isEffectiveOnline;
     const nowIso = new Date().toISOString();
 
     const newSale: SaleRecord = {
       ...data,
       id: `sale_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       timestamp: nowIso,
-      syncStatus: offline ? 'pending' : 'synced',
-      recordedOffline: offline,
-      syncedAt: offline ? undefined : nowIso,
+      syncStatus: 'synced',
+      recordedOffline: false,
+      syncedAt: nowIso,
     };
 
     // 1. UPDATE GRADE-SPECIFIC STOCK

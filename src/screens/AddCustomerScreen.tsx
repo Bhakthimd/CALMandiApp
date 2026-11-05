@@ -13,10 +13,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { CustomerType } from '../types';
 
 export default function AddCustomerScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { addCustomer } = useMandi();
 
   const [name, setName] = useState('');
@@ -106,10 +111,20 @@ export default function AddCustomerScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Customers</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Customers</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>Add Customer / Farmer</Text>
@@ -160,7 +175,7 @@ export default function AddCustomerScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="e.g. Rameshwar Reddy"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -171,7 +186,7 @@ export default function AddCustomerScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="Enter 10-digit mobile number"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             keyboardType="number-pad"
             maxLength={10}
             value={mobile}
@@ -185,7 +200,7 @@ export default function AddCustomerScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="e.g. Reddy Farm / Sri Lakshmi Fruits"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             value={business}
             onChangeText={setBusiness}
             autoCapitalize="words"
@@ -233,7 +248,7 @@ export default function AddCustomerScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="0 (Enter 0 if account is settled)"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             keyboardType="numeric"
             value={openingBalance}
             onChangeText={setOpeningBalance}
@@ -244,7 +259,7 @@ export default function AddCustomerScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="e.g. Stall #4, APMC Block B"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textMuted}
             value={address}
             onChangeText={setAddress}
             returnKeyType="done"
@@ -272,7 +287,15 @@ export default function AddCustomerScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -303,26 +326,26 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 6,
     marginBottom: 20,
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     elevation: 2,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textPrimary,
     marginTop: 14,
     marginBottom: 8,
   },
@@ -335,9 +358,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     alignItems: 'center',
   },
   typeChipActive: {
@@ -347,14 +370,14 @@ const styles = StyleSheet.create({
   typeChipLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   typeChipLabelActive: {
     color: '#FFFFFF',
   },
   typeChipSub: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   typeChipSubActive: {
@@ -369,9 +392,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     alignItems: 'center',
   },
   balDirBtnRecActive: {
@@ -385,20 +408,20 @@ const styles = StyleSheet.create({
   balDirText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#555555',
+    color: colors.textSecondary,
   },
   balDirTextActive: {
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
-    color: '#222222',
-    backgroundColor: '#FFFFFF',
+    color: colors.textPrimary,
+    backgroundColor: colors.cardBackground,
   },
   saveButton: {
     backgroundColor: '#16834A',
@@ -413,14 +436,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
   },
   cancelButtonText: {
-    color: '#555555',
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '600',
   },

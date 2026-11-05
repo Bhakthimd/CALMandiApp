@@ -10,9 +10,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 
 export default function ReportsScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { initialTab } = route.params || {};
   const {
     customers,
@@ -125,7 +129,7 @@ export default function ReportsScreen({ route, navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Reports & Analytics</Text>
@@ -467,7 +471,15 @@ export default function ReportsScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -477,7 +489,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -491,11 +503,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   exportBtn: {
     padding: 8,
@@ -527,7 +539,7 @@ const styles = StyleSheet.create({
   mainTabText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
   },
   mainTabTextActive: {
     color: '#FFFFFF',
@@ -541,9 +553,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     alignItems: 'center',
   },
   dateFilterChipActive: {
@@ -594,7 +606,7 @@ const styles = StyleSheet.create({
   },
   kpiHindi: {
     fontSize: 10,
-    color: '#666666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   kpiValue: {
@@ -602,11 +614,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 14,
   },
   sectionHeader: {
@@ -615,11 +627,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   sectionSubtitle: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   customerReportRow: {
     flexDirection: 'row',
@@ -627,7 +639,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   custRepInfo: {
     flex: 1,
@@ -635,11 +647,11 @@ const styles = StyleSheet.create({
   custRepName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   custRepBiz: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   custRepBal: {
@@ -651,13 +663,13 @@ const styles = StyleSheet.create({
   },
   custRepTag: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   filterTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   prodFilterScroll: {
@@ -668,9 +680,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   prodFilterChipActive: {
     backgroundColor: '#16834A',
@@ -679,7 +691,7 @@ const styles = StyleSheet.create({
   prodFilterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#444444',
+    color: colors.textPrimary,
   },
   prodFilterChipTextActive: {
     color: '#FFFFFF',
@@ -690,7 +702,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   gradeStockInfo: {
     flex: 1,
@@ -698,11 +710,11 @@ const styles = StyleSheet.create({
   gradeStockName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   gradeStockRate: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   gradeStockValBox: {
     alignItems: 'flex-end',
@@ -710,11 +722,11 @@ const styles = StyleSheet.create({
   gradeStockQty: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   gradeStockValueLabel: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   wastageReportRow: {
     flexDirection: 'row',
@@ -722,7 +734,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   wastageRepInfo: {
     flex: 1,
@@ -730,11 +742,11 @@ const styles = StyleSheet.create({
   wastageRepProd: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   wastageRepCounts: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   wastagePillBox: {
@@ -753,7 +765,7 @@ const styles = StyleSheet.create({
   },
   wastagePercentLabel: {
     fontSize: 9,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   emptyNotice: {
     fontSize: 12,

@@ -10,10 +10,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { CustomerType } from '../types';
 
 export default function CashDebtScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customers, financialSummary, getCustomerBalance } = useMandi();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,19 +55,28 @@ export default function CashDebtScreen({ navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Cash & Debt Management</Text>
           <Text style={styles.headerSubtitle}>रोकड़ एवं उधारी (खाताबही)</Text>
         </View>
-        <TouchableOpacity
-          style={styles.reportsButton}
-          onPress={() => navigation.navigate('Reports', { initialTab: 'financial' })}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="bar-chart-outline" size={20} color="#16834A" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={styles.themeToggleBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.reportsButton}
+            onPress={() => navigation.navigate('Reports', { initialTab: 'financial' })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="bar-chart-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -390,7 +403,15 @@ export default function CashDebtScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -400,7 +421,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -414,7 +435,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
@@ -429,11 +450,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 16,
     elevation: 2,
     shadowColor: '#000',
@@ -450,7 +471,7 @@ const styles = StyleSheet.create({
   summarySectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   summarySectionSub: {
     fontSize: 12,
@@ -583,7 +604,7 @@ const styles = StyleSheet.create({
   sectionHeaderTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   sectionHeaderSub: {
     fontSize: 11,
@@ -606,7 +627,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: '#DDDDDD',
     borderRadius: 10,
@@ -617,7 +638,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#222222',
+    color: colors.textPrimary,
   },
   filterChipScroll: {
     gap: 8,
@@ -627,7 +648,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: '#DDDDDD',
     alignItems: 'center',
@@ -654,10 +675,10 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     padding: 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
   },
   emptyTitle: {
     fontSize: 15,
@@ -670,11 +691,11 @@ const styles = StyleSheet.create({
     color: '#888888',
   },
   customerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   custTopRow: {
@@ -697,7 +718,7 @@ const styles = StyleSheet.create({
   custName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   typeTag: {
     paddingHorizontal: 6,
@@ -749,7 +770,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
   },
   balBadgeGrey: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
   },
   balBadgeTitle: {
     fontSize: 9,
@@ -768,13 +789,13 @@ const styles = StyleSheet.create({
     color: '#16834A',
   },
   balTextGrey: {
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   custActionsRow: {
     flexDirection: 'row',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
     paddingTop: 10,
   },
   cardActionBtn: {
@@ -788,10 +809,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#F7F9F7',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
   },
   cardActionBtnHighlight: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderColor: '#A7F3D0',
   },
   cardActionText: {

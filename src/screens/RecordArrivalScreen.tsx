@@ -13,10 +13,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
-import NetworkStatusBanner from '../components/NetworkStatusBanner';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 
 export default function RecordArrivalScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const {
     products,
     units,
@@ -130,7 +133,7 @@ export default function RecordArrivalScreen({ route, navigation }: any) {
       setIsSaving(false);
 
       Alert.alert(
-        saved.recordedOffline ? 'Saved Offline 💾' : 'Arrival Recorded 🟢',
+        'Arrival Recorded ✅',
         `Arrival of ${qtyNum} ${selectedUnit} ${resolvedProductName} from ${cleanFarmer} saved.\n\nStock updated immediately. What would you like to do next?`,
         [
           {
@@ -208,9 +211,19 @@ export default function RecordArrivalScreen({ route, navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Back</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         {/* Title & Badge */}
@@ -223,9 +236,7 @@ export default function RecordArrivalScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {/* Network Status Banner */}
-        <NetworkStatusBanner />
-
+        
         {/* 1. Commodity Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>1. Select Commodity / Product *</Text>
@@ -485,7 +496,15 @@ export default function RecordArrivalScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -519,30 +538,30 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 13,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   subLabel: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 8,
     marginBottom: 6,
   },
@@ -557,9 +576,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     gap: 4,
   },
   commodityChipSelected: {
@@ -569,7 +588,7 @@ const styles = StyleSheet.create({
   commodityChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   commodityChipTextSelected: {
     color: '#FFFFFF',
@@ -583,24 +602,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   stepBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   qtyInput: {
     flex: 1,
     textAlign: 'center',
     fontSize: 20,
     fontWeight: '800',
-    color: '#222222',
-    backgroundColor: '#F9FAFB',
+    color: colors.textPrimary,
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     height: 44,
   },
@@ -613,9 +632,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   unitChipSelected: {
     backgroundColor: '#16834A',
@@ -624,7 +643,7 @@ const styles = StyleSheet.create({
   unitChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#555555',
+    color: colors.textSecondary,
   },
   unitChipTextSelected: {
     color: '#FFFFFF',
@@ -656,14 +675,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   textInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: '#222222',
+    color: colors.textPrimary,
   },
   twoColRow: {
     flexDirection: 'row',
@@ -674,7 +693,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   saveButton: {

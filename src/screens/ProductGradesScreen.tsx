@@ -12,10 +12,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { ProductGrade } from '../types';
 
 export default function ProductGradesScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { productId: initialProductId } = route.params || {};
   const {
     products,
@@ -119,7 +123,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Product Grades & Quality</Text>
@@ -427,7 +431,15 @@ export default function ProductGradesScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -437,7 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -451,11 +463,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   addGradeHeaderBtn: {
     flexDirection: 'row',
@@ -477,7 +489,7 @@ const styles = StyleSheet.create({
   sectionHeaderTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   productChipScroll: {
@@ -488,9 +500,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   productTabActive: {
     backgroundColor: '#16834A',
@@ -513,7 +525,7 @@ const styles = StyleSheet.create({
     color: '#E0F2FE',
   },
   productBanner: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
@@ -530,11 +542,11 @@ const styles = StyleSheet.create({
   bannerProdName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   bannerProdUnit: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   stockCounterBadge: {
@@ -573,13 +585,13 @@ const styles = StyleSheet.create({
   },
   gradesListSub: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   emptyCard: {
     alignItems: 'center',
     padding: 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E5E5',
@@ -587,7 +599,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginTop: 8,
   },
   emptySub: {
@@ -595,7 +607,7 @@ const styles = StyleSheet.create({
     color: '#888888',
   },
   gradeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -603,7 +615,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   gradeCardDisabled: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     opacity: 0.7,
   },
   gradeTopRow: {
@@ -625,7 +637,7 @@ const styles = StyleSheet.create({
   gradeName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   activeTag: {
     paddingHorizontal: 6,
@@ -636,7 +648,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
   },
   activeTagOff: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
   },
   activeTagText: {
     fontSize: 10,
@@ -646,11 +658,11 @@ const styles = StyleSheet.create({
     color: '#16834A',
   },
   activeTagTextOff: {
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   gradeDesc: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   gradeStockBadge: {
     backgroundColor: '#F7F9F7',
@@ -668,7 +680,7 @@ const styles = StyleSheet.create({
   gradeStockValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   gradeBottomRow: {
     flexDirection: 'row',
@@ -685,7 +697,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   priceValue: {
     fontSize: 14,
@@ -738,7 +750,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 18,
     elevation: 5,
@@ -752,7 +764,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   modalForm: {
     gap: 8,
@@ -760,18 +772,18 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   modalInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   modalRowInputs: {

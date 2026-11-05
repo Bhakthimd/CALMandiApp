@@ -95,6 +95,7 @@ export type Product = {
   ungradedStock?: number; // Stock waiting to be sorted/graded
   wastageQuantity?: number; // Total wastage recorded
   wastageReason?: string;
+  image?: string;
 };
 
 export type StockMovementType = 'IN' | 'OUT'; // IN: Farmer Arrival, OUT: Buyer Dispatch
@@ -283,8 +284,8 @@ export type RootStackParamList = {
   AddCustomer: undefined;
   Categories: undefined;
   AddCategory: undefined;
-  Products: undefined;
-  AddProduct: undefined;
+  Products: { category?: string } | undefined;
+  AddProduct: { initialCategory?: string } | undefined;
   Staff: undefined;
   RecordArrival: { productId?: string; farmerId?: string } | undefined;
   RecordSale: { productId?: string; customerId?: string; gradeId?: string } | undefined;

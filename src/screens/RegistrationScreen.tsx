@@ -13,11 +13,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { UserProfile, UserRole } from '../types';
 
 export default function RegistrationScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { loginUser } = useMandi();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState(route?.params?.mobile || '');
   const [business, setBusiness] = useState('');
@@ -103,9 +108,19 @@ export default function RegistrationScreen({ route, navigation }: any) {
             activeOpacity={0.7}
             onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('Welcome')}
           >
-            <Text style={styles.backButtonText}>‹ Back</Text>
+            <Ionicons name="arrow-back" size={22} color={colors.primary} />
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.headerLogo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.headerLogo}>CALMandi</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>
@@ -122,7 +137,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter owner / trader name"
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textMuted}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -135,7 +150,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter mobile number"
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textMuted}
           keyboardType="number-pad"
           maxLength={10}
           value={mobile}
@@ -151,7 +166,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter business name"
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textMuted}
           value={business}
           onChangeText={setBusiness}
           autoCapitalize="words"
@@ -164,7 +179,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter your location"
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textMuted}
           value={location}
           onChangeText={setLocation}
           autoCapitalize="words"
@@ -218,118 +233,118 @@ export default function RegistrationScreen({ route, navigation }: any) {
 }
 
 // Styles
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
-
   content: {
     flexGrow: 1,
     padding: 25,
   },
-
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 6,
     paddingRight: 10,
+    gap: 4,
   },
-
   backButtonText: {
     fontSize: 16,
-    color: '#16834A',
+    color: colors.primary,
     fontWeight: '600',
   },
-
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   headerLogo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
   },
-
   logo: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
     textAlign: 'center',
     marginBottom: 25,
   },
-
   title: {
     fontSize: 25,
     fontWeight: 'bold',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
-
   subtitle: {
     fontSize: 15,
-    color: '#777777',
+    color: colors.textSecondary,
     marginBottom: 25,
   },
-
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textPrimary,
     marginBottom: 8,
     marginTop: 12,
   },
-
   input: {
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    color: '#222222',
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
   },
-
   roleContainer: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 5,
   },
-
   roleButton: {
     flex: 1,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 10,
     alignItems: 'center',
+    backgroundColor: colors.surface,
   },
-
   selectedRole: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-
   roleText: {
     fontSize: 16,
-    color: '#333333',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
-
   selectedRoleText: {
     color: '#FFFFFF',
   },
-
   button: {
-    backgroundColor: '#16834A',
+    backgroundColor: colors.primary,
     padding: 17,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 30,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
-
   buttonText: {
     color: '#FFFFFF',
     fontSize: 18,

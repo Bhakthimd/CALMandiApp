@@ -11,10 +11,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { MandiSlip } from '../types';
 
 export default function SlipsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { slips } = useMandi();
   const [filter, setFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
 
@@ -223,10 +227,18 @@ _Thank you for your business!_
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAF8',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -254,12 +266,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 18,
     lineHeight: 20,
   },
@@ -292,7 +304,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: '#D1D5DB',
   },
@@ -303,13 +315,13 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
   },
   emptyContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 30,
     alignItems: 'center',
@@ -330,12 +342,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   slipCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -377,30 +389,30 @@ const styles = StyleSheet.create({
   slipNum: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textPrimary,
   },
   slipDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   partyName: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   partyMobile: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 10,
     marginTop: 2,
   },
   detailBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   detailRow: {
     flexDirection: 'row',
@@ -410,7 +422,7 @@ const styles = StyleSheet.create({
   detailCommodity: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   detailQty: {
     fontSize: 15,
@@ -419,7 +431,7 @@ const styles = StyleSheet.create({
   },
   detailRate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   amountRow: {
@@ -430,12 +442,12 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   totalAmountText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   balanceBadge: {
     backgroundColor: '#FEF3C7',

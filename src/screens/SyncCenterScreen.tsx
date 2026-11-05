@@ -11,6 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { ArrivalRecord, SaleRecord } from '../types';
 
 type FilterTab = 'all' | 'pending' | 'synced' | 'failed' | 'arrivals' | 'sales';
@@ -23,6 +25,8 @@ interface UnifiedItem {
 
 export default function SyncCenterScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const {
     arrivals,
     sales,
@@ -126,9 +130,19 @@ export default function SyncCenterScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.backText}>‹ Home</Text>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={styles.backText}>Home</Text>
           </TouchableOpacity>
-          <Text style={styles.logo}>CALMandi</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={styles.themeToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>CALMandi</Text>
+          </View>
         </View>
 
         {/* Title & Description */}
@@ -607,7 +621,15 @@ export default function SyncCenterScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -638,17 +660,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 18,
     lineHeight: 20,
   },
   heroCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1.5,
@@ -713,7 +735,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   simToggleBtnNormal: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderColor: '#D1D5DB',
   },
   simToggleBtnActive: {
@@ -723,7 +745,7 @@ const styles = StyleSheet.create({
   simToggleText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textPrimary,
   },
   simToggleTextActive: {
     color: '#FFFFFF',
@@ -765,7 +787,7 @@ const styles = StyleSheet.create({
   metricTileLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   metricTileNumber: {
     fontSize: 22,
@@ -773,7 +795,7 @@ const styles = StyleSheet.create({
   },
   metricTileSub: {
     fontSize: 10,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   lastSyncRow: {
@@ -791,7 +813,7 @@ const styles = StyleSheet.create({
   },
   lastSyncText: {
     fontSize: 12,
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   syncNowBtn: {
     flexDirection: 'row',
@@ -864,7 +886,7 @@ const styles = StyleSheet.create({
   filterTabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   filterTabTextActive: {
     color: '#FFFFFF',
@@ -905,19 +927,19 @@ const styles = StyleSheet.create({
   listSectionTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   listCountSubtext: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 30,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     marginTop: 10,
   },
   emptyTitle: {
@@ -934,12 +956,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   recordCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -1012,16 +1034,16 @@ const styles = StyleSheet.create({
   recordCommodity: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   recordParty: {
     fontSize: 13,
-    color: '#4B5563',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   recordNotes: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 4,
   },
@@ -1037,7 +1059,7 @@ const styles = StyleSheet.create({
   recordQuantity: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   recordAmount: {
     fontSize: 14,
@@ -1047,7 +1069,7 @@ const styles = StyleSheet.create({
   },
   recordPayMethod: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   recordFooter: {
@@ -1055,13 +1077,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
     paddingTop: 8,
     marginTop: 2,
   },
   recordDateText: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
   offlineHintText: {
     fontSize: 11,

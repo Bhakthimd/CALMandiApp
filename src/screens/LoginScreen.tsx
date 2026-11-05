@@ -18,13 +18,12 @@ import { useTheme } from '../context/ThemeContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
 import { UserRole } from '../types';
 import CALMandiLogo from '../components/CALMandiLogo';
-import NetworkStatusBanner from '../components/NetworkStatusBanner';
 
 export default function LoginScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const [mobile, setMobile] = useState('');
   const { loginUser } = useMandi();
-  const { colors } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const targetRole: UserRole = route?.params?.role || 'Owner';
 
   const handleContinue = () => {
@@ -90,6 +89,21 @@ export default function LoginScreen({ route, navigation }: any) {
           <Text style={[styles.backButtonText, { color: colors.textPrimary }]}>Home</Text>
         </TouchableOpacity>
 
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={{
+              padding: 6,
+              borderRadius: 8,
+              backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
+          </TouchableOpacity>
+
         {/* Role Pill Indicator */}
         <View
           style={[
@@ -114,6 +128,7 @@ export default function LoginScreen({ route, navigation }: any) {
           >
             {targetRole === 'Owner' ? 'Owner Login' : 'Operator Login'}
           </Text>
+        </View>
         </View>
       </View>
 
@@ -141,9 +156,7 @@ export default function LoginScreen({ route, navigation }: any) {
             </Text>
           </View>
 
-          {/* Network Status & Offline Simulator Banner */}
-          <NetworkStatusBanner />
-
+          
           {/* Mobile Number Input */}
           <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number</Text>
           <View

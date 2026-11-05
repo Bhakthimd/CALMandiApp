@@ -12,10 +12,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 import { UserRole } from '../types';
 
 export default function StaffScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { staffMembers, addStaffMember, isOwner, switchRole, currentUser } = useMandi();
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -380,7 +384,15 @@ export default function StaffScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -411,22 +423,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 20,
     lineHeight: 20,
   },
   activeRoleCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     marginBottom: 22,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -476,7 +488,7 @@ const styles = StyleSheet.create({
   },
   activeRoleDescription: {
     fontSize: 13,
-    color: '#4B5563',
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   sectionHeaderRow: {
@@ -488,7 +500,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   addStaffBtn: {
     flexDirection: 'row',
@@ -505,7 +517,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   staffCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
@@ -531,7 +543,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   staffDetails: {
     flex: 1,
@@ -545,7 +557,7 @@ const styles = StyleSheet.create({
   staffName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   memberRoleTag: {
     paddingHorizontal: 8,
@@ -574,23 +586,23 @@ const styles = StyleSheet.create({
   },
   staffDesk: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   staffMobile: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   matrixContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   matrixHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
@@ -599,7 +611,7 @@ const styles = StyleSheet.create({
   matrixHeaderCell: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textPrimary,
   },
   centerText: {
     flex: 1,
@@ -611,7 +623,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   matrixRowAlt: {
     backgroundColor: '#FAFAFA',
@@ -619,12 +631,12 @@ const styles = StyleSheet.create({
   permFeature: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   permNote: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   centerCol: {
     flex: 1,
@@ -638,7 +650,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 20,
   },
@@ -651,17 +663,17 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.textPrimary,
   },
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     padding: 10,
     fontSize: 15,
@@ -677,9 +689,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.inputBorder,
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
   },
   rolePickerChipActive: {
     borderColor: '#16834A',
@@ -688,7 +700,7 @@ const styles = StyleSheet.create({
   rolePickerChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   rolePickerChipTextActive: {
     color: '#16834A',
@@ -702,12 +714,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
   },
   modalCancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.textSecondary,
   },
   modalSaveBtn: {
     paddingVertical: 10,

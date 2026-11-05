@@ -11,9 +11,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../styles/theme';
 
 export default function GradingWastageScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { productId: initialProductId } = route.params || {};
   const {
     products,
@@ -166,7 +170,7 @@ export default function GradingWastageScreen({ route, navigation }: any) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#222222" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Grading & Wastage Management</Text>
@@ -462,7 +466,15 @@ export default function GradingWastageScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  themeToggleBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F9F7',
@@ -472,7 +484,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -486,11 +498,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   content: {
     padding: 16,
@@ -498,7 +510,7 @@ const styles = StyleSheet.create({
   sectionHeaderTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   prodScroll: {
@@ -509,9 +521,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   prodTabActive: {
     backgroundColor: '#16834A',
@@ -527,17 +539,17 @@ const styles = StyleSheet.create({
   },
   prodTabSub: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   prodTabSubActive: {
     color: '#E0F2FE',
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 14,
   },
   stepTitleRow: {
@@ -562,18 +574,18 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   stepSub: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   qtyInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 10,
     paddingHorizontal: 14,
     height: 50,
@@ -582,12 +594,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   unitSuffix: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   noGradesWarning: {
     fontSize: 13,
@@ -608,19 +620,19 @@ const styles = StyleSheet.create({
   gradeInputName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   gradeInputPrice: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   gradeInputBoxWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     width: 110,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 8,
     height: 38,
@@ -629,13 +641,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     textAlign: 'right',
     paddingRight: 4,
   },
   gradeInputUnit: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   totalGradedSummaryRow: {
     flexDirection: 'row',
@@ -646,7 +658,7 @@ const styles = StyleSheet.create({
   totalGradedLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
   },
   totalGradedValue: {
     fontSize: 14,
@@ -656,7 +668,7 @@ const styles = StyleSheet.create({
   subFieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginTop: 12,
     marginBottom: 6,
   },
@@ -670,9 +682,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
   },
   reasonChipActive: {
     backgroundColor: '#FEF2F2',
@@ -687,14 +699,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   notesField: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? colors.surface : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 12,
-    color: '#222222',
+    color: colors.textPrimary,
   },
   auditCard: {
     borderRadius: 12,
@@ -703,8 +715,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   auditCardValid: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E5E5',
+    backgroundColor: colors.cardBackground,
+    borderColor: colors.border,
   },
   auditCardError: {
     backgroundColor: '#FEF2F2',
@@ -713,7 +725,7 @@ const styles = StyleSheet.create({
   auditTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   calcRow: {
@@ -723,12 +735,12 @@ const styles = StyleSheet.create({
   },
   calcLabel: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   calcValue: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   calcDivider: {
     height: 1,
@@ -738,7 +750,7 @@ const styles = StyleSheet.create({
   calcBoldLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   calcBoldValue: {
     fontSize: 14,
@@ -785,15 +797,15 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   historyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBackground,
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 8,
   },
   historyHeader: {
@@ -804,7 +816,7 @@ const styles = StyleSheet.create({
   },
   historyDate: {
     fontSize: 11,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   historyWastagePill: {
     backgroundColor: '#FEE2E2',
@@ -820,11 +832,11 @@ const styles = StyleSheet.create({
   historySummary: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   historyReason: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
 });
