@@ -70,7 +70,7 @@ export default function KhataScreen({ navigation }: any) {
 
   const handleSendReminder = async (customer: Customer) => {
     const pending = customer.pendingAmount || 0;
-    const msg = `*CALMandi Payment Reminder*
+    const msg = `*CAL Mandi Payment Reminder*
 -----------------------------
 Dear *${customer.name}* (${customer.business}),
 Your current pending balance at our Mandi shop is *₹${pending.toLocaleString('en-IN')}*.

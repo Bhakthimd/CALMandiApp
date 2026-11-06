@@ -285,6 +285,7 @@ export interface OfflineSyncStats {
 }
 
 export type RootStackParamList = {
+  Splash: undefined;
   Welcome: undefined;
   Login: { role?: UserRole } | undefined;
   Otp: { mobile: string; demoOtp?: string; detectedRole?: UserRole };

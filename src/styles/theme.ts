@@ -206,7 +206,7 @@ export const commonTheme = {
   },
   typography: {
     tagline: 'Mandi operations made easy',
-    appName: 'CALMandi',
+    appName: 'CAL Mandi',
     fontSizes: {
       xs: 11,
       sm: 13,

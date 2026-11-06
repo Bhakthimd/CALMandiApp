@@ -130,6 +130,7 @@ interface MandiContextType {
   wastageRecords: WastageRecord[];
   addProductGrade: (gradeData: Omit<ProductGrade, 'id'>) => Promise<ProductGrade>;
   updateProductGrade: (id: string, updates: Partial<ProductGrade>) => Promise<boolean>;
+  deleteProductGrade: (id: string) => Promise<boolean>;
   toggleGradeActive: (id: string) => Promise<boolean>;
   getProductGrades: (productId: string) => ProductGrade[];
   recordWastageAndSorting: (params: {
@@ -910,6 +911,32 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     return updateProductGrade(id, { isActive: !target.isActive });
   };
 
+  const deleteProductGrade = async (id: string): Promise<boolean> => {
+    const target = productGrades.find((g) => g.id === id);
+    if (!target) return false;
+    const nextGrades = productGrades.filter((g) => g.id !== id);
+    setProductGrades(nextGrades);
+
+    const targetProductId = target.productId;
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === targetProductId) {
+          const proGrades = nextGrades.filter((g) => g.productId === targetProductId);
+          const totalStock = proGrades.reduce((sum, g) => sum + (g.isActive ? g.stockQuantity : 0), 0);
+          return {
+            ...p,
+            grades: proGrades,
+            quantity: String(totalStock),
+          };
+        }
+        return p;
+      })
+    );
+
+    await saveProductGradesToStorage(nextGrades);
+    return true;
+  };
+
   // Record sorting batch and wastage with strict balance verification
   const recordWastageAndSorting = async (params: {
     productId: string;
@@ -1578,6 +1605,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         wastageRecords,
         addProductGrade,
         updateProductGrade,
+        deleteProductGrade,
         toggleGradeActive,
         getProductGrades,
         recordWastageAndSorting,

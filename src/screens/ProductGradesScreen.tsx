@@ -26,7 +26,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
     productGrades,
     addProductGrade,
     updateProductGrade,
-    toggleGradeActive,
+    deleteProductGrade,
     isOwner,
   } = useMandi();
 
@@ -106,12 +106,25 @@ export default function ProductGradesScreen({ route, navigation }: any) {
     setModalVisible(false);
   };
 
-  const handleToggleGrade = async (gradeId: string, currentStatus: boolean) => {
+  const handleDeleteGrade = (gradeId: string, name: string) => {
     if (!isOwner) {
-      Alert.alert('Permission Denied', 'Only Mandi Owners can activate or deactivate grades.');
+      Alert.alert('Permission Denied', 'Only Mandi Owners can delete grades.');
       return;
     }
-    await toggleGradeActive(gradeId);
+    Alert.alert(
+      'Delete Grade',
+      `Are you sure you want to delete ${name}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteProductGrade(gradeId);
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -229,7 +242,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
             Configured Grades ({currentGrades.length})
           </Text>
           <Text style={styles.gradesListSub}>
-            {isOwner ? 'Edit prices and activate/disable grades' : 'View grade prices and stock'}
+            {isOwner ? 'Edit prices or delete grades' : 'View grade prices and stock'}
           </Text>
         </View>
 
@@ -316,26 +329,17 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={[
-                          styles.toggleBtn,
-                          isActive ? styles.toggleBtnDisable : styles.toggleBtnEnable,
-                        ]}
-                        onPress={() => handleToggleGrade(grade.id, Boolean(isActive))}
+                        style={styles.deleteBtn}
+                        onPress={() => handleDeleteGrade(grade.id, grade.name)}
                         activeOpacity={0.7}
+                        accessibilityLabel={`Delete ${grade.name}`}
                       >
                         <Ionicons
-                          name={isActive ? 'power-outline' : 'checkmark-circle-outline'}
+                          name="trash-outline"
                           size={15}
-                          color={isActive ? '#DC2626' : '#16834A'}
+                          color="#DC2626"
                         />
-                        <Text
-                          style={[
-                            styles.toggleBtnText,
-                            isActive ? { color: '#DC2626' } : { color: '#16834A' },
-                          ]}
-                        >
-                          {isActive ? 'Disable' : 'Enable'}
-                        </Text>
+                        <Text style={styles.deleteBtnText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -722,26 +726,21 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: '600',
     color: '#16834A',
   },
-  toggleBtn: {
+  deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
+    borderColor: isDark ? 'rgba(239, 68, 68, 0.4)' : '#FCA5A5',
+    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
     gap: 4,
   },
-  toggleBtnDisable: {
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
-  },
-  toggleBtnEnable: {
-    borderColor: '#A7F3D0',
-    backgroundColor: '#ECFDF5',
-  },
-  toggleBtnText: {
+  deleteBtnText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#DC2626',
   },
   modalOverlay: {
     flex: 1,

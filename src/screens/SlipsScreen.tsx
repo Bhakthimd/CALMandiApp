@@ -29,7 +29,7 @@ export default function SlipsScreen({ navigation }: any) {
 
   const generateWhatsAppMessage = (slip: MandiSlip) => {
     const isOut = slip.type === 'OUT';
-    return `*CALMandi Delivery Slip*
+    return `*CAL Mandi Delivery Slip*
 -----------------------------
 *Slip No:* #${slip.slipNumber}
 *Date:* ${slip.date}
@@ -44,7 +44,7 @@ export default function SlipsScreen({ navigation }: any) {
 *Balance Due:* ₹${slip.balanceAmount.toLocaleString('en-IN')}
 ${slip.notes ? `*Notes:* ${slip.notes}\n` : ''}-----------------------------
 _Thank you for your business!_
-*CALMandi APMC Market Yard*`;
+*CAL Mandi APMC Market Yard*`;
   };
 
   const handleShare = async (slip: MandiSlip) => {
@@ -86,7 +86,7 @@ _Thank you for your business!_
             <Text style={styles.backText}>‹ Home</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <Text style={styles.logo}>CAL Mandi</Text>
         </View>
 
         <Text style={styles.title}>Delivery Slips & Bills</Text>

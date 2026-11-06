@@ -153,7 +153,7 @@ export default function OtpScreen({ route, navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.logo}>CALMandi</Text>
+        <Text style={styles.logo}>CAL Mandi</Text>
 
         <Text style={styles.title}>Verify Phone Number</Text>
 

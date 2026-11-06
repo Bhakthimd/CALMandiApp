@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
 import { UserRole } from '../types';
@@ -22,7 +21,6 @@ import CALMandiLogo from '../components/CALMandiLogo';
 export default function LoginScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const [mobile, setMobile] = useState('');
-  const { loginUser } = useMandi();
   const { colors, isDark, toggleTheme } = useTheme();
   const targetRole: UserRole = route?.params?.role || 'Owner';
 
@@ -55,13 +53,6 @@ export default function LoginScreen({ route, navigation }: any) {
       demoOtp,
       detectedRole,
     });
-  };
-
-  const handleQuickDemo = (role: 'Owner' | 'Operator') => {
-    Keyboard.dismiss();
-    const profile = role === 'Owner' ? demoOwnerProfile : demoOperatorProfile;
-    loginUser(profile);
-    navigation.replace('Home');
   };
 
   return (
@@ -181,8 +172,12 @@ export default function LoginScreen({ route, navigation }: any) {
               <Text style={[styles.prefixText, { color: colors.textPrimary }]}>+91</Text>
             </View>
             <TextInput
-              style={[styles.input, { color: colors.textPrimary }]}
-              placeholder="98765 43210"
+              style={[
+                styles.input,
+                mobile.length > 0 ? styles.inputWithText : styles.inputPlaceholder,
+                { color: colors.textPrimary },
+              ]}
+              placeholder="enter your phone number"
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={10}
@@ -192,6 +187,8 @@ export default function LoginScreen({ route, navigation }: any) {
               }
               returnKeyType="done"
               onSubmitEditing={handleContinue}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -214,7 +211,7 @@ export default function LoginScreen({ route, navigation }: any) {
           {/* Register Link */}
           <View style={styles.registerPromptRow}>
             <Text style={[styles.registerPromptText, { color: colors.textSecondary }]}>
-              New to CALMandi?{' '}
+              New to CAL Mandi?{' '}
             </Text>
             <TouchableOpacity
               activeOpacity={0.7}
@@ -224,51 +221,6 @@ export default function LoginScreen({ route, navigation }: any) {
                 Register here
               </Text>
             </TouchableOpacity>
-          </View>
-
-          {/* Quick Demo Bar for Testing */}
-          <View style={[styles.demoSection, { borderTopColor: colors.borderLight }]}>
-            <Text style={[styles.demoLabel, { color: colors.textMuted }]}>
-              1-Tap Demo Test:
-            </Text>
-            <View style={styles.demoButtonsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.demoChip,
-                  {
-                    backgroundColor: colors.demoChipBg,
-                    borderColor: colors.demoChipBorder,
-                  },
-                ]}
-                activeOpacity={0.7}
-                onPress={() => handleQuickDemo('Owner')}
-              >
-                <Text style={[styles.demoChipText, { color: colors.primaryDark }]}>
-                  👑 Owner Demo
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.demoChip,
-                  {
-                    backgroundColor: colors.demoChipBg,
-                    borderColor: colors.demoChipBorderOperator,
-                  },
-                ]}
-                activeOpacity={0.7}
-                onPress={() => handleQuickDemo('Operator')}
-              >
-                <Text
-                  style={[
-                    styles.demoChipTextOperator,
-                    { color: colors.operatorBadgeText },
-                  ]}
-                >
-                  👷 Operator Demo
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -353,25 +305,32 @@ const styles = StyleSheet.create({
   prefixContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 14,
     borderRightWidth: 1,
   },
   flagText: {
-    fontSize: 18,
-    marginRight: 6,
+    fontSize: 16,
+    marginRight: 4,
   },
   prefixText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   input: {
     flex: 1,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 14,
-    fontSize: 18,
+  },
+  inputPlaceholder: {
+    fontSize: 14,
+    fontWeight: '400',
+    letterSpacing: 0,
+  },
+  inputWithText: {
+    fontSize: 17,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   button: {
     flexDirection: 'row',
@@ -402,34 +361,5 @@ const styles = StyleSheet.create({
   registerLinkText: {
     fontSize: 15,
     fontWeight: '700',
-  },
-  demoSection: {
-    marginTop: 36,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    alignItems: 'center',
-  },
-  demoLabel: {
-    fontSize: 12,
-    marginBottom: 10,
-    fontWeight: '600',
-  },
-  demoButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  demoChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  demoChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  demoChipTextOperator: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

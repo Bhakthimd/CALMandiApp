@@ -129,7 +129,7 @@ export default function StaffScreen({ navigation }: any) {
             <Text style={styles.backText}>‹ Home</Text>
           </TouchableOpacity>
 
-          <Text style={styles.logo}>CALMandi</Text>
+          <Text style={styles.logo}>CAL Mandi</Text>
         </View>
 
         <Text style={styles.title}>Team & Role Permissions</Text>

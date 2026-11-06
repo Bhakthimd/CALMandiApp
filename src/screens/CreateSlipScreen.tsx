@@ -123,7 +123,7 @@ export default function CreateSlipScreen({ route, navigation }: any) {
 
   const generateWhatsAppMessage = (slip: MandiSlip) => {
     const isOut = slip.type === 'OUT';
-    return `*CALMandi Delivery Slip*
+    return `*CAL Mandi Delivery Slip*
 -----------------------------
 *Slip No:* #${slip.slipNumber}
 *Date:* ${slip.date}
@@ -138,7 +138,7 @@ export default function CreateSlipScreen({ route, navigation }: any) {
 *Balance Due:* ₹${slip.balanceAmount.toLocaleString('en-IN')}
 ${slip.notes ? `*Notes:* ${slip.notes}\n` : ''}-----------------------------
 _Thank you for your business!_
-*CALMandi APMC Market Yard*`;
+*CAL Mandi APMC Market Yard*`;
   };
 
   const handleShareWhatsApp = async () => {
@@ -186,7 +186,7 @@ _Thank you for your business!_
               <Text style={styles.backText}>‹ Back</Text>
             </TouchableOpacity>
 
-            <Text style={styles.logo}>CALMandi</Text>
+            <Text style={styles.logo}>CAL Mandi</Text>
           </View>
 
           <Text style={styles.title}>Fast Stock Entry & Bill</Text>
@@ -443,7 +443,7 @@ _Thank you for your business!_
             <View style={styles.slipHeader}>
               <View style={styles.slipLogoRow}>
                 <Ionicons name="leaf" size={20} color="#16834A" />
-                <Text style={styles.slipMandiName}>CALMandi APMC Yard</Text>
+                <Text style={styles.slipMandiName}>CAL Mandi APMC Yard</Text>
               </View>
               <Text style={styles.slipBadge}>
                 {createdSlip?.type === 'OUT' ? '📤 SALE / DISPATCH' : '📥 FARMER INWARD'}

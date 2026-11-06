@@ -43,7 +43,7 @@ export default function HomeScreen({ navigation }: any) {
   const handleLogout = () => {
     Alert.alert(
       t('logoutConfirmTitle', 'Logout'),
-      t('logoutConfirmMsg', 'Are you sure you want to log out of CALMandi?'),
+      t('logoutConfirmMsg', 'Are you sure you want to log out of CAL Mandi?'),
       [
         { text: t('cancel', 'Cancel'), style: 'cancel' },
         {
@@ -149,7 +149,7 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={styles.welcomeGreeting}>{t('welcome', 'Welcome')},</Text>
               <Text style={styles.userName}>{currentUser?.name || 'Mandi User'}</Text>
               <Text style={styles.mandiBusiness}>
-                {currentUser?.business || 'CALMandi APMC'} • {currentUser?.location || 'Bangalore'}
+                {currentUser?.business || 'CAL Mandi APMC'} • {currentUser?.location || 'Bangalore'}
               </Text>
             </View>
 

@@ -8,7 +8,7 @@ interface ThemeTogglePillProps {
 }
 
 export default function ThemeTogglePill({ style }: ThemeTogglePillProps) {
-  const { isDark, setThemeMode, colors } = useTheme();
+  const { isDark, setThemeMode } = useTheme();
 
   return (
     <View

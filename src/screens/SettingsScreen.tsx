@@ -34,7 +34,7 @@ export default function SettingsScreen({ navigation }: any) {
   const handleLogout = () => {
     Alert.alert(
       t('logoutConfirmTitle', 'Logout'),
-      t('logoutConfirmMsg', 'Are you sure you want to log out of CALMandi?'),
+      t('logoutConfirmMsg', 'Are you sure you want to log out of CAL Mandi?'),
       [
         { text: t('cancel', 'Cancel'), style: 'cancel' },
         {
@@ -97,7 +97,7 @@ export default function SettingsScreen({ navigation }: any) {
                 {t('languageSectionTitle', 'Language Settings')}
               </Text>
               <Text style={[styles.sectionSubtext, { color: colors.textSecondary }]}>
-                {t('languageSectionSub', 'Select your preferred language for CALMandi')}
+                {t('languageSectionSub', 'Select your preferred language for CAL Mandi')}
               </Text>
             </View>
           </View>
@@ -352,7 +352,7 @@ export default function SettingsScreen({ navigation }: any) {
                   Mandi Business
                 </Text>
                 <Text style={[styles.profileMetaVal, { color: colors.textPrimary }]}>
-                  {currentUser?.business || 'CALMandi APMC'}
+                  {currentUser?.business || 'CAL Mandi APMC'}
                 </Text>
               </View>
 
@@ -455,7 +455,7 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.aboutTitle, { color: colors.textPrimary }]}>
-                  CALMandi Mobile
+                  CAL Mandi Mobile
                 </Text>
                 <Text style={[styles.aboutVersion, { color: colors.textSecondary }]}>
                   Version 1.0.0 • APMC Mandi Edition

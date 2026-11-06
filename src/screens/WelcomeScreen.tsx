@@ -17,7 +17,6 @@ import { useLanguage } from '../context/LanguageContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
 import CALMandiLogo from '../components/CALMandiLogo';
 import LanguageSelectorModal from '../components/LanguageSelectorModal';
-import ThemeTogglePill from '../components/ThemeTogglePill';
 
 export default function WelcomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();

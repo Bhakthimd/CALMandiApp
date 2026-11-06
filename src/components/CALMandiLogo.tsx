@@ -129,6 +129,7 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    gap: 6,
   },
   brandPartCal: {
     fontWeight: '800',

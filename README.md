@@ -1,6 +1,6 @@
-# CALMandi - Mobile Mandi Management Application
+# CAL Mandi - Mobile Mandi Management Application
 
-**CALMandi** is an intuitive, mobile-first management application tailored for agricultural mandi owners, commission agents, and traders—particularly those with limited previous smartphone experience.
+**CAL Mandi** is an intuitive, mobile-first management application tailored for agricultural mandi owners, commission agents, and traders—particularly those with limited previous smartphone experience.
 
 The user interface prioritizes clarity, readability, and familiarity, utilizing a clean **green-and-white theme** (`#16834A`), large touch-friendly action cards, high-contrast readable text, recognizable icons, and seamless mobile keyboard interactions.
 
@@ -8,7 +8,7 @@ The user interface prioritizes clarity, readability, and familiarity, utilizing 
 
 ## 1. Project Overview
 
-CALMandi streamlines daily mandi directory operations across three key pillars:
+CAL Mandi streamlines daily mandi directory operations across three key pillars:
 
 1. **Customers Management**: Keep track of mandi buyers, sellers, and traders with instant 10-digit mobile number validation and business directory cards.
 2. **Category Management**: Categorize commodities (e.g., *Fruits*, *Vegetables*, *Leafy Vegetables*, *Dry Fruits*) with automatic duplicate prevention.
@@ -136,7 +136,7 @@ Options from the interactive menu:
    ```bash
    npx expo start --android
    ```
-3. Expo will automatically detect the running emulator, install Expo Go if needed, and open CALMandi.
+3. Expo will automatically detect the running emulator, install Expo Go if needed, and open CAL Mandi.
 
 ---
 

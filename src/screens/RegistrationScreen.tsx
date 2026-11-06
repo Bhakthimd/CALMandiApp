@@ -72,7 +72,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
 
     Alert.alert(
       'Registration Successful!',
-      `Welcome to CALMandi, ${cleanedName}!\nRegistered as ${role}.`,
+      `Welcome to CAL Mandi, ${cleanedName}!\nRegistered as ${role}.`,
       [
         {
           text: 'Open Mandi Dashboard',
@@ -119,7 +119,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
             >
               <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
             </TouchableOpacity>
-            <Text style={styles.headerLogo}>CALMandi</Text>
+            <Text style={styles.headerLogo}>CAL Mandi</Text>
           </View>
         </View>
 

@@ -74,7 +74,7 @@ export default function CustomersScreen({ navigation }: any) {
             >
               <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
             </TouchableOpacity>
-            <Text style={styles.logo}>CALMandi</Text>
+            <Text style={styles.logo}>CAL Mandi</Text>
           </View>
         </View>
 
