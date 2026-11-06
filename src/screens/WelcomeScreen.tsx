@@ -17,6 +17,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
 import CALMandiLogo from '../components/CALMandiLogo';
 import LanguageSelectorModal from '../components/LanguageSelectorModal';
+import ThemeTogglePill from '../components/ThemeTogglePill';
 
 export default function WelcomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -151,7 +152,7 @@ export default function WelcomeScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {/* Official CALMandi Logo & Tagline Header */}
+          {/* Official CAL Mandi Logo & Tagline Header */}
           <View style={styles.headerSection}>
             <CALMandiLogo size="large" showTagline={false} forceLightText={true} />
 
@@ -160,10 +161,7 @@ export default function WelcomeScreen({ navigation }: any) {
               <Text style={styles.taglineText}>
                 {theme.typography.tagline}
               </Text>
-              <Text style={styles.subTaglineText}>
-                {t('welcomeSubTagline', 'Daily auctions, live crate tally, digital khata & slips')}
-              </Text>
-            </View>
+                          </View>
           </View>
 
           {/* Role Selection Container */}
@@ -179,12 +177,9 @@ export default function WelcomeScreen({ navigation }: any) {
             <View style={styles.sectionTitleRow}>
               <Ionicons name="people-circle-outline" size={20} color={colors.primary} />
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                {t('selectYourRole', 'Select Your Role')}
+                {t('chooseYourRole', 'Choose your role')}
               </Text>
             </View>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              {t('roleSubtitle', 'Tailored experience for business owners & floor staff')}
-            </Text>
 
             {/* Owner Role Card */}
             <TouchableOpacity
@@ -241,7 +236,7 @@ export default function WelcomeScreen({ navigation }: any) {
                     </View>
                   </View>
                   <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>
-                    {t('ownerRoleDesc', 'Complete business control: Khata, udhaar ledger, profit & staff management.')}
+                    {t('ownerRoleDesc', 'Manage Khata, payments, staff and business')}
                   </Text>
                 </View>
               </View>
@@ -327,7 +322,7 @@ export default function WelcomeScreen({ navigation }: any) {
                     </View>
                   </View>
                   <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>
-                    {t('operatorRoleDesc', 'Fast floor operations: Live crate clicker, gate in/out slips & cash drawer.')}
+                    {t('operatorRoleDesc', 'Manage crates, weighing and daily sales')}
                   </Text>
                 </View>
               </View>
@@ -446,7 +441,7 @@ export default function WelcomeScreen({ navigation }: any) {
 
           {/* Footer note */}
           <Text style={styles.footerNote}>
-            CALMandi v1.0 • Built for Indian APMC & Krishi Mandi Mandals
+            CAL Mandi v1.0 • Built for Indian APMC & Krishi Mandi Mandals
           </Text>
         </ScrollView>
       </ImageBackground>
@@ -579,7 +574,7 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 17,
