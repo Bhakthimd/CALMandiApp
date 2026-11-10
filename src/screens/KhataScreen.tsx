@@ -22,7 +22,7 @@ export default function KhataScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const { customers, totalUdhaar, settleCustomerBalance, isOwner } = useMandi();
+  const { customers, totalUdhaar, settleCustomerBalance, getCustomerBalance, isOwner } = useMandi();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [settleAmount, setSettleAmount] = useState('');
@@ -48,7 +48,8 @@ export default function KhataScreen({ navigation }: any) {
 
   const handleOpenSettle = (customer: Customer) => {
     setSelectedCustomer(customer);
-    setSettleAmount((customer.pendingAmount || 0).toString());
+    const bal = getCustomerBalance(customer.id);
+    setSettleAmount((bal.currentBalance > 0 ? bal.currentBalance : 0).toString());
     setModalVisible(true);
   };
 
@@ -56,7 +57,16 @@ export default function KhataScreen({ navigation }: any) {
     if (!selectedCustomer) return;
     const amount = parseFloat(settleAmount) || 0;
     if (amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
+      Alert.alert('Invalid Amount', 'Please enter a valid payment amount greater than zero.');
+      return;
+    }
+
+    const curBal = getCustomerBalance(selectedCustomer.id).currentBalance;
+    if (amount > curBal) {
+      Alert.alert(
+        'Amount Exceeds Debt',
+        `Payment amount (₹${amount.toLocaleString()}) cannot exceed outstanding debt of ₹${curBal.toLocaleString()}.`
+      );
       return;
     }
 
@@ -64,12 +74,13 @@ export default function KhataScreen({ navigation }: any) {
     setModalVisible(false);
     Alert.alert(
       'Payment Recorded',
-      `Received ₹${amount.toLocaleString('en-IN')} from ${selectedCustomer.name}. Ledger updated.`
+      `Received ₹${amount.toLocaleString('en-IN')} from ${selectedCustomer.name}. Customer Ledger and Cash in Drawer updated.`
     );
   };
 
   const handleSendReminder = async (customer: Customer) => {
-    const pending = customer.pendingAmount || 0;
+    const bal = getCustomerBalance(customer.id);
+    const pending = bal.currentBalance > 0 ? bal.currentBalance : 0;
     const msg = `*CAL Mandi Payment Reminder*
 -----------------------------
 Dear *${customer.name}* (${customer.business}),
@@ -144,7 +155,9 @@ Thank you,
         <Text style={styles.sectionTitle}>Buyer Credit Accounts</Text>
 
         {customers.map((c) => {
-          const isPending = (c.pendingAmount || 0) > 0;
+          const bal = getCustomerBalance(c.id);
+          const pending = bal.currentBalance > 0 ? bal.currentBalance : 0;
+          const isPending = pending > 0;
           return (
             <View key={c.id} style={styles.khataCard}>
               <View style={styles.khataHeader}>
@@ -169,7 +182,7 @@ Thank you,
                       isPending ? styles.pendingPillText : styles.settledPillText,
                     ]}
                   >
-                    {isPending ? `₹ ${(c.pendingAmount || 0).toLocaleString('en-IN')} Due` : 'Settled'}
+                    {isPending ? `₹ ${pending.toLocaleString('en-IN')} Due` : 'Settled'}
                   </Text>
                 </View>
               </View>
@@ -181,7 +194,7 @@ Thank you,
                     activeOpacity={0.7}
                     onPress={() => handleSendReminder(c)}
                   >
-                    <Ionicons name="logo-whatsapp" size={16} color="#16834A" />
+                    <Ionicons name="logo-whatsapp" size={16} color={isDark ? '#4ADE80' : '#16834A'} />
                     <Text style={styles.reminderBtnText}>WhatsApp Reminder</Text>
                   </TouchableOpacity>
 
@@ -221,6 +234,7 @@ Thank you,
               value={settleAmount}
               onChangeText={setSettleAmount}
               placeholder="Enter amount paid"
+              placeholderTextColor={colors.inputPlaceholder}
             />
 
             <View style={styles.modalBtnsRow}>
@@ -273,19 +287,19 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   backText: {
     fontSize: 18,
-    color: '#16834A',
+    color: isDark ? colors.textPrimary : colors.primary,
     fontWeight: '600',
   },
   ownerBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDark ? '#3B2904' : '#FEF3C7',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: isDark ? '#78350F' : '#FDE68A',
   },
   ownerBadgeText: {
-    color: '#B45309',
+    color: isDark ? '#FBBF24' : '#B45309',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -313,11 +327,11 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: 'bold',
   },
   totalUdhaarCard: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: isDark ? '#3B1212' : '#FFF5F5',
     borderRadius: 16,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: '#FECACA',
+    borderColor: isDark ? '#7F1D1D' : '#FECACA',
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 22,
@@ -326,7 +340,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#5C1D1D' : '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -337,17 +351,17 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   udhaarLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#991B1B',
+    color: isDark ? '#FCA5A5' : '#991B1B',
   },
   udhaarValue: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     marginVertical: 2,
   },
   udhaarSub: {
     fontSize: 12,
-    color: '#7F1D1D',
+    color: isDark ? '#FECACA' : '#7F1D1D',
   },
   sectionTitle: {
     fontSize: 18,
@@ -399,18 +413,18 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: 'bold',
   },
   pendingPill: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3B1212' : '#FEE2E2',
   },
   pendingPillText: {
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     fontSize: 13,
     fontWeight: 'bold',
   },
   settledPill: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: isDark ? '#143823' : '#DCFCE7',
   },
   settledPillText: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -426,16 +440,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: isDark ? '#143823' : '#F0FDF4',
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: isDark ? '#1E5E35' : '#BBF7D0',
   },
   reminderBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     marginLeft: 6,
   },
   settleBtn: {
@@ -455,14 +469,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     padding: 20,
   },
   modalBox: {
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.modalBackground,
     borderRadius: 16,
     padding: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
@@ -483,12 +499,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   modalInput: {
     borderWidth: 1.5,
-    borderColor: '#16834A',
+    borderColor: isDark ? '#4ADE80' : '#16834A',
     borderRadius: 8,
     padding: 12,
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    backgroundColor: isDark ? colors.inputBackground : '#FFFFFF',
     marginBottom: 20,
   },
   modalBtnsRow: {

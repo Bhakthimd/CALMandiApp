@@ -169,7 +169,7 @@ export default function StaffScreen({ navigation }: any) {
                 );
               }}
             >
-              <Ionicons name="swap-horizontal" size={16} color="#16834A" />
+              <Ionicons name="swap-horizontal" size={16} color={isDark ? '#4ADE80' : '#16834A'} />
               <Text style={styles.switchButtonText}>
                 Switch to {isOwner ? 'Operator' : 'Owner'}
               </Text>
@@ -237,11 +237,11 @@ export default function StaffScreen({ navigation }: any) {
               </View>
 
               <Text style={styles.staffDesk}>
-                <Ionicons name="location-outline" size={13} color="#666666" />{' '}
+                <Ionicons name="location-outline" size={13} color={colors.textSecondary} />{' '}
                 {member.assignedDesk}
               </Text>
               <Text style={styles.staffMobile}>
-                <Ionicons name="call-outline" size={13} color="#666666" />{' '}
+                <Ionicons name="call-outline" size={13} color={colors.textSecondary} />{' '}
                 {member.mobile}
               </Text>
             </View>
@@ -281,7 +281,7 @@ export default function StaffScreen({ navigation }: any) {
                 <Ionicons
                   name={perm.owner ? 'checkmark-circle' : 'close-circle'}
                   size={20}
-                  color={perm.owner ? '#16834A' : '#DC2626'}
+                  color={perm.owner ? (isDark ? '#4ADE80' : '#16834A') : (isDark ? '#F87171' : '#DC2626')}
                 />
               </View>
 
@@ -289,7 +289,7 @@ export default function StaffScreen({ navigation }: any) {
                 <Ionicons
                   name={perm.operator ? 'checkmark-circle' : 'close-circle'}
                   size={20}
-                  color={perm.operator ? '#16834A' : '#DC2626'}
+                  color={perm.operator ? (isDark ? '#4ADE80' : '#16834A') : (isDark ? '#F87171' : '#DC2626')}
                 />
               </View>
             </View>
@@ -309,7 +309,7 @@ export default function StaffScreen({ navigation }: any) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Mandi Staff Member</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#666666" />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -317,6 +317,7 @@ export default function StaffScreen({ navigation }: any) {
             <TextInput
               style={styles.modalInput}
               placeholder="e.g. Anand Gowda"
+              placeholderTextColor={colors.inputPlaceholder}
               value={name}
               onChangeText={setName}
             />
@@ -325,6 +326,7 @@ export default function StaffScreen({ navigation }: any) {
             <TextInput
               style={styles.modalInput}
               placeholder="10-digit mobile"
+              placeholderTextColor={colors.inputPlaceholder}
               keyboardType="number-pad"
               maxLength={10}
               value={mobile}
@@ -335,6 +337,7 @@ export default function StaffScreen({ navigation }: any) {
             <TextInput
               style={styles.modalInput}
               placeholder="e.g. Weighbridge Counter #2"
+              placeholderTextColor={colors.inputPlaceholder}
               value={assignedDesk}
               onChangeText={setAssignedDesk}
             />
@@ -395,7 +398,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -412,13 +415,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   backText: {
     fontSize: 18,
-    color: '#16834A',
+    color: isDark ? colors.textPrimary : colors.primary,
     fontWeight: '600',
   },
   logo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   title: {
     fontSize: 26,
@@ -473,15 +476,15 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   switchButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5EC',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#C7E8D3',
+    borderColor: isDark ? '#1E5E35' : '#C7E8D3',
   },
   switchButtonText: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontSize: 12,
     fontWeight: '700',
     marginLeft: 4,
@@ -524,7 +527,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
   },
   avatarCircle: {
     width: 44,
@@ -535,10 +538,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginRight: 14,
   },
   ownerAvatar: {
-    backgroundColor: '#D1EAD8',
+    backgroundColor: isDark ? '#143823' : '#D1EAD8',
   },
   operatorAvatar: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: isDark ? '#082F49' : '#E0F2FE',
   },
   avatarText: {
     fontSize: 18,
@@ -569,18 +572,18 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: '700',
   },
   ownerTag: {
-    backgroundColor: '#E8F5EC',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
   },
   operatorTag: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: isDark ? '#082F49' : '#E0F2FE',
   },
   ownerTagText: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontSize: 11,
     fontWeight: '700',
   },
   operatorTagText: {
-    color: '#0284C7',
+    color: isDark ? '#38BDF8' : '#0284C7',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -606,7 +609,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   matrixHeaderCell: {
     fontSize: 13,
@@ -626,7 +629,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderBottomColor: colors.border,
   },
   matrixRowAlt: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: isDark ? colors.surface : '#FAFAFA',
   },
   permFeature: {
     fontSize: 13,
@@ -645,14 +648,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.modalBackground,
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -677,6 +682,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 8,
     padding: 10,
     fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: isDark ? colors.inputBackground : '#FFFFFF',
     marginBottom: 14,
   },
   rolePickerRow: {
@@ -694,8 +701,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     backgroundColor: isDark ? colors.surface : '#F9FAFB',
   },
   rolePickerChipActive: {
-    borderColor: '#16834A',
-    backgroundColor: '#E8F5EC',
+    borderColor: isDark ? '#4ADE80' : '#16834A',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
   },
   rolePickerChipText: {
     fontSize: 14,
@@ -703,7 +710,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textSecondary,
   },
   rolePickerChipTextActive: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   modalActions: {
     flexDirection: 'row',

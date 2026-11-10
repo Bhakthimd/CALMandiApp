@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ActivityIndicator,
   Alert,
@@ -54,6 +55,8 @@ export default function ChatbotScreen({ navigation }: any) {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  // Initial welcome message displayed ONCE when conversation starts
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: 'welcome_1',
@@ -74,9 +77,28 @@ export default function ChatbotScreen({ navigation }: any) {
     };
   }, []);
 
+  // Automatically scroll to the latest message on content or typing updates
   useEffect(() => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    return () => clearTimeout(timer);
   }, [messages, isTyping]);
+
+  // Keep latest message visible above keyboard when keyboard slides up
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 80);
+      }
+    );
+    return () => {
+      showSub.remove();
+    };
+  }, []);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
@@ -93,6 +115,7 @@ export default function ChatbotScreen({ navigation }: any) {
       language: selectedLanguage,
     };
 
+    // Preserve full conversation history without repeating welcome
     setMessages((prev) => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
@@ -124,7 +147,7 @@ export default function ChatbotScreen({ navigation }: any) {
       const errMsg: ChatMessage = {
         id: generateMessageId('err'),
         sender: 'ai',
-        text: 'Sorry, I encountered an issue processing your request. Please try again.',
+        text: 'Sorry, I encountered an issue processing your request. Please try asking again.',
         timestamp: getFormattedCurrentTime(),
         language: selectedLanguage,
       };
@@ -174,8 +197,9 @@ export default function ChatbotScreen({ navigation }: any) {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: isDark ? colors.background : '#F7F9F8' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      {/* WhatsApp-Style Mandi Header */}
+      {/* Clean Mandi Green Header with Integrated Navigation & Settings */}
       <View
         style={[
           styles.header,
@@ -238,16 +262,31 @@ export default function ChatbotScreen({ navigation }: any) {
           </Text>
         </TouchableOpacity>
 
+        {/* Clean Header Settings Button (Replaces any floating button) */}
+        <TouchableOpacity
+          onPress={() => {
+            speechService.stop();
+            navigation.navigate('Settings');
+          }}
+          style={styles.headerActionBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Clear Conversation History Button */}
         <TouchableOpacity
           onPress={handleClearChat}
-          style={styles.clearBtn}
+          style={styles.headerActionBtn}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
         >
           <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {/* Suggested Quick Questions Bar */}
+      {/* Suggested Quick Questions Bar (Horizontally scrollable with no clipping) */}
       <View
         style={[
           styles.suggestionsContainer,
@@ -260,6 +299,7 @@ export default function ChatbotScreen({ navigation }: any) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.suggestionsScroll}
         >
           {suggestedQuestions.map((q, idx) => (
@@ -277,7 +317,7 @@ export default function ChatbotScreen({ navigation }: any) {
             >
               <Ionicons
                 name="help-circle-outline"
-                size={13}
+                size={14}
                 color={isDark ? '#4ADE80' : '#16864B'}
               />
               <Text
@@ -285,6 +325,7 @@ export default function ChatbotScreen({ navigation }: any) {
                   styles.suggestChipText,
                   { color: isDark ? colors.textPrimary : '#334155' },
                 ]}
+                numberOfLines={1}
               >
                 {q}
               </Text>
@@ -296,9 +337,14 @@ export default function ChatbotScreen({ navigation }: any) {
       {/* Messages Scroll Area */}
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={styles.messagesList}
+        style={styles.messagesScroll}
+        contentContainerStyle={[
+          styles.messagesList,
+          { paddingBottom: 16 },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
       >
         {messages.map((item) => {
           const isUser = item.sender === 'user';
@@ -310,13 +356,28 @@ export default function ChatbotScreen({ navigation }: any) {
                 isUser ? styles.messageRowUser : styles.messageRowAi,
               ]}
             >
+              {!isUser && (
+                <View
+                  style={[
+                    styles.aiAvatarSmall,
+                    { backgroundColor: isDark ? '#143823' : '#E8F5EC' },
+                  ]}
+                >
+                  <Ionicons
+                    name="sparkles"
+                    size={12}
+                    color={isDark ? '#4ADE80' : '#16864B'}
+                  />
+                </View>
+              )}
+
               <View
                 style={[
                   styles.messageBubble,
                   isUser
                     ? [
                         styles.bubbleUser,
-                        isDark && { backgroundColor: '#143823' },
+                        isDark && { backgroundColor: '#14532D', borderColor: '#166534' },
                       ]
                     : [
                         styles.bubbleAi,
@@ -327,13 +388,20 @@ export default function ChatbotScreen({ navigation }: any) {
                       ],
                 ]}
               >
+                {!isUser && (
+                  <Text style={[styles.aiLabel, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                    CAL Mandi Assistant
+                  </Text>
+                )}
+
                 <Text
                   style={[
                     styles.messageText,
                     isUser
                       ? [styles.messageTextUser, isDark && { color: '#FFFFFF' }]
-                      : [styles.messageTextAi, isDark && { color: '#FFFFFF' }],
+                      : [styles.messageTextAi, isDark && { color: colors.textPrimary }],
                   ]}
+                  selectable
                 >
                   {item.text}
                 </Text>
@@ -343,12 +411,19 @@ export default function ChatbotScreen({ navigation }: any) {
                     style={[
                       styles.timestampText,
                       isUser
-                        ? [styles.timestampUser, isDark && { color: colors.textSecondary }]
+                        ? [styles.timestampUser, isDark && { color: '#86EFAC' }]
                         : [styles.timestampAi, isDark && { color: colors.textSecondary }],
                     ]}
                   >
                     {item.timestamp}
                   </Text>
+                  {isUser && (
+                    <Ionicons
+                      name="checkmark-done"
+                      size={14}
+                      color={isDark ? '#86EFAC' : '#16834A'}
+                    />
+                  )}
                 </View>
               </View>
             </View>
@@ -357,6 +432,19 @@ export default function ChatbotScreen({ navigation }: any) {
 
         {isTyping && (
           <View style={[styles.messageRow, styles.messageRowAi]}>
+            <View
+              style={[
+                styles.aiAvatarSmall,
+                { backgroundColor: isDark ? '#143823' : '#E8F5EC' },
+              ]}
+            >
+              <Ionicons
+                name="sparkles"
+                size={12}
+                color={isDark ? '#4ADE80' : '#16864B'}
+              />
+            </View>
+
             <View
               style={[
                 styles.messageBubble,
@@ -375,7 +463,7 @@ export default function ChatbotScreen({ navigation }: any) {
               <Text
                 style={[
                   styles.typingText,
-                  isDark && { color: colors.textSecondary },
+                  { color: isDark ? colors.textSecondary : '#64748B' },
                 ]}
               >
                 CAL Mandi AI is typing...
@@ -385,12 +473,12 @@ export default function ChatbotScreen({ navigation }: any) {
         )}
       </ScrollView>
 
-      {/* Input Bar */}
+      {/* Bottom Input Area: Consistent Alignment, Multiline Support, Non-Shrinking Buttons */}
       <View
         style={[
           styles.inputContainer,
           {
-            paddingBottom: Math.max(insets.bottom + 8, 14),
+            paddingBottom: Math.max(insets.bottom + 8, 12),
             backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
             borderTopColor: isDark ? colors.border : '#E2E8F0',
           },
@@ -398,7 +486,7 @@ export default function ChatbotScreen({ navigation }: any) {
       >
         <TouchableOpacity
           style={[
-            styles.micInputBtn,
+            styles.actionIconBtn,
             { backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9' },
           ]}
           onPress={() => setIsVoiceModalOpen(true)}
@@ -425,23 +513,28 @@ export default function ChatbotScreen({ navigation }: any) {
           value={inputText}
           onChangeText={setInputText}
           multiline
-          maxLength={300}
+          maxLength={400}
         />
 
         <TouchableOpacity
           style={[
+            styles.actionIconBtn,
             styles.sendBtn,
             { backgroundColor: isDark ? colors.primary : '#16864B' },
             !inputText.trim() && [
               styles.sendBtnDisabled,
-              { backgroundColor: isDark ? colors.surfaceMuted : '#94A3B8' },
+              { backgroundColor: isDark ? colors.surfaceMuted : '#CBD5E1' },
             ],
           ]}
           onPress={() => handleSendMessage()}
           disabled={!inputText.trim()}
           activeOpacity={0.8}
         >
-          <Ionicons name="send" size={18} color="#FFFFFF" />
+          <Ionicons
+            name="send"
+            size={18}
+            color={inputText.trim() ? '#FFFFFF' : '#94A3B8'}
+          />
         </TouchableOpacity>
       </View>
 
@@ -465,20 +558,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    elevation: 4,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 3,
   },
   backBtn: {
-    marginRight: 10,
+    marginRight: 8,
     padding: 4,
   },
   avatarWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -495,61 +588,78 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     color: '#D1FAE5',
     fontSize: 11,
+    marginTop: 1,
   },
   langToggleBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 12,
-    marginRight: 10,
+    marginRight: 6,
   },
   langToggleText: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
   },
-  clearBtn: {
+  headerActionBtn: {
     padding: 6,
+    marginLeft: 4,
   },
   suggestionsContainer: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   suggestionsScroll: {
-    paddingHorizontal: 14,
-    gap: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   suggestChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginRight: 8,
   },
   suggestChipText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#334155',
     fontWeight: '600',
   },
+  messagesScroll: {
+    flex: 1,
+  },
   messagesList: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   messageRow: {
     flexDirection: 'row',
-    marginVertical: 2,
+    marginVertical: 4,
+    alignItems: 'flex-end',
   },
   messageRowUser: {
     justifyContent: 'flex-end',
   },
   messageRowAi: {
     justifyContent: 'flex-start',
+  },
+  aiAvatarSmall: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+    marginBottom: 4,
   },
   messageBubble: {
     maxWidth: '82%',
@@ -564,18 +674,26 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bubbleUser: {
-    backgroundColor: '#DCF8C6',
-    borderTopRightRadius: 4,
+    backgroundColor: '#DCFCE7',
+    borderBottomRightRadius: 4,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   bubbleAi: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  aiLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
   messageText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
   },
   messageTextUser: {
     color: '#0F172A',
@@ -587,14 +705,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: 4,
+    marginTop: 6,
   },
   timestampText: {
     fontSize: 10,
   },
   timestampUser: {
-    color: '#64748B',
+    color: '#166534',
   },
   timestampAi: {
     color: '#94A3B8',
@@ -603,16 +721,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   typingText: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 13,
     fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
@@ -620,13 +738,22 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 8,
   },
-  micInputBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  actionIconBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+    marginBottom: 1,
+  },
+  sendBtn: {
+    backgroundColor: '#16864B',
+  },
+  sendBtnDisabled: {
+    backgroundColor: '#CBD5E1',
+    opacity: 0.6,
   },
   textInput: {
     flex: 1,
@@ -635,21 +762,12 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    fontSize: 14,
+    paddingTop: Platform.OS === 'ios' ? 10 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
+    fontSize: 15,
     color: '#0F172A',
-    maxHeight: 90,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#16864B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnDisabled: {
-    backgroundColor: '#94A3B8',
-    opacity: 0.5,
+    minHeight: 42,
+    maxHeight: 110,
+    textAlignVertical: 'center',
   },
 });

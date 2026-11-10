@@ -377,13 +377,16 @@ Rules:
     const lower = prompt.toLowerCase();
     const lang = context.language;
 
-    // 1. SALES & FINANCIAL INQUIRIES
+    // 1. SALES & FINANCIAL INQUIRIES (Exclude slip inquiries)
     if (
-      lower.includes('sale') ||
-      lower.includes('बिक्री') ||
-      lower.includes('ಮಾರಾಟ') ||
-      lower.includes('revenue') ||
-      lower.includes('कमाई')
+      !lower.includes('slip') &&
+      !lower.includes('पर्ची') &&
+      !lower.includes('ರಶೀದಿ') &&
+      (lower.includes('sale') ||
+        lower.includes('बिक्री') ||
+        lower.includes('ಮಾರಾಟ') ||
+        lower.includes('revenue') ||
+        lower.includes('कमाई'))
     ) {
       if (lang === 'hi') {
         const text = `आज की कुल बिक्री ₹${context.todaySales.toLocaleString('en-IN')} है। कुल बाज़ार उधारी ₹${context.totalUdhaar.toLocaleString('en-IN')} बकाया है।`;
@@ -461,9 +464,47 @@ Rules:
       return { text, spokenText: text, language: lang, intent: 'QUERY', source: 'LOCAL_EXPERT_ENGINE' };
     }
 
+    // 3b. CUSTOMER PAYMENTS GUIDANCE
+    if (
+      lower.includes('payment') ||
+      lower.includes('collect payment') ||
+      lower.includes('receive payment') ||
+      lower.includes('customer payment') ||
+      lower.includes('भुगतान') ||
+      lower.includes('ಪಾವತಿ')
+    ) {
+      const text =
+        lang === 'hi'
+          ? `ग्राहक भुगतान (Payment) दर्ज करने के चरण:\n1. 'Customers' टैब खोलें और संबंधित ग्राहक चुनें।\n2. 'Ledger' पर टैप करके ग्राहक का बहीखाता देखें।\n3. 'Receive Payment' पर टैप करें।\n4. प्राप्त राशि, भुगतान विधि (Cash/UPI/Cheque) और विवरण दर्ज करें।\n5. 'Save' करें। बकाया खाता तुरंत अपडेट हो जाएगा।`
+          : lang === 'kn'
+          ? `ಗ್ರಾಹಕರ ಪಾವತಿ (Payment) ದಾಖಲಿಸಲು ಕ್ರಮಗಳು:\n1. 'Customers' ಟ್ಯಾಬ್ ತೆರೆದು ಗ್ರಾಹಕರನ್ನು ಆರಿಸಿ.\n2. ಗ್ರಾಹಕರ 'Ledger' (ಖಾತೆ) ತೆರೆಯಿರಿ.\n3. 'Receive Payment' ಒತ್ತಿರಿ.\n4. ಬಂದ ಹಣ, ಪಾವತಿ ವಿಧಾನ (Cash/UPI) ನಮೂದಿಸಿ.\n5. 'Save' ಒತ್ತಿರಿ. ಬಾಕಿ ಹಣ ತಕ್ಷಣ ಅಪ್ಡೇಟ್ ಆಗುತ್ತದೆ.`
+          : `Steps to manage customer payments:\n1. Open the 'Customers' tab and select the customer.\n2. Tap 'Ledger' to view their transaction history.\n3. Tap 'Receive Payment'.\n4. Enter the amount paid, payment mode (Cash, UPI, Cheque), and notes.\n5. Confirm to immediately credit the payment and reduce their balance.`;
+
+      return { text, spokenText: text, language: lang, intent: 'GUIDE', source: 'LOCAL_EXPERT_ENGINE' };
+    }
+
+    // 3c. INVENTORY MANAGEMENT GUIDANCE
+    if (
+      lower.includes('manage inventory') ||
+      lower.includes('inventory management') ||
+      lower.includes('स्टॉक प्रबंधन') ||
+      lower.includes('ದಾಸ್ತಾನು ನಿರ್ವಹಣೆ')
+    ) {
+      const text =
+        lang === 'hi'
+          ? `इन्वेंटरी स्टॉक प्रबंधन के चरण:\n1. 'Products' टैब खोलें और वस्तु पर '+ Select' टैप करें।\n2. मात्रा (+ / -) सेट करें या सीधे संख्या भरें।\n3. 'Add to Stock' पर टैप करें।\n4. 'Add to Existing Stock' (स्टॉक बढ़ाना) या 'Set Exact Stock' (नया स्टॉक सेट करना) चुनें।\n5. कन्फर्म करते ही भौतिक स्टॉक अपडेट हो जाएगा।`
+          : lang === 'kn'
+          ? `ದಾಸ್ತಾನು ನಿರ್ವಹಣೆಯ ಕ್ರಮಗಳು:\n1. 'Products' ಟ್ಯಾಬ್ ತೆರೆದು ಸರಕಿನ ಮೇಲೆ '+ Select' ಒತ್ತಿರಿ.\n2. ಪ್ರಮಾಣವನ್ನು (+ / -) ಮೂಲಕ ಸರಿಹೊಂದಿಸಿ.\n3. 'Add to Stock' ಒತ್ತಿರಿ.\n4. 'Add to Existing Stock' ಅಥವಾ 'Set Exact Stock' ಆರಿಸಿ.\n5. ಖಚಿತಪಡಿಸಿದ ತಕ್ಷಣ ಲಭ್ಯವಿರುವ ಸ್ಟಾಕ್ ಅಪ್ಡೇಟ್ ಆಗುತ್ತದೆ.`
+          : `Steps to manage inventory:\n1. Open the 'Products' tab and tap '+ Select' on the commodity.\n2. Adjust quantity using [+] / [-] or tap the count to type directly.\n3. Tap 'Add to Stock' in the review bar.\n4. Choose 'Add to Existing Stock' (to add to current inventory) or 'Set Exact Stock Count' (to overwrite).\n5. Confirm to immediately update mandi stock.`;
+
+      return { text, spokenText: text, language: lang, intent: 'GUIDE', source: 'LOCAL_EXPERT_ENGINE' };
+    }
+
     // 4. GUIDANCE: HOW TO ADD PRODUCT
     if (
       lower.includes('add product') ||
+      lower.includes('add a product') ||
+      (lower.includes('add') && lower.includes('product')) ||
       lower.includes('create product') ||
       lower.includes('नया उत्पाद') ||
       lower.includes('ಉತ್ಪನ್ನ ಸೇರಿಸು')
@@ -490,10 +531,12 @@ Rules:
 
     // 5. GUIDANCE: HOW TO RECORD INWARD ARRIVAL
     if (
-      lower.includes('how to record arrival') ||
+      lower.includes('record arrival') ||
       lower.includes('inward arrival') ||
-      lower.includes('आवक कैसे') ||
-      lower.includes('ಆವಕ ದಾಖಲಿಸುವುದು')
+      lower.includes('record inward') ||
+      lower.includes('how to record arrival') ||
+      lower.includes('आवक') ||
+      lower.includes('ಆವಕ')
     ) {
       const text =
         lang === 'hi'
@@ -507,10 +550,12 @@ Rules:
 
     // 6. GUIDANCE: HOW TO CREATE DELIVERY SLIP
     if (
-      lower.includes('create slip') ||
+      lower.includes('slip') ||
       lower.includes('delivery slip') ||
-      lower.includes('पर्ची कैसे') ||
-      lower.includes('ರಶೀದಿ ಹೇಗೆ')
+      lower.includes('sales slip') ||
+      lower.includes('create slip') ||
+      lower.includes('पर्ची') ||
+      lower.includes('ರಶೀದಿ')
     ) {
       const text =
         lang === 'hi'
@@ -553,13 +598,34 @@ Rules:
       return { text, spokenText: text, language: lang, intent: 'GUIDE', source: 'LOCAL_EXPERT_ENGINE' };
     }
 
-    // DEFAULT FALLBACK HELPFUL ASSISTANCE
+    // 9. GREETINGS (SHORT & DISTINCT)
+    if (
+      lower === 'hi' ||
+      lower === 'hello' ||
+      lower === 'hey' ||
+      lower === 'namaste' ||
+      lower.startsWith('hi ') ||
+      lower.startsWith('hello ') ||
+      lower.includes('नमस्ते') ||
+      lower.includes('ನಮಸ್ಕಾರ')
+    ) {
+      const text =
+        lang === 'hi'
+          ? `नमस्ते! आज मैं आपकी मंडी में किस प्रकार सहायता कर सकता हूँ? आप स्टॉक, बिक्री, उधारी, या पर्ची के बारे में पूछ सकते हैं।`
+          : lang === 'kn'
+          ? `ನಮಸ್ಕಾರ! ಇಂದು ನಿಮ್ಮ ಮಂಡಿ ಕೆಲಸದಲ್ಲಿ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ? ನೀವು ಸ್ಟಾಕ್, ಮಾರಾಟ, ಉದ್ಧಾರ ಅಥವಾ ರಶೀದಿ ಬಗ್ಗೆ ಕೇಳಬಹುದು.`
+          : `Hello! I am ready to help with your mandi operations. You can ask about today's sales, stock levels, customer balances, or creating slips.`;
+
+      return { text, spokenText: text, language: lang, intent: 'QUERY', source: 'LOCAL_EXPERT_ENGINE' };
+    }
+
+    // DEFAULT FALLBACK HELPFUL ASSISTANCE (DO NOT REPEAT GENERIC WELCOME)
     const fallbackText =
       lang === 'hi'
-        ? `नमस्ते! मैं आपका CAL Mandi सहायक हूँ। आप मुझसे आज की बिक्री, स्टॉक की स्थिति, उधारी, या ऐप के संचालन संबंधी प्रश्न पूछ सकते हैं।`
+        ? `मुझे आपका यह सवाल पूरी तरह समझ नहीं आया। आप इनमें से कुछ पूछ सकते हैं:\n• आज की कुल बिक्री या बाज़ार उधारी\n• किसी वस्तु का स्टॉक (जैसे 'टमाटर का स्टॉक')\n• नया उत्पाद जोड़ना, आवक दर्ज करना या पर्ची बनाना\n• ग्राहक भुगतान दर्ज करना`
         : lang === 'kn'
-        ? `ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ CAL Mandi ಸಹಾಯಕ. ನೀವು ಇಂದಿನ ಮಾರಾಟ, ಸ್ಟಾಕ್ ವಿವರ, ಬಾಕಿ ಉದ್ಧಾರ ಅಥವಾ ಅಪ್ಲಿಕೇಶನ್ ಬಳಕೆ ಬಗ್ಗೆ ನನ್ನನ್ನು ಕೇಳಬಹುದು.`
-        : `Hello! I am your CAL Mandi Operations Assistant. You can ask me about today's sales, commodity stock levels, customer debts, or step-by-step guidance on any mandi feature.`;
+        ? `ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಸ್ಪಷ್ಟವಾಗಿಲ್ಲ. ನೀವು ಇವುಗಳನ್ನು ಕೇಳಬಹುದು:\n• ಇಂದಿನ ಒಟ್ಟು ಮಾರಾಟ ಅಥವಾ ಉದ್ಧಾರ ಬಾಕಿ\n• ಯಾವುದೇ ಸರಕಿನ ಸ್ಟಾಕ್ (ಉದಾ: 'ಟೊಮೆಟೊ ಸ್ಟಾಕ್')\n• ಹೊಸ ಉತ್ಪನ್ನ ಸೇರಿಸುವುದು ಅಥವಾ ರಶೀದಿ ಮಾಡುವುದು\n• ಗ್ರಾಹಕರ ಪಾವತಿ ನಿರ್ವಹಣೆ`
+        : `I didn't quite catch that specific mandi action. You can ask me:\n• Check stock levels (e.g. "Tomato stock")\n• Review today's sales or market udhaar\n• How to add products, record arrivals, or create slips\n• How to manage customer payments and ledgers\n\nOr tap any of the suggested topics above.`;
 
     return {
       text: fallbackText,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,182 +9,195 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ThemeColors } from '../styles/theme';
+import { getProductImage } from '../utils/productImages';
+
+const COMMON_UNITS = ['Kg', 'Crate', 'Box', 'Bag', 'Quintal'];
+
+function createLotNumber(): string {
+  return `LOT-${Date.now().toString().slice(-4)}`;
+}
 
 export default function RecordArrivalScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, toggleTheme } = useTheme();
-  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const {
     products,
-    units,
     customers,
     recordArrival,
     generatePatti,
   } = useMandi();
 
   const initialProductId = route?.params?.productId;
-  const initialProduct = products.find((p) => p.id === initialProductId);
+  const initialProduct = products.find((p) => p.id === initialProductId) || products[0];
 
+  // 1. Farmer / Supplier State
+  const registeredSuppliers = useMemo(() => {
+    return customers.filter((c) => {
+      const type = c.customerType || 'Buyer';
+      return type === 'Farmer' || type === 'Supplier' || type === 'Both' || type === 'Trader';
+    });
+  }, [customers]);
+
+  const [selectedFarmerId, setSelectedFarmerId] = useState<string>(
+    registeredSuppliers.length > 0 ? registeredSuppliers[0].id : ''
+  );
+  const [customFarmerName, setCustomFarmerName] = useState<string>('');
+  const [isNewSupplier, setIsNewSupplier] = useState<boolean>(registeredSuppliers.length === 0);
+  const [vehicleNumber, setVehicleNumber] = useState<string>('');
+
+  // 2. Product Details State
   const [selectedProductId, setSelectedProductId] = useState<string>(
     initialProduct?.id || (products.length > 0 ? products[0].id : '')
   );
-  const [customProductName, setCustomProductName] = useState<string>('');
-  const [isCustomProduct, setIsCustomProduct] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<string>('50');
   const [selectedUnit, setSelectedUnit] = useState<string>(
     initialProduct?.unit || 'Kg'
   );
-
-  // Farmer selection
-  const registeredFarmers = customers.filter(
-    (c) => (c.customerType || 'Buyer') === 'Farmer'
+  const [ratePerUnit, setRatePerUnit] = useState<string>(
+    initialProduct?.costPrice || initialProduct?.price || '40'
   );
-  const [selectedFarmerId, setSelectedFarmerId] = useState<string>('');
-  const [farmerName, setFarmerName] = useState<string>('');
-  const [farmerMobile, setFarmerMobile] = useState<string>('');
-  const [vehicleNumber, setVehicleNumber] = useState<string>('');
-  const [lotNumber, setLotNumber] = useState<string>('LOT-A101');
-  const [notes, setNotes] = useState<string>('');
+
+  // 3. Final Details & Charges State
+  const [commissionPercent, setCommissionPercent] = useState<string>('2');
+  const [laborCharge, setLaborCharge] = useState<string>('100');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  const handleProductSelect = (productId: string) => {
-    setSelectedProductId(productId);
-    setIsCustomProduct(false);
-    const prod = products.find((p) => p.id === productId);
-    if (prod?.unit) {
-      setSelectedUnit(prod.unit);
-    }
-  };
+  // Derived calculations
+  const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
+  const selectedFarmer = customers.find((c) => c.id === selectedFarmerId);
 
-  const handleSelectFarmerChip = (fId: string) => {
-    const f = customers.find((c) => c.id === fId);
-    if (f) {
-      setSelectedFarmerId(f.id);
-      setFarmerName(f.name);
-      setFarmerMobile(f.mobile);
-    }
-  };
+  const activeFarmerName = isNewSupplier
+    ? customFarmerName.trim()
+    : selectedFarmer?.name || 'Farmer / Supplier';
+
+  const qtyNum = parseFloat(quantity) || 0;
+  const rateNum = parseFloat(ratePerUnit) || 0;
+  const grossAmount = Math.round(qtyNum * rateNum);
+
+  const commPct = parseFloat(commissionPercent) || 0;
+  const commAmount = Math.round((grossAmount * commPct) / 100);
+  const laborAmount = parseFloat(laborCharge) || 0;
+  const netPayable = Math.max(0, grossAmount - commAmount - laborAmount);
 
   const handleStepQuantity = (delta: number) => {
-    const current = parseFloat(quantity) || 0;
-    const next = Math.max(1, current + delta);
-    setQuantity(String(next));
+    setQuantity((prev) => {
+      const curr = parseFloat(prev) || 0;
+      return String(Math.max(1, curr + delta));
+    });
   };
 
-  const handleSave = async () => {
-    const cleanFarmer = farmerName.trim();
-    const qtyNum = parseFloat(quantity) || 0;
+  const handleProductSelect = (prod: any) => {
+    setSelectedProductId(prod.id);
+    if (prod.unit) {
+      setSelectedUnit(prod.unit);
+    }
+    if (prod.costPrice || prod.price) {
+      setRatePerUnit(prod.costPrice || prod.price);
+    }
+  };
 
-    if (!cleanFarmer) {
-      Alert.alert('Missing Detail', 'Please enter the Farmer or Supplier name.');
+  const handleSaveArrival = async () => {
+    if (!activeFarmerName) {
+      Alert.alert(
+        t('missingSupplier', 'Supplier Name Required'),
+        'Please select a supplier or enter farmer name.'
+      );
       return;
     }
 
     if (qtyNum <= 0) {
-      Alert.alert('Invalid Quantity', 'Please enter an arrival quantity greater than 0.');
+      Alert.alert(
+        t('invalidQuantity', 'Invalid Quantity'),
+        'Please enter an arrival quantity greater than 0.'
+      );
       return;
     }
 
-    let resolvedProductName = '';
-    let resolvedCategory = 'Produce';
-    let resolvedProductId = selectedProductId;
-
-    if (isCustomProduct) {
-      const cleanCustom = customProductName.trim();
-      if (!cleanCustom) {
-        Alert.alert('Missing Commodity', 'Please enter the commodity/product name.');
-        return;
-      }
-      resolvedProductName = cleanCustom;
-      resolvedProductId = `custom_${Date.now()}`;
-    } else {
-      const prod = products.find((p) => p.id === selectedProductId);
-      if (!prod) {
-        Alert.alert('Select Commodity', 'Please select a commodity from the catalog.');
-        return;
-      }
-      resolvedProductName = prod.name;
-      resolvedCategory = prod.category;
+    if (rateNum <= 0) {
+      Alert.alert(
+        t('invalidRate', 'Invalid Rate'),
+        'Please enter a valid purchase rate per unit.'
+      );
+      return;
     }
 
     setIsSaving(true);
 
     try {
       const saved = await recordArrival({
-        productId: resolvedProductId,
-        productName: resolvedProductName,
-        category: resolvedCategory,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        category: selectedProduct.category,
         quantity: qtyNum,
         unit: selectedUnit,
-        farmerName: cleanFarmer,
-        farmerMobile: farmerMobile.replace(/\D/g, '') || undefined,
-        farmerId: selectedFarmerId || undefined,
+        farmerName: activeFarmerName,
+        farmerMobile: selectedFarmer?.mobile || undefined,
+        farmerId: isNewSupplier ? undefined : selectedFarmerId,
         vehicleNumber: vehicleNumber.trim() || undefined,
-        lotNumber: lotNumber.trim() || undefined,
-        notes: notes.trim() || undefined,
+        lotNumber: createLotNumber(),
+        notes: `Recorded via Inward Arrival. Rate: ₹${rateNum}/${selectedUnit}. Net: ₹${netPayable}`,
       });
 
+      // Optionally generate Patti record so financial ledger is integrated
+      try {
+        generatePatti({
+          arrivalId: saved.id,
+          farmerId: isNewSupplier ? 'farmer_direct' : selectedFarmerId || 'farmer_direct',
+          farmerName: activeFarmerName,
+          farmerMobile: selectedFarmer?.mobile || '9876500000',
+          productName: selectedProduct.name,
+          quantity: qtyNum,
+          unit: selectedUnit,
+          rate: rateNum,
+          grossAmount,
+          commissionRate: commPct,
+          commissionAmount: commAmount,
+          laborCharges: laborAmount,
+          netPayable,
+          paymentStatus: 'Pending',
+          date: new Date().toLocaleDateString('en-IN'),
+        });
+      } catch {
+        // Patti generation non-blocking for basic arrivals
+      }
+
       setIsSaving(false);
 
-      Alert.alert(
-        'Arrival Recorded ✅',
-        `Arrival of ${qtyNum} ${selectedUnit} ${resolvedProductName} from ${cleanFarmer} saved.\n\nStock updated immediately. What would you like to do next?`,
-        [
+      // Navigate to clean Transaction Confirmation Screen (Section 9)
+      navigation.replace('TransactionConfirmation', {
+        transactionNumber: saved.lotNumber || saved.id,
+        transactionType: 'ARRIVAL',
+        partyName: activeFarmerName,
+        partyType: 'Farmer / Supplier',
+        items: [
           {
-            text: 'Sort & Grade Lot',
-            onPress: () =>
-              navigation.replace('GradingWastage', {
-                productId: resolvedProductId,
-                arrivalId: saved.id,
-              }),
+            name: selectedProduct.name,
+            quantity: qtyNum,
+            unit: selectedUnit,
+            rate: rateNum,
+            amount: grossAmount,
+            productId: selectedProduct.id,
           },
-          {
-            text: 'Generate Patti',
-            onPress: async () => {
-              const prod = products.find((p) => p.id === resolvedProductId);
-              const rate = parseFloat(prod?.price || '20') || 20;
-              const gross = qtyNum * rate;
-              const comm = gross * 0.05;
-              const labor = 30;
-              const net = gross - comm - labor;
-
-              const patti = await generatePatti({
-                arrivalId: saved.id,
-                farmerId: selectedFarmerId || '4',
-                farmerName: cleanFarmer,
-                farmerMobile: farmerMobile || undefined,
-                productName: resolvedProductName,
-                gradeName: 'Grade B (Standard)',
-                quantity: qtyNum,
-                unit: selectedUnit,
-                rate,
-                grossAmount: gross,
-                commissionRate: 5,
-                commissionAmount: comm,
-                laborCharges: labor,
-                netPayable: net,
-                paymentStatus: 'Pending',
-                date: new Date().toISOString().split('T')[0],
-              });
-
-              navigation.replace('PattiReceipt', { pattiId: patti.id, type: 'PATTI' });
-            },
-          },
-          {
-            text: 'Done',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
-    } catch {
+        ],
+        totalBill: netPayable,
+        amountPaid: netPayable,
+        remainingBalance: 0,
+        receiptId: saved.id,
+      });
+    } catch (err: any) {
       setIsSaving(false);
-      Alert.alert('Error', 'Could not save arrival record. Please try again.');
+      Alert.alert('Save Failed', err?.message || 'Could not record inward arrival.');
     }
   };
 
@@ -197,298 +210,321 @@ export default function RecordArrivalScreen({ route, navigation }: any) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: Math.max(insets.top + 16, 40),
-            paddingBottom: Math.max(insets.bottom + 25, 30),
+            paddingTop: Math.max(insets.top + 14, 38),
+            paddingBottom: Math.max(insets.bottom + 24, 36),
           },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            <Text style={styles.backText}>Back</Text>
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            <Text style={styles.backText}>{t('back', 'Back')}</Text>
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={styles.themeToggleBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
-            </TouchableOpacity>
-            <Text style={styles.logo}>CAL Mandi</Text>
-          </View>
+          <Text style={styles.headerTitle}>{t('recordInwardArrival', 'Record Inward Arrival')}</Text>
+          <View style={{ width: 44 }} />
         </View>
 
-        {/* Title & Badge */}
-        <View style={styles.titleRow}>
-          <View>
-            <Text style={styles.title}>Record Arrival (आवक)</Text>
-            <Text style={styles.subtitle}>
-              Inward produce from farmers with grading & patti options.
-            </Text>
-          </View>
-        </View>
-
-        
-        {/* 1. Commodity Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>1. Select Commodity / Product *</Text>
-          <View style={styles.chipRow}>
-            {products.map((p) => {
-              const isSelected = !isCustomProduct && selectedProductId === p.id;
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  style={[
-                    styles.commodityChip,
-                    isSelected && styles.commodityChipSelected,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => handleProductSelect(p.id)}
-                >
-                  <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'cube-outline'}
-                    size={15}
-                    color={isSelected ? '#FFFFFF' : '#16834A'}
-                  />
-                  <Text
-                    style={[
-                      styles.commodityChipText,
-                      isSelected && styles.commodityChipTextSelected,
-                    ]}
-                  >
-                    {p.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-
-            <TouchableOpacity
-              style={[
-                styles.commodityChip,
-                isCustomProduct && styles.commodityChipSelected,
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setIsCustomProduct(true)}
-            >
-              <Ionicons
-                name={isCustomProduct ? 'checkmark-circle' : 'add'}
-                size={15}
-                color={isCustomProduct ? '#FFFFFF' : '#16834A'}
-              />
-              <Text
-                style={[
-                  styles.commodityChipText,
-                  isCustomProduct && styles.commodityChipTextSelected,
-                ]}
-              >
-                + Other Produce
-              </Text>
-            </TouchableOpacity>
+        {/* ============================================================== */}
+        {/* SECTION 1: Farmer / Supplier Details                           */}
+        {/* ============================================================== */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+              <Ionicons name="person" size={16} color="#16834A" />
+            </View>
+            <Text style={styles.sectionTitle}>1. Farmer / Supplier Details</Text>
           </View>
 
-          {isCustomProduct && (
-            <TextInput
-              style={[styles.textInput, { marginTop: 10 }]}
-              placeholder="Enter Custom Commodity Name"
-              placeholderTextColor="#9CA3AF"
-              value={customProductName}
-              onChangeText={setCustomProductName}
-            />
-          )}
-        </View>
-
-        {/* 2. Quantity & Unit */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>2. Arrival Quantity & Unit *</Text>
-          <View style={styles.qtyControlRow}>
-            <TouchableOpacity
-              style={styles.stepBtn}
-              activeOpacity={0.7}
-              onPress={() => handleStepQuantity(-10)}
-            >
-              <Text style={styles.stepBtnText}>-10</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.stepBtn}
-              activeOpacity={0.7}
-              onPress={() => handleStepQuantity(-1)}
-            >
-              <Ionicons name="remove" size={18} color="#16834A" />
-            </TouchableOpacity>
-
-            <TextInput
-              style={styles.qtyInput}
-              keyboardType="numeric"
-              value={quantity}
-              onChangeText={(t) => setQuantity(t.replace(/[^0-9.]/g, ''))}
-              textAlign="center"
-              selectTextOnFocus
-            />
-
-            <TouchableOpacity
-              style={styles.stepBtn}
-              activeOpacity={0.7}
-              onPress={() => handleStepQuantity(1)}
-            >
-              <Ionicons name="add" size={18} color="#16834A" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.stepBtn}
-              activeOpacity={0.7}
-              onPress={() => handleStepQuantity(10)}
-            >
-              <Text style={styles.stepBtnText}>+10</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Unit Chips */}
-          <Text style={styles.subLabel}>Unit of Measurement</Text>
-          <View style={styles.unitChipRow}>
-            {units.map((u) => {
-              const isSelected = selectedUnit === u;
-              return (
-                <TouchableOpacity
-                  key={u}
-                  style={[
-                    styles.unitChip,
-                    isSelected && styles.unitChipSelected,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => setSelectedUnit(u)}
-                >
-                  <Text
-                    style={[
-                      styles.unitChipText,
-                      isSelected && styles.unitChipTextSelected,
-                    ]}
-                  >
-                    {u}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* 3. Farmer / Supplier Info with 1-Tap Chips */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>3. Farmer / Supplier Details *</Text>
-
-          {registeredFarmers.length > 0 && (
-            <View style={styles.quickFarmersSection}>
-              <Text style={styles.subLabel}>Quick Select Registered Farmer:</Text>
+          {/* Supplier Select Chips */}
+          {!isNewSupplier && registeredSuppliers.length > 0 ? (
+            <View style={{ marginBottom: 10 }}>
+              <Text style={styles.inputLabel}>Select Registered Supplier:</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.farmerChipsScroll}
+                contentContainerStyle={styles.supplierScroll}
               >
-                {registeredFarmers.map((f) => {
-                  const sel = selectedFarmerId === f.id;
+                {registeredSuppliers.map((sup) => {
+                  const isSelected = sup.id === selectedFarmerId;
                   return (
                     <TouchableOpacity
-                      key={f.id}
+                      key={sup.id}
                       style={[
-                        styles.farmerChip,
-                        sel && styles.farmerChipActive,
+                        styles.supplierChip,
+                        isSelected && styles.supplierChipSelected,
                       ]}
-                      onPress={() => handleSelectFarmerChip(f.id)}
+                      onPress={() => setSelectedFarmerId(sup.id)}
+                      activeOpacity={0.7}
                     >
+                      <Ionicons
+                        name="leaf-outline"
+                        size={14}
+                        color={isSelected ? '#16834A' : colors.textSecondary}
+                      />
                       <Text
                         style={[
-                          styles.farmerChipText,
-                          sel && styles.farmerChipTextActive,
+                          styles.supplierChipText,
+                          isSelected && styles.supplierChipTextSelected,
                         ]}
                       >
-                        🌾 {f.name}
+                        {sup.name}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
             </View>
-          )}
-
-          <TextInput
-            style={styles.textInput}
-            placeholder="Farmer Name (e.g. Rameshwar Reddy)"
-            placeholderTextColor="#9CA3AF"
-            value={farmerName}
-            onChangeText={(t) => {
-              setFarmerName(t);
-              setSelectedFarmerId('');
-            }}
-          />
-
-          <TextInput
-            style={[styles.textInput, { marginTop: 10 }]}
-            placeholder="Contact Number (10 digits - optional)"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="number-pad"
-            maxLength={10}
-            value={farmerMobile}
-            onChangeText={setFarmerMobile}
-          />
-        </View>
-
-        {/* 4. Vehicle & Lot Tracking */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>4. Vehicle & Lot Number</Text>
-          <View style={styles.twoColRow}>
-            <View style={styles.col}>
-              <Text style={styles.fieldLabel}>Vehicle Number</Text>
+          ) : (
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Farmer / Supplier Full Name *</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. KA-04-E-4512"
-                placeholderTextColor="#9CA3AF"
-                value={vehicleNumber}
-                onChangeText={setVehicleNumber}
-                autoCapitalize="characters"
+                placeholder="e.g. Basavaraj Farmer"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={customFarmerName}
+                onChangeText={setCustomFarmerName}
               />
             </View>
+          )}
 
-            <View style={styles.col}>
-              <Text style={styles.fieldLabel}>Lot Number</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. LOT-A101"
-                placeholderTextColor="#9CA3AF"
-                value={lotNumber}
-                onChangeText={setLotNumber}
-                autoCapitalize="characters"
-              />
+          {/* Toggle New vs Existing Supplier */}
+          <TouchableOpacity
+            style={styles.toggleSupplierBtn}
+            onPress={() => setIsNewSupplier(!isNewSupplier)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isNewSupplier ? 'people-outline' : 'person-add-outline'}
+              size={14}
+              color={colors.primary}
+            />
+            <Text style={styles.toggleSupplierText}>
+              {isNewSupplier ? 'Pick from Registered Suppliers' : '+ Add New Supplier'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Vehicle / Truck Number */}
+          <View style={[styles.formGroup, { marginTop: 8 }]}>
+            <Text style={styles.inputLabel}>Vehicle Number (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. KA-04-E-1234"
+              placeholderTextColor={colors.inputPlaceholder}
+              value={vehicleNumber}
+              onChangeText={setVehicleNumber}
+              autoCapitalize="characters"
+            />
+          </View>
+        </View>
+
+        {/* ============================================================== */}
+        {/* SECTION 2: Product Details (Visual Selection & Rate)           */}
+        {/* ============================================================== */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#082F49' : '#E0F2FE' }]}>
+              <Ionicons name="cube" size={16} color="#0284C7" />
+            </View>
+            <Text style={styles.sectionTitle}>2. Product Details</Text>
+          </View>
+
+          {/* Horizontal Product Picker with Thumbnails */}
+          <Text style={styles.inputLabel}>Select Commodity to Unload:</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.productScroll}
+          >
+            {products.map((p) => {
+              const isSelected = p.id === selectedProductId;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[
+                    styles.productTile,
+                    isSelected && styles.productTileSelected,
+                  ]}
+                  onPress={() => handleProductSelect(p)}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={{ uri: getProductImage(p) }}
+                    style={styles.productTileThumb}
+                  />
+                  <Text
+                    style={[
+                      styles.productTileName,
+                      isSelected && styles.productTileNameSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {p.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Quantity & Unit Stepper */}
+          <View style={styles.qtyUnitRow}>
+            {/* Quantity Stepper */}
+            <View style={{ flex: 1.2 }}>
+              <Text style={styles.inputLabel}>Quantity Arriving *</Text>
+              <View style={styles.stepperContainer}>
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => handleStepQuantity(-5)}
+                >
+                  <Text style={styles.stepBtnText}>-5</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.qtyInput}
+                  keyboardType="numeric"
+                  value={quantity}
+                  onChangeText={setQuantity}
+                />
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => handleStepQuantity(5)}
+                >
+                  <Text style={styles.stepBtnText}>+5</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Measuring Unit Selector */}
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.inputLabel}>Unit</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.unitScroll}
+              >
+                {COMMON_UNITS.map((u) => {
+                  const isUnitSelected = selectedUnit === u;
+                  return (
+                    <TouchableOpacity
+                      key={u}
+                      style={[
+                        styles.unitPill,
+                        isUnitSelected && styles.unitPillSelected,
+                      ]}
+                      onPress={() => setSelectedUnit(u)}
+                    >
+                      <Text
+                        style={[
+                          styles.unitPillText,
+                          isUnitSelected && styles.unitPillTextSelected,
+                        ]}
+                      >
+                        {u}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
           </View>
 
-          <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Notes / Produce Quality</Text>
-          <TextInput
-            style={[styles.textInput, { height: 50 }]}
-            placeholder="e.g. Morning fresh harvest, direct orchard delivery"
-            placeholderTextColor="#9CA3AF"
-            value={notes}
-            onChangeText={setNotes}
-          />
+          {/* Purchase Rate per Unit & Live Line Amount */}
+          <View style={styles.rateCalculationRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Purchase Rate (₹ per {selectedUnit})</Text>
+              <View style={styles.rateInputWrap}>
+                <Text style={styles.currencyPrefix}>₹</Text>
+                <TextInput
+                  style={styles.rateInput}
+                  keyboardType="numeric"
+                  value={ratePerUnit}
+                  onChangeText={setRatePerUnit}
+                  placeholder="0"
+                  placeholderTextColor={colors.inputPlaceholder}
+                />
+              </View>
+            </View>
+
+            {/* Live Line Amount Badge */}
+            <View style={styles.liveLineAmountBox}>
+              <Text style={styles.liveLineAmountLabel}>Gross Produce Value</Text>
+              <Text style={styles.liveLineAmountValue}>
+                ₹{grossAmount.toLocaleString('en-IN')}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Save Arrival Button */}
+        {/* ============================================================== */}
+        {/* SECTION 3: Final Details & Charges                             */}
+        {/* ============================================================== */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#3B2904' : '#FEF3C7' }]}>
+              <Ionicons name="receipt" size={16} color="#D97706" />
+            </View>
+            <Text style={styles.sectionTitle}>3. Charges & Final Settlement</Text>
+          </View>
+
+          <View style={styles.chargesRow}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.inputLabel}>Commission ({commissionPercent}%)</Text>
+              <View style={styles.chargeField}>
+                <TextInput
+                  style={styles.chargeInput}
+                  keyboardType="numeric"
+                  value={commissionPercent}
+                  onChangeText={setCommissionPercent}
+                />
+                <Text style={styles.chargeSuffix}>% (₹{commAmount})</Text>
+              </View>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Labor / Hamali (₹)</Text>
+              <View style={styles.chargeField}>
+                <Text style={styles.currencyPrefix}>₹</Text>
+                <TextInput
+                  style={styles.chargeInput}
+                  keyboardType="numeric"
+                  value={laborCharge}
+                  onChangeText={setLaborCharge}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Final Net Settlement Summary */}
+          <View style={styles.netPayableCard}>
+            <View>
+              <Text style={styles.netPayableLabel}>Net Amount Payable to Farmer</Text>
+              <Text style={styles.netPayableFormula}>
+                ₹{grossAmount} (Gross) - ₹{commAmount + laborAmount} (Charges)
+              </Text>
+            </View>
+            <Text style={styles.netPayableAmount}>
+              ₹{netPayable.toLocaleString('en-IN')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Prominent Save Arrival Action Button */}
         <TouchableOpacity
-          style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={isSaving}
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           activeOpacity={0.8}
+          onPress={handleSaveArrival}
+          disabled={isSaving}
         >
-          <Ionicons name="arrow-down-circle" size={22} color="#FFFFFF" />
+          <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
           <Text style={styles.saveButtonText}>
-            {isSaving ? 'Recording Arrival...' : 'Confirm Arrival & Add to Stock'}
+            {isSaving
+              ? 'Saving Inward Lot...'
+              : `Save Inward Arrival (${qtyNum} ${selectedUnit} ${selectedProduct.name})`}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -498,218 +534,330 @@ export default function RecordArrivalScreen({ route, navigation }: any) {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-  themeToggleBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F9F7',
-  },
-  content: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  backButton: {
-    paddingVertical: 6,
-    paddingRight: 10,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#16834A',
-    fontWeight: '600',
-  },
-  logo: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#16834A',
-  },
-  titleRow: {
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  section: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  subLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 8,
-    marginBottom: 6,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  commodityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    gap: 4,
-  },
-  commodityChipSelected: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
-  },
-  commodityChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  commodityChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  qtyControlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  stepBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  qtyInput: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: 8,
-    height: 44,
-  },
-  unitChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  unitChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  unitChipSelected: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
-  },
-  unitChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  unitChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  quickFarmersSection: {
-    marginBottom: 8,
-  },
-  farmerChipsScroll: {
-    gap: 6,
-  },
-  farmerChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  farmerChipActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
-  },
-  farmerChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#065F46',
-  },
-  farmerChipTextActive: {
-    color: '#FFFFFF',
-  },
-  textInput: {
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: colors.textPrimary,
-  },
-  twoColRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  col: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#16834A',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    elevation: 3,
-    marginBottom: 20,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      paddingHorizontal: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    backButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 4,
+    },
+    backText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    sectionCard: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 14,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    sectionIconCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    supplierScroll: {
+      gap: 8,
+      paddingVertical: 2,
+    },
+    supplierChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: isDark ? colors.surface : '#F1F5F9',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    supplierChipSelected: {
+      backgroundColor: isDark ? '#143823' : '#DCFCE7',
+      borderColor: '#16834A',
+    },
+    supplierChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    supplierChipTextSelected: {
+      color: isDark ? '#4ADE80' : '#16834A',
+      fontWeight: '700',
+    },
+    toggleSupplierBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 6,
+      paddingVertical: 2,
+    },
+    toggleSupplierText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    formGroup: {
+      marginBottom: 6,
+    },
+    textInput: {
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      fontSize: 14,
+      color: colors.textPrimary,
+      backgroundColor: isDark ? colors.surface : '#F9FAFB',
+    },
+    productScroll: {
+      gap: 8,
+      paddingVertical: 6,
+      marginBottom: 10,
+    },
+    productTile: {
+      width: 76,
+      padding: 6,
+      borderRadius: 10,
+      alignItems: 'center',
+      backgroundColor: isDark ? colors.surface : '#F8FAFC',
+      borderWidth: 1.5,
+      borderColor: colors.border,
+    },
+    productTileSelected: {
+      borderColor: '#16834A',
+      backgroundColor: isDark ? '#143823' : '#F0FDF4',
+    },
+    productTileThumb: {
+      width: 44,
+      height: 44,
+      borderRadius: 8,
+      marginBottom: 4,
+    },
+    productTileName: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    productTileNameSelected: {
+      color: isDark ? '#4ADE80' : '#16834A',
+      fontWeight: '700',
+    },
+    qtyUnitRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    stepperContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      overflow: 'hidden',
+    },
+    stepBtn: {
+      backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
+      paddingHorizontal: 10,
+      paddingVertical: 9,
+    },
+    stepBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    qtyInput: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      paddingVertical: 8,
+      backgroundColor: isDark ? colors.surface : '#FFFFFF',
+    },
+    unitScroll: {
+      gap: 6,
+      paddingVertical: 4,
+    },
+    unitPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+      backgroundColor: isDark ? colors.surface : '#F1F5F9',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    unitPillSelected: {
+      backgroundColor: isDark ? '#143823' : '#DCFCE7',
+      borderColor: '#16834A',
+    },
+    unitPillText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    unitPillTextSelected: {
+      color: isDark ? '#4ADE80' : '#16834A',
+      fontWeight: '700',
+    },
+    rateCalculationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    rateInputWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      backgroundColor: isDark ? colors.surface : '#F9FAFB',
+    },
+    currencyPrefix: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      marginRight: 4,
+    },
+    rateInput: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      paddingVertical: 8,
+    },
+    liveLineAmountBox: {
+      flex: 1.2,
+      backgroundColor: isDark ? colors.surface : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      padding: 8,
+      alignItems: 'center',
+    },
+    liveLineAmountLabel: {
+      fontSize: 10,
+      color: colors.textSecondary,
+    },
+    liveLineAmountValue: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: isDark ? '#4ADE80' : '#16834A',
+      marginTop: 2,
+    },
+    chargesRow: {
+      flexDirection: 'row',
+      marginBottom: 10,
+    },
+    chargeField: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: 10,
+      paddingHorizontal: 8,
+      backgroundColor: isDark ? colors.surface : '#F9FAFB',
+    },
+    chargeInput: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      paddingVertical: 7,
+    },
+    chargeSuffix: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      marginLeft: 4,
+    },
+    netPayableCard: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: isDark ? '#143823' : '#F0FDF4',
+      borderWidth: 1.5,
+      borderColor: isDark ? '#22C55E' : '#16834A',
+      borderRadius: 12,
+      padding: 12,
+    },
+    netPayableLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    netPayableFormula: {
+      fontSize: 10,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    netPayableAmount: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: isDark ? '#4ADE80' : '#16834A',
+    },
+    saveButton: {
+      flexDirection: 'row',
+      backgroundColor: '#16834A',
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      shadowColor: '#16834A',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 3,
+      marginBottom: 16,
+    },
+    saveButtonDisabled: {
+      backgroundColor: '#9CA3AF',
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    saveButtonText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+  });

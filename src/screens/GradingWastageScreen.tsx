@@ -18,17 +18,25 @@ export default function GradingWastageScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const { productId: initialProductId } = route.params || {};
+  const { productId: initialProductId, arrivalId: initialArrivalId } = route.params || {};
   const {
     products,
     productGrades,
     wastageRecords,
+    arrivalLots,
     recordWastageAndSorting,
   } = useMandi();
 
   const [selectedProductId, setSelectedProductId] = useState<string>(
     initialProductId || (products[0]?.id ?? '')
   );
+
+  const activeLot = useMemo(() => {
+    if (initialArrivalId) {
+      return arrivalLots.find((l) => l.arrivalId === initialArrivalId);
+    }
+    return arrivalLots.find((l) => l.productId === selectedProductId && l.ungradedQuantity > 0);
+  }, [arrivalLots, initialArrivalId, selectedProductId]);
 
   const selectedProduct = useMemo(() => {
     return products.find((p) => p.id === selectedProductId);
@@ -39,7 +47,13 @@ export default function GradingWastageScreen({ route, navigation }: any) {
   }, [productGrades, selectedProductId]);
 
   // Original quantity to sort
-  const [originalQty, setOriginalQty] = useState<string>('100');
+  const [originalQty, setOriginalQty] = useState<string>(
+    activeLot
+      ? String(activeLot.ungradedQuantity)
+      : selectedProduct?.ungradedStock && selectedProduct.ungradedStock > 0
+      ? String(selectedProduct.ungradedStock)
+      : '100'
+  );
 
   // Quantities assigned to each grade (gradeId -> string)
   const [gradeInputs, setGradeInputs] = useState<Record<string, string>>({});
@@ -118,6 +132,8 @@ export default function GradingWastageScreen({ route, navigation }: any) {
       });
 
       const res = await recordWastageAndSorting({
+        lotId: activeLot?.id,
+        arrivalId: activeLot?.arrivalId || initialArrivalId,
         productId: selectedProduct.id,
         productName: selectedProduct.name,
         originalQuantity: parsedOriginal,
@@ -224,6 +240,17 @@ export default function GradingWastageScreen({ route, navigation }: any) {
 
         {/* Step 1: Original Quantity Received */}
         <View style={styles.card}>
+          {activeLot && (
+            <View style={{ marginBottom: 12, padding: 8, backgroundColor: isDark ? colors.surfaceElevated : '#F0FDF4', borderRadius: 8, borderWidth: 1, borderColor: isDark ? '#22C55E' : '#86EFAC' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#4ADE80' : '#16834A' }}>
+                📦 Lot #{activeLot.lotNumber} ({activeLot.supplierName})
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                Ungraded Lot Stock: {activeLot.ungradedQuantity} {selectedProduct?.unit}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.stepTitleRow}>
             <View style={styles.stepNumberBadge}>
               <Text style={styles.stepNumberText}>1</Text>
@@ -241,7 +268,7 @@ export default function GradingWastageScreen({ route, navigation }: any) {
               value={originalQty}
               onChangeText={setOriginalQty}
               placeholder="0"
-              placeholderTextColor="#AAAAAA"
+              placeholderTextColor={colors.inputPlaceholder}
             />
             <Text style={styles.unitSuffix}>{selectedProduct?.unit}</Text>
           </View>
@@ -278,7 +305,7 @@ export default function GradingWastageScreen({ route, navigation }: any) {
                     style={styles.gradeInputField}
                     keyboardType="numeric"
                     placeholder="0"
-                    placeholderTextColor="#AAAAAA"
+                    placeholderTextColor={colors.inputPlaceholder}
                     value={gradeInputs[grade.id] || ''}
                     onChangeText={(val) => handleGradeInputChange(grade.id, val)}
                   />
@@ -299,7 +326,7 @@ export default function GradingWastageScreen({ route, navigation }: any) {
         {/* Step 3: Wastage Tracking */}
         <View style={styles.card}>
           <View style={styles.stepTitleRow}>
-            <View style={[styles.stepNumberBadge, { backgroundColor: '#DC2626' }]}>
+            <View style={[styles.stepNumberBadge, { backgroundColor: isDark ? '#DC2626' : '#DC2626' }]}>
               <Text style={styles.stepNumberText}>3</Text>
             </View>
             <View>
@@ -310,12 +337,12 @@ export default function GradingWastageScreen({ route, navigation }: any) {
 
           <View style={styles.qtyInputWrap}>
             <TextInput
-              style={[styles.bigQtyInput, { color: '#DC2626' }]}
+              style={[styles.bigQtyInput, { color: isDark ? '#F87171' : '#DC2626' }]}
               keyboardType="numeric"
               value={wastageQty}
               onChangeText={setWastageQty}
               placeholder="0"
-              placeholderTextColor="#AAAAAA"
+              placeholderTextColor={colors.inputPlaceholder}
             />
             <Text style={styles.unitSuffix}>{selectedProduct?.unit} Wastage</Text>
           </View>
@@ -349,7 +376,7 @@ export default function GradingWastageScreen({ route, navigation }: any) {
           <TextInput
             style={styles.notesField}
             placeholder="Additional sorting notes (e.g. Unloading bay #2, lorry damage)"
-            placeholderTextColor="#888888"
+            placeholderTextColor={colors.inputPlaceholder}
             value={notes}
             onChangeText={setNotes}
           />
@@ -373,14 +400,14 @@ export default function GradingWastageScreen({ route, navigation }: any) {
 
           <View style={styles.calcRow}>
             <Text style={styles.calcLabel}>Total Graded Quantity:</Text>
-            <Text style={[styles.calcValue, { color: '#16834A' }]}>
+            <Text style={[styles.calcValue, { color: isDark ? '#4ADE80' : '#16834A' }]}>
               + {totalGraded} {selectedProduct?.unit}
             </Text>
           </View>
 
           <View style={styles.calcRow}>
             <Text style={styles.calcLabel}>Wastage Quantity:</Text>
-            <Text style={[styles.calcValue, { color: '#DC2626' }]}>
+            <Text style={[styles.calcValue, { color: isDark ? '#F87171' : '#DC2626' }]}>
               + {parsedWastage} {selectedProduct?.unit} ({wastagePercentage.toFixed(1)}%)
             </Text>
           </View>
@@ -392,7 +419,7 @@ export default function GradingWastageScreen({ route, navigation }: any) {
             <Text
               style={[
                 styles.calcBoldValue,
-                isOverAllocated && { color: '#DC2626' },
+                isOverAllocated && { color: isDark ? '#F87171' : '#DC2626' },
               ]}
             >
               {totalProcessed} / {parsedOriginal} {selectedProduct?.unit}
@@ -477,7 +504,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -486,7 +513,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingBottom: 12,
     backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   backBtn: {
     padding: 6,
@@ -532,7 +559,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   prodTabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   prodTabTextActive: {
     color: '#FFFFFF',
@@ -603,7 +630,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   noGradesWarning: {
     fontSize: 13,
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     padding: 8,
   },
   gradeInputRow: {
@@ -612,7 +639,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   gradeMetaCol: {
     flex: 1,
@@ -663,7 +690,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   totalGradedValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   subFieldLabel: {
     fontSize: 12,
@@ -687,15 +714,15 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderColor: colors.inputBorder,
   },
   reasonChipActive: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#F87171',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
+    borderColor: isDark ? '#7F1D1D' : '#F87171',
   },
   reasonChipText: {
     fontSize: 11,
-    color: '#555555',
+    color: colors.textSecondary,
   },
   reasonChipTextActive: {
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     fontWeight: '700',
   },
   notesField: {
@@ -719,8 +746,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderColor: colors.border,
   },
   auditCardError: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#F87171',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
+    borderColor: isDark ? '#7F1D1D' : '#F87171',
   },
   auditTitle: {
     fontSize: 14,
@@ -744,7 +771,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   calcDivider: {
     height: 1,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: colors.border,
     marginVertical: 6,
   },
   calcBoldLabel: {
@@ -755,21 +782,21 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   calcBoldValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     marginTop: 8,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3B1212' : '#FEE2E2',
     padding: 8,
     borderRadius: 6,
   },
   errorBannerText: {
     flex: 1,
     fontSize: 11,
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     fontWeight: '700',
   },
   submitBtn: {
@@ -819,7 +846,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textSecondary,
   },
   historyWastagePill: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3B1212' : '#FEE2E2',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -827,7 +854,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   historyWastagePillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
   },
   historySummary: {
     fontSize: 12,

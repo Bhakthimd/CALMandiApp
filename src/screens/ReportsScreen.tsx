@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors } from '../styles/theme';
+import BottomNavBar from '../components/BottomNavBar';
 
 export default function ReportsScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -23,6 +24,7 @@ export default function ReportsScreen({ route, navigation }: any) {
     products,
     productGrades,
     sales,
+    dispatchInvoices,
     wastageRecords,
     financialSummary,
     getCustomerBalance,
@@ -47,14 +49,72 @@ export default function ReportsScreen({ route, navigation }: any) {
     });
   }, [customers, getCustomerBalance]);
 
-  // Grade-wise sales & revenue calculations
+  // Helper to test if an ISO timestamp is within selected date filter
+  const isWithinDateFilter = (
+    timestampStr: string | undefined,
+    filter: 'ALL' | 'MONTH' | 'WEEK' | 'TODAY'
+  ): boolean => {
+    if (filter === 'ALL') return true;
+    if (!timestampStr) return false;
+    const itemDate = new Date(timestampStr);
+    if (isNaN(itemDate.getTime())) return false;
+
+    const now = new Date();
+    if (filter === 'TODAY') {
+      return (
+        itemDate.getFullYear() === now.getFullYear() &&
+        itemDate.getMonth() === now.getMonth() &&
+        itemDate.getDate() === now.getDate()
+      );
+    }
+    if (filter === 'WEEK') {
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return itemDate >= oneWeekAgo && itemDate <= now;
+    }
+    if (filter === 'MONTH') {
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return itemDate >= oneMonthAgo && itemDate <= now;
+    }
+    return true;
+  };
+
+  // Grade-wise sales & revenue calculations respecting dateFilter and selectedProductId
   const gradeSalesStats = useMemo(() => {
     const stats: Record<
       string,
       { gradeName: string; productName: string; quantity: number; revenue: number; unit: string }
     > = {};
 
+    // 1. Process active dispatch invoices line items
+    dispatchInvoices.forEach((inv) => {
+      if (inv.isReversed) return;
+      if (!isWithinDateFilter(inv.timestamp, dateFilter)) return;
+
+      inv.items.forEach((item) => {
+        if (selectedProductId !== 'ALL' && item.productId !== selectedProductId) {
+          return;
+        }
+        const key = `${item.productId}_${item.gradeId || 'default'}`;
+        if (!stats[key]) {
+          stats[key] = {
+            gradeName: item.gradeName || 'Standard Grade',
+            productName: item.productName,
+            quantity: 0,
+            revenue: 0,
+            unit: item.unit,
+          };
+        }
+        stats[key].quantity += item.quantity;
+        stats[key].revenue += item.totalAmount;
+      });
+    });
+
+    // 2. Process legacy sales (if not already represented in dispatchInvoices)
     sales.forEach((s) => {
+      if (!isWithinDateFilter(s.timestamp, dateFilter)) return;
+      if (selectedProductId !== 'ALL' && s.productId !== selectedProductId) return;
+      if (dispatchInvoices.some((inv) => inv.id === s.id)) return;
+
       const key = `${s.productId}_${s.gradeId || 'default'}`;
       if (!stats[key]) {
         stats[key] = {
@@ -70,9 +130,9 @@ export default function ReportsScreen({ route, navigation }: any) {
     });
 
     return Object.values(stats);
-  }, [sales]);
+  }, [sales, dispatchInvoices, dateFilter, selectedProductId]);
 
-  // Product-wise wastage stats
+  // Product-wise wastage stats respecting dateFilter and selectedProductId
   const productWastageStats = useMemo(() => {
     const map: Record<
       string,
@@ -86,6 +146,9 @@ export default function ReportsScreen({ route, navigation }: any) {
     > = {};
 
     wastageRecords.forEach((w) => {
+      if (!isWithinDateFilter(w.timestamp, dateFilter)) return;
+      if (selectedProductId !== 'ALL' && w.productId !== selectedProductId) return;
+
       if (!map[w.productId]) {
         map[w.productId] = {
           productId: w.productId,
@@ -107,7 +170,7 @@ export default function ReportsScreen({ route, navigation }: any) {
           ? ((item.wastageQty / item.originalQty) * 100).toFixed(1)
           : '0.0',
     }));
-  }, [wastageRecords]);
+  }, [wastageRecords, dateFilter, selectedProductId]);
 
   // Handle export simulation
   const handleExportSummary = () => {
@@ -140,14 +203,14 @@ export default function ReportsScreen({ route, navigation }: any) {
           onPress={handleExportSummary}
           activeOpacity={0.7}
         >
-          <Ionicons name="download-outline" size={20} color="#16834A" />
+          <Ionicons name="download-outline" size={20} color={isDark ? '#4ADE80' : '#16834A'} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(insets.bottom + 40, 50) },
+          { paddingBottom: Math.max(insets.bottom + 90, 110) },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -161,7 +224,7 @@ export default function ReportsScreen({ route, navigation }: any) {
             <Ionicons
               name="cash-outline"
               size={18}
-              color={activeTab === 'financial' ? '#FFFFFF' : '#444444'}
+              color={activeTab === 'financial' ? '#FFFFFF' : (isDark ? colors.textSecondary : '#444444')}
             />
             <Text
               style={[
@@ -181,7 +244,7 @@ export default function ReportsScreen({ route, navigation }: any) {
             <Ionicons
               name="pie-chart-outline"
               size={18}
-              color={activeTab === 'product' ? '#FFFFFF' : '#444444'}
+              color={activeTab === 'product' ? '#FFFFFF' : (isDark ? colors.textSecondary : '#444444')}
             />
             <Text
               style={[
@@ -230,7 +293,7 @@ export default function ReportsScreen({ route, navigation }: any) {
               <View style={[styles.kpiCard, styles.kpiCardRed]}>
                 <Text style={styles.kpiLabel}>Total Receivables</Text>
                 <Text style={styles.kpiHindi}>लेने बाकी (बाज़ार से)</Text>
-                <Text style={[styles.kpiValue, { color: '#DC2626' }]}>
+                <Text style={[styles.kpiValue, { color: isDark ? '#F87171' : '#DC2626' }]}>
                   ₹ {financialSummary.totalReceivable.toLocaleString()}
                 </Text>
               </View>
@@ -238,7 +301,7 @@ export default function ReportsScreen({ route, navigation }: any) {
               <View style={[styles.kpiCard, styles.kpiCardOrange]}>
                 <Text style={styles.kpiLabel}>Total Payables</Text>
                 <Text style={styles.kpiHindi}>देने बाकी (किसानों को)</Text>
-                <Text style={[styles.kpiValue, { color: '#D97706' }]}>
+                <Text style={[styles.kpiValue, { color: isDark ? '#FBBF24' : '#D97706' }]}>
                   ₹ {financialSummary.totalPayable.toLocaleString()}
                 </Text>
               </View>
@@ -246,7 +309,7 @@ export default function ReportsScreen({ route, navigation }: any) {
               <View style={[styles.kpiCard, styles.kpiCardGreen]}>
                 <Text style={styles.kpiLabel}>Total Cash Inflow</Text>
                 <Text style={styles.kpiHindi}>कुल नकद प्राप्त</Text>
-                <Text style={[styles.kpiValue, { color: '#16834A' }]}>
+                <Text style={[styles.kpiValue, { color: isDark ? '#4ADE80' : '#16834A' }]}>
                   ₹ {financialSummary.totalCashReceived.toLocaleString()}
                 </Text>
               </View>
@@ -254,7 +317,7 @@ export default function ReportsScreen({ route, navigation }: any) {
               <View style={[styles.kpiCard, styles.kpiCardBlue]}>
                 <Text style={styles.kpiLabel}>Total Cash Outflow</Text>
                 <Text style={styles.kpiHindi}>कुल नकद भुगतान</Text>
-                <Text style={[styles.kpiValue, { color: '#2563EB' }]}>
+                <Text style={[styles.kpiValue, { color: isDark ? '#60A5FA' : '#2563EB' }]}>
                   ₹ {financialSummary.totalCashPaid.toLocaleString()}
                 </Text>
               </View>
@@ -422,7 +485,7 @@ export default function ReportsScreen({ route, navigation }: any) {
                     </View>
 
                     <View style={styles.gradeStockValBox}>
-                      <Text style={[styles.gradeStockQty, { color: '#16834A' }]}>
+                      <Text style={[styles.gradeStockQty, { color: isDark ? '#4ADE80' : '#16834A' }]}>
                         ₹ {item.revenue.toLocaleString()}
                       </Text>
                       <Text style={styles.gradeStockValueLabel}>Revenue</Text>
@@ -467,6 +530,9 @@ export default function ReportsScreen({ route, navigation }: any) {
           </View>
         )}
       </ScrollView>
+
+      {/* Bottom Navigation Bar */}
+      <BottomNavBar activeTab="More" navigation={navigation} />
     </View>
   );
 }
@@ -482,7 +548,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -491,7 +557,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingBottom: 12,
     backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   backBtn: {
     padding: 6,
@@ -512,14 +578,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   exportBtn: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
   },
   content: {
     padding: 16,
   },
   mainTabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#EEEEEE',
+    backgroundColor: isDark ? colors.surfaceElevated : '#EEEEEE',
     borderRadius: 12,
     padding: 3,
     marginBottom: 12,
@@ -565,7 +631,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   dateFilterText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#555555',
+    color: colors.textSecondary,
   },
   dateFilterTextActive: {
     color: '#FFFFFF',
@@ -584,25 +650,25 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderWidth: 1,
   },
   kpiCardRed: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FCA5A5',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
+    borderColor: isDark ? '#7F1D1D' : '#FCA5A5',
   },
   kpiCardOrange: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
+    backgroundColor: isDark ? '#3B2904' : '#FFFBEB',
+    borderColor: isDark ? '#78350F' : '#FCD34D',
   },
   kpiCardGreen: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: isDark ? '#143823' : '#ECFDF5',
+    borderColor: isDark ? '#1E5E35' : '#A7F3D0',
   },
   kpiCardBlue: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    backgroundColor: isDark ? '#082F49' : '#EFF6FF',
+    borderColor: isDark ? '#0369A1' : '#BFDBFE',
   },
   kpiLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   kpiHindi: {
     fontSize: 10,
@@ -750,9 +816,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginTop: 2,
   },
   wastagePillBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: isDark ? '#7F1D1D' : '#FCA5A5',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -761,7 +827,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   wastagePercentText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
   },
   wastagePercentLabel: {
     fontSize: 9,
@@ -769,7 +835,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   emptyNotice: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.textSecondary,
     padding: 10,
     textAlign: 'center',
   },

@@ -32,6 +32,7 @@ export default function CreateSlipScreen({ route, navigation }: any) {
 
   const [type, setType] = useState<StockMovementType>(initialType);
   const [selectedProductId, setSelectedProductId] = useState<string>(initialProductId);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(route?.params?.customerId || '');
   const [partyName, setPartyName] = useState('');
   const [partyMobile, setPartyMobile] = useState('');
   const [quantity, setQuantity] = useState('10');
@@ -50,9 +51,10 @@ export default function CreateSlipScreen({ route, navigation }: any) {
   const paidNumber = paidAmount ? parseFloat(paidAmount) || 0 : totalAmount;
   const balanceDue = Math.max(0, totalAmount - paidNumber);
 
-  const handleSelectCustomer = (custName: string, custMobile: string) => {
+  const handleSelectCustomer = (custName: string, custMobile: string, cId?: string) => {
     setPartyName(custName);
     setPartyMobile(custMobile);
+    if (cId) setSelectedCustomerId(cId);
   };
 
   const handleQuickAddQty = (step: number) => {
@@ -80,10 +82,12 @@ export default function CreateSlipScreen({ route, navigation }: any) {
     Keyboard.dismiss();
 
     const doSave = () => {
+      const matchingCust = customers.find((c) => c.id === selectedCustomerId || c.name === cleanParty || c.mobile === partyMobile);
       const newSlip = recordSlip({
         type,
         partyName: cleanParty,
         partyMobile: partyMobile.replace(/\D/g, '') || '9876543210',
+        customerId: matchingCust?.id || selectedCustomerId || undefined,
         productId: selectedProduct.id,
         productName: selectedProduct.name,
         category: selectedProduct.category,
@@ -208,7 +212,7 @@ _Thank you for your business!_
               <Ionicons
                 name="arrow-down-circle"
                 size={22}
-                color={type === 'IN' ? '#FFFFFF' : '#16834A'}
+                color={type === 'IN' ? '#FFFFFF' : isDark ? '#4ADE80' : '#16834A'}
               />
               <Text
                 style={[
@@ -232,7 +236,7 @@ _Thank you for your business!_
               <Ionicons
                 name="arrow-up-circle"
                 size={22}
-                color={type === 'OUT' ? '#FFFFFF' : '#0284C7'}
+                color={type === 'OUT' ? '#FFFFFF' : isDark ? '#38BDF8' : '#0284C7'}
               />
               <Text
                 style={[
@@ -252,6 +256,7 @@ _Thank you for your business!_
           <TextInput
             style={styles.input}
             placeholder={type === 'IN' ? 'e.g. Basavaraj (Farmer)' : 'e.g. Ravi Traders'}
+            placeholderTextColor={colors.inputPlaceholder}
             value={partyName}
             onChangeText={setPartyName}
           />
@@ -268,7 +273,7 @@ _Thank you for your business!_
                       styles.customerChip,
                       partyName === c.name && styles.customerChipActive,
                     ]}
-                    onPress={() => handleSelectCustomer(c.name, c.mobile)}
+                    onPress={() => handleSelectCustomer(c.name, c.mobile, c.id)}
                   >
                     <Text
                       style={[
@@ -288,6 +293,7 @@ _Thank you for your business!_
           <TextInput
             style={styles.input}
             placeholder="10-digit mobile number"
+            placeholderTextColor={colors.inputPlaceholder}
             keyboardType="number-pad"
             maxLength={10}
             value={partyMobile}
@@ -356,6 +362,7 @@ _Thank you for your business!_
             keyboardType="number-pad"
             value={quantity}
             onChangeText={(v) => setQuantity(v.replace(/\D/g, ''))}
+            placeholderTextColor={colors.inputPlaceholder}
           />
 
           {/* 5. Rate Per Unit & Total Calculation Card */}
@@ -365,6 +372,7 @@ _Thank you for your business!_
               <TextInput
                 style={styles.rateInput}
                 placeholder={selectedProduct?.price || '0'}
+                placeholderTextColor={colors.inputPlaceholder}
                 keyboardType="numeric"
                 value={customRate}
                 onChangeText={setCustomRate}
@@ -387,6 +395,7 @@ _Thank you for your business!_
                   <TextInput
                     style={styles.rateInput}
                     placeholder={`₹ ${totalAmount}`}
+                    placeholderTextColor={colors.inputPlaceholder}
                     keyboardType="numeric"
                     value={paidAmount}
                     onChangeText={setPaidAmount}
@@ -395,10 +404,10 @@ _Thank you for your business!_
 
                 {balanceDue > 0 && (
                   <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: '#DC2626' }]}>
+                    <Text style={[styles.summaryLabel, { color: isDark ? '#F87171' : '#DC2626' }]}>
                       Balance Due (Udhaar):
                     </Text>
-                    <Text style={[styles.totalValue, { color: '#DC2626' }]}>
+                    <Text style={[styles.totalValue, { color: isDark ? '#F87171' : '#DC2626' }]}>
                       ₹ {balanceDue.toLocaleString('en-IN')}
                     </Text>
                   </View>
@@ -412,6 +421,7 @@ _Thank you for your business!_
           <TextInput
             style={styles.input}
             placeholder="e.g. Tractor KA-04-1234 or Tempo"
+            placeholderTextColor={colors.inputPlaceholder}
             value={notes}
             onChangeText={setNotes}
           />
@@ -442,7 +452,7 @@ _Thank you for your business!_
             {/* Header */}
             <View style={styles.slipHeader}>
               <View style={styles.slipLogoRow}>
-                <Ionicons name="leaf" size={20} color="#16834A" />
+                <Ionicons name="leaf" size={20} color={isDark ? '#4ADE80' : '#16834A'} />
                 <Text style={styles.slipMandiName}>CAL Mandi APMC Yard</Text>
               </View>
               <Text style={styles.slipBadge}>
@@ -505,10 +515,10 @@ _Thank you for your business!_
 
             {createdSlip && createdSlip.balanceAmount > 0 && (
               <View style={styles.slipDetailRow}>
-                <Text style={[styles.slipDetailLabel, { color: '#DC2626' }]}>
+                <Text style={[styles.slipDetailLabel, { color: isDark ? '#F87171' : '#DC2626' }]}>
                   Balance Due:
                 </Text>
-                <Text style={[styles.slipDetailValueBold, { color: '#DC2626' }]}>
+                <Text style={[styles.slipDetailValueBold, { color: isDark ? '#F87171' : '#DC2626' }]}>
                   ₹{createdSlip.balanceAmount.toLocaleString('en-IN')}
                 </Text>
               </View>
@@ -572,13 +582,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   backText: {
     fontSize: 18,
-    color: '#16834A',
+    color: isDark ? colors.textPrimary : colors.primary,
     fontWeight: '600',
   },
   logo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   title: {
     fontSize: 24,
@@ -608,13 +618,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderWidth: 1.5,
   },
   inBtn: {
-    borderColor: '#16834A',
+    borderColor: isDark ? '#143823' : '#16834A',
   },
   inBtnActive: {
     backgroundColor: '#16834A',
   },
   outBtn: {
-    borderColor: '#0284C7',
+    borderColor: isDark ? '#075985' : '#0284C7',
   },
   outBtnActive: {
     backgroundColor: '#0284C7',
@@ -649,7 +659,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   chipsContainer: {
     marginBottom: 12,
@@ -660,13 +670,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginBottom: 6,
   },
   customerChip: {
-    backgroundColor: '#E8F5EC',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#C7E8D3',
+    borderColor: isDark ? '#1E5E35' : '#C7E8D3',
   },
   customerChipActive: {
     backgroundColor: '#16834A',
@@ -674,7 +684,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   customerChipText: {
     fontSize: 13,
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontWeight: '600',
   },
   customerChipTextActive: {
@@ -696,8 +706,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     alignItems: 'center',
   },
   productChipActive: {
-    borderColor: '#16834A',
-    backgroundColor: '#E8F5EC',
+    borderColor: isDark ? '#4ADE80' : '#16834A',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
   },
   productChipTitle: {
     fontSize: 15,
@@ -706,14 +716,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginBottom: 2,
   },
   productChipTitleActive: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   productChipUnit: {
     fontSize: 12,
     color: colors.textSecondary,
   },
   productChipUnitActive: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontWeight: '600',
   },
   rowBetween: {
@@ -728,7 +738,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     gap: 6,
   },
   stepChip: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: isDark ? '#082F49' : '#E0F2FE',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -736,7 +746,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   stepChipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0284C7',
+    color: isDark ? '#38BDF8' : '#0284C7',
   },
   billSummaryCard: {
     backgroundColor: colors.cardBackground,
@@ -772,7 +782,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
     marginVertical: 8,
   },
   totalLabel: {
@@ -783,7 +793,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   saveSlipBtn: {
     flexDirection: 'row',
@@ -808,7 +818,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     padding: 20,
   },
@@ -816,6 +826,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -834,13 +846,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   slipMandiName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     marginLeft: 6,
   },
   slipBadge: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0284C7',
+    color: isDark ? '#38BDF8' : '#0284C7',
     marginTop: 2,
     marginBottom: 4,
   },
@@ -851,7 +863,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   slipDottedLine: {
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: colors.inputBorder,
+    borderColor: colors.border,
     marginVertical: 12,
   },
   slipDetailRow: {
@@ -881,7 +893,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   slipTotalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   slipNotesText: {
     fontSize: 12,

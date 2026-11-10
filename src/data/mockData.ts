@@ -437,6 +437,28 @@ export const initialProducts: Product[] = [
     ungradedStock: 0,
     image: 'https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=500&auto=format&fit=crop&q=80',
   },
+  {
+    id: '30',
+    name: 'Coconut',
+    category: 'Fruits',
+    unit: 'Piece',
+    quantity: '120',
+    price: '35',
+    costPrice: '25',
+    ungradedStock: 0,
+    image: 'https://images.unsplash.com/photo-1544378730-8b5104b18790?w=500&auto=format&fit=crop&q=80',
+  },
+  {
+    id: '31',
+    name: 'Lemon',
+    category: 'Vegetables',
+    unit: 'Kg',
+    quantity: '40',
+    price: '70',
+    costPrice: '50',
+    ungradedStock: 0,
+    image: 'https://images.unsplash.com/photo-1533038590840-1cde6e668a91?w=500&auto=format&fit=crop&q=80',
+  },
 
   // Vegetables
   {
