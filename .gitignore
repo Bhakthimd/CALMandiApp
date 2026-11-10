@@ -47,3 +47,6 @@ yarn-error.*
 # Build artifacts
 build/
 *.apk
+
+# Backups
+_backup_checkpoint/

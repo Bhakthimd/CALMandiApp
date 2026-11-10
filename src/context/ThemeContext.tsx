@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { lightColors, darkColors, getTheme, Theme, ThemeColors } from '../styles/theme';
+import { getMetaValue, setMetaValue } from '../services/offlineStorage';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
+
+const STORAGE_THEME_KEY = 'app_theme_preference';
 
 interface ThemeContextType {
   themeMode: ThemeMode;
@@ -17,7 +20,29 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('light');
+
+  useEffect(() => {
+    // Load saved theme preference
+    const loadTheme = async () => {
+      try {
+        const saved = await getMetaValue(STORAGE_THEME_KEY);
+        if (saved === 'light' || saved === 'dark' || saved === 'system') {
+          setThemeModeState(saved as ThemeMode);
+        }
+      } catch (err) {
+        console.warn('[ThemeContext] Could not load saved theme:', err);
+      }
+    };
+    loadTheme();
+  }, []);
+
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    setMetaValue(STORAGE_THEME_KEY, mode).catch((err) => {
+      console.warn('[ThemeContext] Failed to save theme:', err);
+    });
+  };
 
   const isDark =
     themeMode === 'system'
@@ -28,7 +53,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const currentTheme = getTheme(isDark);
 
   const toggleTheme = () => {
-    setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    const nextMode = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(nextMode);
   };
 
   return (

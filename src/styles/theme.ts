@@ -34,12 +34,23 @@ export const lightColors = {
   textMuted: '#94A3B8',
   textInverse: '#FFFFFF',
   textGold: '#B45309',
+  textHeading: '#1E293B',
+  textLabel: '#475569',
+  textDisabled: '#94A3B8',
+
+  // Inputs
+  inputBackground: '#FFFFFF',
+  inputPlaceholder: '#94A3B8',
+  inputBorder: '#CBD5E1',
+  inputFocusBorder: '#16834A',
+
+  // Modals & Bottom Sheets
+  modalBackground: '#FFFFFF',
+  modalOverlay: 'rgba(15, 23, 42, 0.40)',
 
   // Borders & Dividers
   border: '#E2E8F0',
   borderLight: '#EDF2F0',
-  inputBorder: '#CBD5E1',
-  inputFocusBorder: '#16834A',
 
   // Status & Feedback
   success: '#10B981',
@@ -78,74 +89,85 @@ export const lightColors = {
 };
 
 export const darkColors: typeof lightColors = {
-  // Primary Mandi Harvest Greens (vibrant & luminous for dark background)
-  primary: '#22C55E',
+  // Primary Mandi Harvest Greens (Preserve CALMandi brand green for primary actions)
+  primary: '#16834A',
   primaryLight: '#143823',
-  primaryDark: '#16A34A',
-  primarySubtle: '#0F291A',
-  primaryHover: '#4ADE80',
+  primaryDark: '#4ADE80', // luminous/readable green for text (never dark green on dark backgrounds)
+  primarySubtle: '#102A1A',
+  primaryHover: '#1E9E5A',
 
   // Harvest Gold / Mustard Accents
   gold: '#F59E0B',
   goldLight: '#3D2800',
-  goldDark: '#D97706',
+  goldDark: '#FBBF24',
   goldAccent: '#FBBF24',
 
   // Role-specific Branding
-  ownerPrimary: '#22C55E',
-  ownerBadgeBg: '#0F3820',
+  ownerPrimary: '#16834A',
+  ownerBadgeBg: '#143823',
   ownerBadgeText: '#4ADE80',
-  operatorPrimary: '#F59E0B',
+  operatorPrimary: '#D97706',
   operatorBadgeBg: '#3B2904',
   operatorBadgeText: '#FBBF24',
 
-  // Backgrounds & Surfaces (deep night emerald/slate)
-  background: '#0B130E',
-  backgroundWarm: '#0E1712',
-  cardBackground: '#131E17',
-  surface: '#17241C',
-  surfaceElevated: '#1D2D23',
-  surfaceMuted: '#24372C',
+  // Backgrounds & Surfaces (Required Consistent Dark Color System)
+  background: '#121212',           // Main screen background: #121212
+  backgroundWarm: '#181818',
+  cardBackground: '#1E1E1E',       // Cards and panels: #1E1E1E
+  surface: '#1E1E1E',              // Cards and panels: #1E1E1E
+  surfaceElevated: '#252525',      // Elevated cards: #252525
+  surfaceMuted: '#2A2A2A',         // Secondary surfaces / tabs
 
-  // Typography (high readability slate)
-  textPrimary: '#F8FAFC',
-  textSecondary: '#CBD5E1',
-  textMuted: '#94A3B8',
-  textInverse: '#0B130E',
+  // Typography (Required High Readability Dark Color System)
+  textPrimary: '#FFFFFF',          // Primary text: White (#FFFFFF)
+  textSecondary: '#BDBDBD',        // Secondary text: Light grey (#BDBDBD)
+  textMuted: '#757575',            // Disabled/Muted text: Medium/Muted grey
+  textInverse: '#121212',
   textGold: '#FBBF24',
+  textHeading: '#FFFFFF',          // Headings: White (#FFFFFF)
+  textLabel: '#BDBDBD',            // Labels: Light grey (#BDBDBD)
+  textDisabled: '#616161',         // Disabled text: Muted grey
+
+  // Inputs
+  inputBackground: '#2A2A2A',      // Input backgrounds: #2A2A2A
+  inputPlaceholder: '#757575',     // Placeholder text: Medium grey
+  inputBorder: '#383838',          // Dividers and borders: #383838
+  inputFocusBorder: '#16834A',
+
+  // Modals & Bottom Sheets
+  modalBackground: '#1E1E1E',      // Modal and bottom-sheet backgrounds: #1E1E1E
+  modalOverlay: 'rgba(0, 0, 0, 0.75)',
 
   // Borders & Dividers
-  border: '#283C30',
-  borderLight: '#1E2F26',
-  inputBorder: '#375242',
-  inputFocusBorder: '#22C55E',
+  border: '#383838',               // Dividers and borders: #383838
+  borderLight: '#2E2E2E',
 
   // Status & Feedback
-  success: '#34D399',
-  successLight: '#0B3322',
-  warning: '#FBBF24',
+  success: '#22C55E',              // Success: readable green
+  successLight: '#143823',
+  warning: '#F59E0B',              // Warning: readable amber
   warningLight: '#3B2904',
-  error: '#F87171',
+  error: '#EF4444',                // Error: readable red
   errorLight: '#3B1212',
-  info: '#60A5FA',
-  infoLight: '#11294D',
+  info: '#3B82F6',                 // Information: readable blue
+  infoLight: '#1E293B',
 
   // Welcome Screen Specifics
-  cardSelectionBg: 'rgba(19, 30, 23, 0.95)',
-  cardSelectionBorder: 'rgba(55, 82, 66, 0.55)',
-  roleCardBg: '#17241C',
-  roleCardBorder: '#283C30',
+  cardSelectionBg: '#1E1E1E',
+  cardSelectionBorder: '#383838',
+  roleCardBg: '#1E1E1E',
+  roleCardBorder: '#383838',
   roleCardActiveOwnerBg: '#143823',
-  roleCardActiveOperatorBg: '#352405',
-  roleIconInactiveBg: '#24372C',
-  secondaryBtnBg: '#17241C',
-  secondaryBtnText: '#4ADE80',
-  secondaryBtnBorder: '#283C30',
-  demoChipBg: 'rgba(23, 36, 28, 0.94)',
-  demoChipBorder: '#16A34A',
-  demoChipBorderOperator: '#D97706',
-  overlayTop: 'rgba(5, 20, 12, 0.75)',
-  overlayDimmer: 'rgba(0, 0, 0, 0.72)',
+  roleCardActiveOperatorBg: '#3B2904',
+  roleIconInactiveBg: '#2A2A2A',
+  secondaryBtnBg: '#252525',
+  secondaryBtnText: '#FFFFFF',
+  secondaryBtnBorder: '#383838',
+  demoChipBg: '#252525',
+  demoChipBorder: '#16834A',
+  demoChipBorderOperator: '#F59E0B',
+  overlayTop: 'rgba(0, 0, 0, 0.70)',
+  overlayDimmer: 'rgba(0, 0, 0, 0.75)',
 
   // Base colors
   white: '#FFFFFF',

@@ -83,6 +83,14 @@ export default function AddPaymentScreen({ route, navigation }: any) {
       return;
     }
 
+    if (direction === 'RECEIVE' && customerBalance.currentBalance > 0 && parsedAmount > customerBalance.currentBalance) {
+      Alert.alert(
+        'Amount Exceeds Outstanding Debt',
+        `Payment amount (₹${parsedAmount.toLocaleString()}) cannot exceed the current outstanding debt of ₹${customerBalance.currentBalance.toLocaleString()}.`
+      );
+      return;
+    }
+
     // Prevent duplicate submission
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -172,7 +180,7 @@ export default function AddPaymentScreen({ route, navigation }: any) {
             <Ionicons
               name="arrow-down-circle"
               size={20}
-              color={direction === 'RECEIVE' ? '#FFFFFF' : '#16834A'}
+              color={direction === 'RECEIVE' ? '#FFFFFF' : isDark ? '#4ADE80' : '#16834A'}
             />
             <View>
               <Text
@@ -205,7 +213,7 @@ export default function AddPaymentScreen({ route, navigation }: any) {
             <Ionicons
               name="arrow-up-circle"
               size={20}
-              color={direction === 'PAY' ? '#FFFFFF' : '#0284C7'}
+              color={direction === 'PAY' ? '#FFFFFF' : isDark ? '#38BDF8' : '#0284C7'}
             />
             <View>
               <Text
@@ -262,10 +270,10 @@ export default function AddPaymentScreen({ route, navigation }: any) {
                     style={[
                       styles.custSelectBal,
                       bal.currentBalance > 0
-                        ? { color: '#DC2626' }
+                        ? { color: isDark ? '#F87171' : '#DC2626' }
                         : bal.currentBalance < 0
-                        ? { color: '#16834A' }
-                        : { color: '#888888' },
+                        ? { color: isDark ? '#4ADE80' : '#16834A' }
+                        : { color: colors.textSecondary },
                     ]}
                   >
                     {bal.currentBalance > 0
@@ -358,7 +366,7 @@ export default function AddPaymentScreen({ route, navigation }: any) {
             <TextInput
               style={styles.amountInput}
               placeholder="0"
-              placeholderTextColor="#AAAAAA"
+              placeholderTextColor={colors.inputPlaceholder}
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
@@ -406,7 +414,7 @@ export default function AddPaymentScreen({ route, navigation }: any) {
                         : 'document-text-outline'
                     }
                     size={20}
-                    color={isSelected ? '#16834A' : '#666666'}
+                    color={isSelected ? (isDark ? '#4ADE80' : '#16834A') : colors.textSecondary}
                   />
                   <Text
                     style={[
@@ -428,7 +436,7 @@ export default function AddPaymentScreen({ route, navigation }: any) {
           <TextInput
             style={styles.textInput}
             placeholder="e.g. UTR-98234190 or CHQ-0021"
-            placeholderTextColor="#888888"
+            placeholderTextColor={colors.inputPlaceholder}
             value={referenceNo}
             onChangeText={setReferenceNo}
           />
@@ -439,7 +447,7 @@ export default function AddPaymentScreen({ route, navigation }: any) {
           <TextInput
             style={[styles.textInput, { height: 60, textAlignVertical: 'top' }]}
             placeholder="e.g. Settlement for Tuesday morning tomato lot"
-            placeholderTextColor="#888888"
+            placeholderTextColor={colors.inputPlaceholder}
             multiline
             value={notes}
             onChangeText={setNotes}
@@ -468,7 +476,9 @@ export default function AddPaymentScreen({ route, navigation }: any) {
               <Text
                 style={[
                   styles.previewValue,
-                  direction === 'RECEIVE' ? { color: '#16834A' } : { color: '#0284C7' },
+                  direction === 'RECEIVE'
+                    ? { color: isDark ? '#4ADE80' : '#16834A' }
+                    : { color: isDark ? '#38BDF8' : '#0284C7' },
                 ]}
               >
                 ₹ {parsedAmount.toLocaleString()}
@@ -481,10 +491,10 @@ export default function AddPaymentScreen({ route, navigation }: any) {
                 style={[
                   styles.previewTotalValue,
                   projectedBalance > 0
-                    ? { color: '#DC2626' }
+                    ? { color: isDark ? '#F87171' : '#DC2626' }
                     : projectedBalance < 0
-                    ? { color: '#16834A' }
-                    : { color: '#4B5563' },
+                    ? { color: isDark ? '#4ADE80' : '#16834A' }
+                    : { color: colors.textSecondary },
                 ]}
               >
                 ₹ {Math.abs(projectedBalance).toLocaleString()}{' '}
@@ -534,7 +544,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -543,7 +553,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingBottom: 12,
     backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   backBtn: {
     padding: 6,
@@ -555,11 +565,11 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   content: {
     padding: 16,
@@ -578,27 +588,27 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 10,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   directionTabReceiveActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
+    backgroundColor: isDark ? '#143823' : '#16834A',
+    borderColor: isDark ? '#22C55E' : '#16834A',
   },
   directionTabPayActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
+    backgroundColor: isDark ? '#082F49' : '#0284C7',
+    borderColor: isDark ? '#38BDF8' : '#0284C7',
   },
   directionText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   directionTextActive: {
     color: '#FFFFFF',
   },
   directionSubText: {
     fontSize: 9,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   directionSubTextActive: {
     color: '#E0F2FE',
@@ -609,7 +619,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   inputLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   customerScroll: {
@@ -622,23 +632,23 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 10,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   customerSelectCardActive: {
-    borderColor: '#16834A',
-    backgroundColor: '#E8F4EC',
+    borderColor: isDark ? '#22C55E' : '#16834A',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
   },
   custSelectName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   custSelectNameActive: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   custSelectBiz: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   custSelectBal: {
@@ -657,16 +667,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 8,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   typeChipActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   typeChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#444444',
+    color: colors.textSecondary,
   },
   typeChipTextActive: {
     color: '#FFFFFF',
@@ -680,14 +690,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   fillFullText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   amountInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1.5,
-    borderColor: '#16834A',
+    borderColor: isDark ? colors.border : '#16834A',
     borderRadius: 10,
     paddingHorizontal: 14,
     height: 52,
@@ -695,14 +705,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   rupeePrefix: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
     marginRight: 6,
   },
   amountInput: {
     flex: 1,
     fontSize: 22,
     fontWeight: '800',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   quickAmountRow: {
     flexDirection: 'row',
@@ -713,12 +723,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
   },
   quickValText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   methodGrid: {
     flexDirection: 'row',
@@ -731,31 +741,31 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 8,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     gap: 4,
   },
   methodCardActive: {
-    borderColor: '#16834A',
-    backgroundColor: '#E8F4EC',
+    borderColor: isDark ? '#22C55E' : '#16834A',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
   },
   methodText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#555555',
+    color: colors.textSecondary,
   },
   methodTextActive: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontWeight: '700',
   },
   textInput: {
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#222222',
+    color: colors.textPrimary,
   },
   previewBox: {
     backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
@@ -763,12 +773,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
   },
   previewTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   previewRow: {
@@ -778,22 +788,22 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   previewLabel: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   previewValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   previewDivider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.border,
     marginVertical: 6,
   },
   previewTotalLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.textPrimary,
   },
   previewTotalValue: {
     fontSize: 13,

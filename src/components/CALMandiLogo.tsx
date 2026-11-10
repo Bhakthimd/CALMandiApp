@@ -43,18 +43,16 @@ export default function CALMandiLogo({
 
   const iconDims = getIconSize();
 
-  const calColor = forceLightText
+  const calColor = (forceLightText || isDark)
     ? '#FFFFFF'
-    : isDark
-    ? '#4ADE80'
     : colors.primaryDark;
 
-  const mandiColor = forceLightText
-    ? colors.primaryLight
+  const mandiColor = (forceLightText || isDark)
+    ? '#FFFFFF'
     : colors.primary;
 
   const taglineColor = forceLightText
-    ? '#E8F5EC'
+    ? '#FFFFFF'
     : colors.textSecondary;
 
   return (
@@ -66,7 +64,7 @@ export default function CALMandiLogo({
           iconDims,
           {
             borderColor: isDark ? colors.border : '#E8F5EC',
-            backgroundColor: isDark ? '#17241C' : '#FFFFFF',
+            backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
             shadowColor: colors.primary,
           },
         ]}

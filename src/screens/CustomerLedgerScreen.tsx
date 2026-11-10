@@ -16,7 +16,7 @@ import { ThemeColors } from '../styles/theme';
 export default function CustomerLedgerScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customerId } = route.params || {};
   const { customers, getCustomerTransactions, getCustomerBalance } = useMandi();
 
@@ -79,136 +79,215 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const handleShareStatement = () => {
+    const statusText = isReceivable
+      ? 'Customer Owes Mandi'
+      : isPayable
+      ? 'Mandi Owes Customer'
+      : 'All Dues Settled';
+
     Alert.alert(
-      'Mandi Statement Shared',
-      `Khata statement for ${customer.name} (${customer.business}) prepared.\nBalance: ₹ ${Math.abs(
-        balanceInfo.currentBalance
-      ).toLocaleString()} ${isReceivable ? 'Receivable' : isPayable ? 'Payable' : 'Settled'}.`
+      'Mandi Statement',
+      `Ledger summary for ${customer.name}\n` +
+      `Business: ${customer.business || 'N/A'}\n` +
+      `Mobile: +91 ${customer.mobile}\n` +
+      `Outstanding Balance: ₹ ${Math.abs(balanceInfo.currentBalance).toLocaleString('en-IN')} (${statusText})\n` +
+      `Total Debits: ₹ ${totalDebits.toLocaleString('en-IN')}\n` +
+      `Total Credits: ₹ ${totalCredits.toLocaleString('en-IN')}`
     );
   };
 
   return (
     <View style={styles.container}>
       {/* Header Bar */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 36) }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top + 8, 34),
+            backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+            borderBottomColor: isDark ? '#334155' : '#E2E8F0',
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.headerBtn}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>{customer.name}</Text>
-          <Text style={styles.headerSubtitle}>
-            {customer.business} • {customer.customerType || 'Buyer'}
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            {customer.name}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+            {customer.customerType || 'Buyer'}
+            {customer.business ? ` • ${customer.business}` : ''}
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.shareBtn}
+          style={[
+            styles.shareBtn,
+            { backgroundColor: isDark ? '#143823' : '#DCFCE7' },
+          ]}
           onPress={handleShareStatement}
           activeOpacity={0.7}
         >
-          <Ionicons name="share-social-outline" size={20} color="#16834A" />
+          <Ionicons name="share-social-outline" size={18} color={isDark ? '#4ADE80' : '#16834A'} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(insets.bottom + 80, 90) },
+          { paddingBottom: Math.max(insets.bottom + 84, 96) },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Customer Profile & Balance Overview Card */}
-        <View style={styles.balanceCard}>
+        {/* ================= 1. OUTSTANDING BALANCE OVERVIEW CARD ================= */}
+        <View
+          style={[
+            styles.balanceCard,
+            {
+              backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+              borderColor: isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+        >
+          {/* Status Badge & Mobile */}
           <View style={styles.statusRow}>
-            <View style={styles.statusBadgeWrap}>
-              <View
-                style={[
-                  styles.statusPill,
-                  isReceivable
-                    ? styles.pillRed
+            <View
+              style={[
+                styles.statusPill,
+                {
+                  backgroundColor: isReceivable
+                    ? (isDark ? '#142E1F' : '#F0FDF4')
                     : isPayable
-                    ? styles.pillGreen
-                    : styles.pillGrey,
+                    ? (isDark ? '#2D1616' : '#FEF2F2')
+                    : (isDark ? '#1E293B' : '#F8FAFC'),
+                  borderColor: isReceivable
+                    ? (isDark ? '#4ADE80' : '#16834A')
+                    : isPayable
+                    ? (isDark ? '#F87171' : '#DC2626')
+                    : (isDark ? '#334155' : '#CBD5E1'),
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusPillText,
+                  {
+                    color: isReceivable
+                      ? (isDark ? '#4ADE80' : '#16834A')
+                      : isPayable
+                      ? (isDark ? '#F87171' : '#DC2626')
+                      : (isDark ? '#94A3B8' : '#64748B'),
+                  },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.statusPillText,
-                    isReceivable
-                      ? styles.pillTextRed
-                      : isPayable
-                      ? styles.pillTextGreen
-                      : styles.pillTextGrey,
-                  ]}
-                >
-                  {isReceivable
-                    ? '⚠️ CUSTOMER OWES MANDI (उधारी / लेने)'
-                    : isPayable
-                    ? '✓ MANDI OWES CUSTOMER (देने)'
-                    : '✓ ALL DUES SETTLED (हिसाब चुकता)'}
-                </Text>
-              </View>
+                {isReceivable
+                  ? 'Customer Owes Mandi'
+                  : isPayable
+                  ? 'Mandi Owes Customer'
+                  : 'All Dues Settled'}
+              </Text>
             </View>
-            <Text style={styles.mobileText}>📞 {customer.mobile}</Text>
+
+            <Text style={[styles.mobileText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              +91 {customer.mobile}
+            </Text>
           </View>
 
+          {/* Outstanding Balance Main Amount */}
           <View style={styles.balanceAmountRow}>
-            <Text style={styles.balanceRupeeSymbol}>₹</Text>
+            <Text style={[styles.balanceRupeeSymbol, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              ₹
+            </Text>
             <Text
               style={[
                 styles.balanceMainAmount,
-                isReceivable
-                  ? { color: '#DC2626' }
-                  : isPayable
-                  ? { color: '#16834A' }
-                  : { color: '#4B5563' },
+                {
+                  color: isReceivable
+                    ? (isDark ? '#4ADE80' : '#16834A')
+                    : isPayable
+                    ? (isDark ? '#F87171' : '#DC2626')
+                    : colors.textPrimary,
+                },
               ]}
             >
-              {Math.abs(balanceInfo.currentBalance).toLocaleString()}
+              {Math.abs(balanceInfo.currentBalance).toLocaleString('en-IN')}
             </Text>
           </View>
-          <Text style={styles.balanceHintText}>
+
+          <Text style={[styles.balanceHintText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
             {isReceivable
-              ? 'Customer has outstanding credit with Mandi'
+              ? 'Outstanding balance receivable from customer'
               : isPayable
-              ? 'Mandi has pending disbursement to customer'
-              : 'Zero pending balance'}
+              ? 'Pending payment disbursement to customer'
+              : 'Account fully settled'}
           </Text>
 
-          {/* 3 mini balance stats */}
-          <View style={styles.miniStatsRow}>
+          {/* Mini Financial Summary Strip */}
+          <View
+            style={[
+              styles.miniStatsRow,
+              {
+                backgroundColor: isDark ? '#0A0F1D' : '#F8FAF8',
+                borderColor: isDark ? '#334155' : '#E2E8F0',
+              },
+            ]}
+          >
+            {/* Opening Balance */}
             <View style={styles.miniStatItem}>
-              <Text style={styles.miniStatLabel}>Opening Balance</Text>
-              <Text style={styles.miniStatValue}>
-                ₹ {(customer.openingBalance || 0).toLocaleString()}
+              <Text style={[styles.miniStatLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Opening Bal.
+              </Text>
+              <Text style={[styles.miniStatValue, { color: colors.textPrimary }]}>
+                ₹ {(customer.openingBalance || 0).toLocaleString('en-IN')}
               </Text>
             </View>
-            <View style={styles.statDivider} />
+
+            <View style={[styles.statDivider, { backgroundColor: isDark ? '#334155' : '#E2E8F0' }]} />
+
+            {/* Total Debits (+) */}
             <View style={styles.miniStatItem}>
-              <Text style={styles.miniStatLabel}>Total Debits (+)</Text>
-              <Text style={[styles.miniStatValue, { color: '#DC2626' }]}>
-                ₹ {totalDebits.toLocaleString()}
+              <Text style={[styles.miniStatLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Total Debits (+)
+              </Text>
+              <Text style={[styles.miniStatValue, { color: isDark ? '#F87171' : '#DC2626' }]}>
+                ₹ {totalDebits.toLocaleString('en-IN')}
               </Text>
             </View>
-            <View style={styles.statDivider} />
+
+            <View style={[styles.statDivider, { backgroundColor: isDark ? '#334155' : '#E2E8F0' }]} />
+
+            {/* Total Credits (-) */}
             <View style={styles.miniStatItem}>
-              <Text style={styles.miniStatLabel}>Total Credits (-)</Text>
-              <Text style={[styles.miniStatValue, { color: '#16834A' }]}>
-                ₹ {totalCredits.toLocaleString()}
+              <Text style={[styles.miniStatLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Total Credits (-)
+              </Text>
+              <Text style={[styles.miniStatValue, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                ₹ {totalCredits.toLocaleString('en-IN')}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Date Filter Bar */}
+        {/* ================= 2. DATE FILTER TABS ================= */}
         <View style={styles.filterSection}>
-          <Text style={styles.sectionTitle}>Transaction History (लेखा-जोखा)</Text>
-          <View style={styles.filterTabs}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Transaction History
+          </Text>
+          <View
+            style={[
+              styles.filterTabs,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+              },
+            ]}
+          >
             {[
               { id: 'ALL', label: 'All Time' },
               { id: 'MONTH', label: 'Last 30D' },
@@ -219,11 +298,30 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
               return (
                 <TouchableOpacity
                   key={f.id}
-                  style={[styles.filterTab, active && styles.filterTabActive]}
+                  style={[
+                    styles.filterTab,
+                    active && {
+                      backgroundColor: isDark ? '#143823' : '#FFFFFF',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 1,
+                      elevation: 1,
+                    },
+                  ]}
                   onPress={() => setDateFilter(f.id as any)}
+                  activeOpacity={0.7}
                 >
                   <Text
-                    style={[styles.filterTabText, active && styles.filterTabTextActive]}
+                    style={[
+                      styles.filterTabText,
+                      {
+                        color: active
+                          ? (isDark ? '#4ADE80' : '#16834A')
+                          : (isDark ? '#94A3B8' : '#64748B'),
+                        fontWeight: active ? '700' : '500',
+                      },
+                    ]}
                   >
                     {f.label}
                   </Text>
@@ -233,57 +331,153 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {/* Transactions List */}
+        {/* ================= 3. OPENING BALANCE DISTINCT INDICATOR ================= */}
+        {customer.openingBalance !== undefined && customer.openingBalance !== 0 && (
+          <View
+            style={[
+              styles.openingBalanceCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                borderColor: isDark ? '#334155' : '#E2E8F0',
+              },
+            ]}
+          >
+            <View style={styles.openingBalLeft}>
+              <View
+                style={[
+                  styles.openingBalIconCircle,
+                  { backgroundColor: isDark ? '#082F49' : '#EFF6FF' },
+                ]}
+              >
+                <Ionicons name="wallet-outline" size={16} color="#0284C7" />
+              </View>
+              <View>
+                <Text style={[styles.openingBalTitle, { color: colors.textPrimary }]}>
+                  Opening Balance
+                </Text>
+                <Text style={[styles.openingBalSub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                  {customer.openingBalance > 0
+                    ? 'Customer owed Mandi on registration'
+                    : 'Mandi owed customer on registration'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.openingBalRight}>
+              <Text
+                style={[
+                  styles.openingBalAmount,
+                  {
+                    color: customer.openingBalance > 0
+                      ? (isDark ? '#4ADE80' : '#16834A')
+                      : (isDark ? '#F87171' : '#DC2626'),
+                  },
+                ]}
+              >
+                ₹ {Math.abs(customer.openingBalance).toLocaleString('en-IN')}
+              </Text>
+              <Text
+                style={[
+                  styles.openingBalBadge,
+                  {
+                    color: customer.openingBalance > 0
+                      ? (isDark ? '#4ADE80' : '#16834A')
+                      : (isDark ? '#F87171' : '#DC2626'),
+                  },
+                ]}
+              >
+                {customer.openingBalance > 0 ? 'Receivable' : 'Payable'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* ================= 4. TRANSACTIONS LIST ================= */}
         {transactions.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="receipt-outline" size={40} color="#CCCCCC" />
-            <Text style={styles.emptyTitle}>No Transactions in this period</Text>
-            <Text style={styles.emptySub}>
-              Record a sale or payment to update the ledger.
+          <View
+            style={[
+              styles.emptyCard,
+              {
+                backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                borderColor: isDark ? '#334155' : '#E2E8F0',
+              },
+            ]}
+          >
+            <Ionicons name="receipt-outline" size={40} color={isDark ? '#64748B' : '#CBD5E1'} />
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+              No Transactions In This Period
+            </Text>
+            <Text style={[styles.emptySub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Sales, dispatches, and payments will appear here.
             </Text>
           </View>
         ) : (
           transactions.map((tx) => {
             const isDebit = tx.category === 'DEBIT';
 
-            let typeLabel = tx.type.replace('_', ' ');
-            let typeHindi = '';
+            // Distinct visual indicators for transaction types
+            let typeLabel = 'Transaction';
+            let typeSub = '';
+            let iconName: any = 'receipt-outline';
+            let iconColor = isDebit ? '#DC2626' : '#16834A';
+            let iconBg = isDark ? (isDebit ? '#2D1616' : '#142E1F') : (isDebit ? '#FEF2F2' : '#F0FDF4');
+
             if (tx.type === 'CREDIT_SALE') {
-              typeLabel = 'Credit Sale (बिक्री)';
-              typeHindi = 'Customer purchase on credit';
+              typeLabel = 'Credit Sale';
+              typeSub = 'Outbound dispatch on credit';
+              iconName = 'cart-outline';
+              iconColor = '#D97706';
+              iconBg = isDark ? '#3B2904' : '#FEF3C7';
             } else if (tx.type === 'CASH_RECEIVED') {
-              typeLabel = 'Cash Received (जमा)';
-              typeHindi = 'Customer paid money to Mandi';
+              typeLabel = 'Payment Received';
+              typeSub = 'Cash payment collected';
+              iconName = 'arrow-down-circle-outline';
+              iconColor = '#16834A';
+              iconBg = isDark ? '#143823' : '#DCFCE7';
             } else if (tx.type === 'CASH_PAID') {
-              typeLabel = 'Cash Paid (निकासी)';
-              typeHindi = 'Mandi paid money to customer';
+              typeLabel = 'Payment to Customer';
+              typeSub = 'Disbursement paid to customer';
+              iconName = 'arrow-up-circle-outline';
+              iconColor = '#DC2626';
+              iconBg = isDark ? '#2D1616' : '#FEF2F2';
             } else if (tx.type === 'PURCHASE_CREDIT') {
-              typeLabel = 'Farmer Arrival Credit (आवक)';
-              typeHindi = 'Produce credit settlement';
+              typeLabel = 'Farmer Arrival Credit';
+              typeSub = 'Produce arrival recorded';
+              iconName = 'leaf-outline';
+              iconColor = '#7C3AED';
+              iconBg = isDark ? '#2E1065' : '#F5F3FF';
             } else if (tx.type === 'ADVANCE_PAYMENT') {
-              typeLabel = 'Advance Payment (अग्रिम)';
-              typeHindi = 'Advance deposit / credit';
+              typeLabel = 'Advance Payment';
+              typeSub = 'Advance deposit recorded';
+              iconName = 'cash-outline';
+              iconColor = '#0284C7';
+              iconBg = isDark ? '#082F49' : '#EFF6FF';
             }
 
             return (
-              <View key={tx.id} style={styles.txCard}>
+              <View
+                key={tx.id}
+                style={[
+                  styles.txCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? '#334155' : '#E2E8F0',
+                  },
+                ]}
+              >
+                {/* Transaction Header Row */}
                 <View style={styles.txTopRow}>
                   <View style={styles.txTypeWrap}>
-                    <View
-                      style={[
-                        styles.txIconCircle,
-                        isDebit ? styles.circleRed : styles.circleGreen,
-                      ]}
-                    >
-                      <Ionicons
-                        name={isDebit ? 'arrow-up-outline' : 'arrow-down-outline'}
-                        size={16}
-                        color={isDebit ? '#DC2626' : '#16834A'}
-                      />
+                    <View style={[styles.txIconCircle, { backgroundColor: iconBg }]}>
+                      <Ionicons name={iconName} size={16} color={iconColor} />
                     </View>
-                    <View>
-                      <Text style={styles.txTypeTitle}>{typeLabel}</Text>
-                      <Text style={styles.txTypeSub}>{typeHindi}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.txTypeTitle, { color: colors.textPrimary }]}>
+                        {typeLabel}
+                      </Text>
+                      <Text style={[styles.txTypeSub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                        {typeSub}
+                      </Text>
                     </View>
                   </View>
 
@@ -291,46 +485,88 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
                     <Text
                       style={[
                         styles.txAmount,
-                        isDebit ? styles.amountRed : styles.amountGreen,
+                        {
+                          color: isDebit
+                            ? (isDark ? '#F87171' : '#DC2626')
+                            : (isDark ? '#4ADE80' : '#16834A'),
+                        },
                       ]}
                     >
-                      {isDebit ? '+' : '-'} ₹ {tx.amount.toLocaleString()}
+                      {isDebit ? '+ ' : '- '}₹ {tx.amount.toLocaleString('en-IN')}
                     </Text>
-                    <Text style={styles.txMethodBadge}>
+                    <Text
+                      style={[
+                        styles.txMethodBadge,
+                        {
+                          backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+                          color: isDark ? '#CBD5E1' : '#475569',
+                        },
+                      ]}
+                    >
                       {tx.paymentMethod}
                     </Text>
                   </View>
                 </View>
 
-                {/* Additional Details */}
-                <View style={styles.txMetaRow}>
-                  <Text style={styles.txDate}>
-                    📅 {new Date(tx.createdAt || tx.date).toLocaleDateString()}
+                {/* Transaction Metadata: Date, Reference, Running Balance */}
+                <View
+                  style={[
+                    styles.txMetaRow,
+                    { borderTopColor: isDark ? '#334155' : '#F1F5F9' },
+                  ]}
+                >
+                  <Text style={[styles.txDate, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                    {new Date(tx.createdAt || tx.date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
                   </Text>
-                  {tx.referenceNo && (
-                    <Text style={styles.txRef}>Ref: {tx.referenceNo}</Text>
-                  )}
+
+                  {tx.referenceNo ? (
+                    <Text style={[styles.txRef, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                      Ref: {tx.referenceNo}
+                    </Text>
+                  ) : null}
+
                   {tx.balanceAfter !== undefined && (
-                    <Text style={styles.txBalanceAfter}>
-                      Bal: ₹ {Math.abs(tx.balanceAfter).toLocaleString()}{' '}
-                      {tx.balanceAfter > 0 ? 'Due' : tx.balanceAfter < 0 ? 'Cr' : ''}
+                    <Text style={[styles.txBalanceAfter, { color: colors.textPrimary }]}>
+                      Bal: ₹ {Math.abs(tx.balanceAfter).toLocaleString('en-IN')}{' '}
+                      {tx.balanceAfter > 0 ? '(Due)' : tx.balanceAfter < 0 ? '(Cr)' : ''}
                     </Text>
                   )}
                 </View>
 
-                {tx.notes && (
-                  <View style={styles.txNotesBox}>
-                    <Text style={styles.txNotesText}>💬 {tx.notes}</Text>
+                {/* Notes if any */}
+                {tx.notes ? (
+                  <View
+                    style={[
+                      styles.txNotesBox,
+                      { backgroundColor: isDark ? '#0A0F1D' : '#F8FAFC' },
+                    ]}
+                  >
+                    <Text style={[styles.txNotesText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                      Note: {tx.notes}
+                    </Text>
                   </View>
-                )}
+                ) : null}
               </View>
             );
           })
         )}
       </ScrollView>
 
-      {/* Floating Bottom Quick Payment Button */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom + 10, 16) }]}>
+      {/* ================= 5. BOTTOM RECORD PAYMENT BUTTON ================= */}
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: Math.max(insets.bottom + 10, 16),
+            backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+            borderTopColor: isDark ? '#334155' : '#E2E8F0',
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.floatingPaymentBtn}
           onPress={() =>
@@ -341,11 +577,13 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
           }
           activeOpacity={0.8}
         >
-          <Ionicons name="add-circle" size={22} color="#FFFFFF" />
+          <Ionicons
+            name={isPayable ? 'arrow-up-circle' : 'arrow-down-circle'}
+            size={20}
+            color="#FFFFFF"
+          />
           <Text style={styles.floatingPaymentText}>
-            {isPayable
-              ? 'Record Payment to Farmer (भुगतान करें)'
-              : 'Record Payment Received (रुपया जमा करें)'}
+            {isPayable ? 'Record Payment to Farmer' : 'Record Payment Received'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -355,334 +593,308 @@ export default function CustomerLedgerScreen({ route, navigation }: any) {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-  themeToggleBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F9F7',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  headerBtn: {
-    padding: 6,
-    marginRight: 8,
-  },
-  headerTitleWrap: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  shareBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#E8F4EC',
-  },
-  content: {
-    padding: 16,
-  },
-  balanceCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 16,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statusBadgeWrap: {
-    flex: 1,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  pillRed: {
-    backgroundColor: '#FEF2F2',
-  },
-  pillGreen: {
-    backgroundColor: '#ECFDF5',
-  },
-  pillGrey: {
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  pillTextRed: {
-    color: '#DC2626',
-  },
-  pillTextGreen: {
-    color: '#16834A',
-  },
-  pillTextGrey: {
-    color: '#6B7280',
-  },
-  mobileText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  balanceAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 4,
-  },
-  balanceRupeeSymbol: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginRight: 4,
-  },
-  balanceMainAmount: {
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  balanceHintText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-    marginBottom: 14,
-  },
-  miniStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F9F7',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  miniStatItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  miniStatLabel: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  miniStatValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  statDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#DDDDDD',
-  },
-  filterSection: {
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  filterTabs: {
-    flexDirection: 'row',
-    backgroundColor: '#EEEEEE',
-    borderRadius: 8,
-    padding: 2,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: 6,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  filterTabActive: {
-    backgroundColor: colors.cardBackground,
-  },
-  filterTabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  filterTabTextActive: {
-    color: '#16834A',
-    fontWeight: '700',
-  },
-  emptyCard: {
-    alignItems: 'center',
-    padding: 30,
-    backgroundColor: colors.cardBackground,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginTop: 8,
-  },
-  emptySub: {
-    fontSize: 12,
-    color: '#888888',
-  },
-  txCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 10,
-  },
-  txTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  txTypeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  txIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  circleRed: {
-    backgroundColor: '#FEF2F2',
-  },
-  circleGreen: {
-    backgroundColor: '#ECFDF5',
-  },
-  txTypeTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  txTypeSub: {
-    fontSize: 10,
-    color: colors.textSecondary,
-  },
-  txAmountWrap: {
-    alignItems: 'flex-end',
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  amountRed: {
-    color: '#DC2626',
-  },
-  amountGreen: {
-    color: '#16834A',
-  },
-  txMethodBadge: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 2,
-  },
-  txMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  txDate: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  txRef: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  txBalanceAfter: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  txNotesBox: {
-    marginTop: 6,
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    padding: 6,
-    borderRadius: 6,
-  },
-  txNotesText: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.cardBackground,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
-  floatingPaymentBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#16834A',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    elevation: 3,
-  },
-  floatingPaymentText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#DC2626',
-    marginBottom: 10,
-  },
-  backBtn: {
-    padding: 10,
-    backgroundColor: '#16834A',
-    borderRadius: 8,
-  },
-  backBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: isDark ? '#0A0F1D' : '#F8FAF8',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+    },
+    headerBtn: {
+      padding: 6,
+      marginRight: 6,
+    },
+    headerTitleWrap: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      marginTop: 1,
+    },
+    shareBtn: {
+      padding: 8,
+      borderRadius: 8,
+    },
+    content: {
+      padding: 16,
+    },
+
+    /* Balance Card */
+    balanceCard: {
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      marginBottom: 14,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    statusPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    statusPillText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    mobileText: {
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    balanceAmountRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      marginBottom: 2,
+    },
+    balanceRupeeSymbol: {
+      fontSize: 22,
+      fontWeight: '700',
+      marginRight: 4,
+    },
+    balanceMainAmount: {
+      fontSize: 32,
+      fontWeight: '800',
+    },
+    balanceHintText: {
+      fontSize: 12,
+      marginBottom: 14,
+    },
+
+    /* Mini Stats */
+    miniStatsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    miniStatItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    miniStatLabel: {
+      fontSize: 11,
+      fontWeight: '500',
+      marginBottom: 3,
+    },
+    miniStatValue: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    statDivider: {
+      width: 1,
+      height: 24,
+    },
+
+    /* Filter Section */
+    filterSection: {
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      marginBottom: 8,
+    },
+    filterTabs: {
+      flexDirection: 'row',
+      borderRadius: 8,
+      padding: 3,
+    },
+    filterTab: {
+      flex: 1,
+      paddingVertical: 7,
+      alignItems: 'center',
+      borderRadius: 6,
+    },
+    filterTabText: {
+      fontSize: 12,
+    },
+
+    /* Opening Balance Card */
+    openingBalanceCard: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 10,
+    },
+    openingBalLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flex: 1,
+    },
+    openingBalIconCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    openingBalTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    openingBalSub: {
+      fontSize: 11,
+      marginTop: 1,
+    },
+    openingBalRight: {
+      alignItems: 'flex-end',
+    },
+    openingBalAmount: {
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    openingBalBadge: {
+      fontSize: 10,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+
+    /* Empty Card */
+    emptyCard: {
+      alignItems: 'center',
+      padding: 32,
+      borderRadius: 12,
+      borderWidth: 1,
+      gap: 6,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    emptySub: {
+      fontSize: 12,
+    },
+
+    /* Transaction Card */
+    txCard: {
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      marginBottom: 10,
+    },
+    txTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    txTypeWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flex: 1,
+      marginRight: 10,
+    },
+    txIconCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    txTypeTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    txTypeSub: {
+      fontSize: 11,
+    },
+    txAmountWrap: {
+      alignItems: 'flex-end',
+    },
+    txAmount: {
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    txMethodBadge: {
+      fontSize: 11,
+      fontWeight: '600',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      marginTop: 3,
+    },
+    txMetaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 8,
+      borderTopWidth: 1,
+    },
+    txDate: {
+      fontSize: 11,
+    },
+    txRef: {
+      fontSize: 11,
+    },
+    txBalanceAfter: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    txNotesBox: {
+      marginTop: 6,
+      padding: 6,
+      borderRadius: 6,
+    },
+    txNotesText: {
+      fontSize: 11,
+    },
+
+    /* Bottom Floating Action Bar */
+    bottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      borderTopWidth: 1,
+      paddingHorizontal: 16,
+      paddingTop: 10,
+    },
+    floatingPaymentBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#16834A',
+      minHeight: 50,
+      borderRadius: 12,
+      gap: 8,
+    },
+    floatingPaymentText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    errorText: {
+      fontSize: 16,
+      color: '#DC2626',
+      marginBottom: 10,
+    },
+    backBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: '#16834A',
+      borderRadius: 8,
+    },
+    backBtnText: {
+      color: '#FFFFFF',
+      fontWeight: '600',
+    },
+  });

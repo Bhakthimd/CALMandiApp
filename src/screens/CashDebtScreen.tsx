@@ -16,7 +16,7 @@ import { CustomerType } from '../types';
 
 export default function CashDebtScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { customers, financialSummary, getCustomerBalance } = useMandi();
 
@@ -41,6 +41,8 @@ export default function CashDebtScreen({ navigation }: any) {
   const customerTypes: { label: string; subLabel: string; value: CustomerType | 'ALL' }[] = [
     { label: 'All', subLabel: 'सभी', value: 'ALL' },
     { label: 'Buyers', subLabel: 'खरीदार', value: 'Buyer' },
+    { label: 'Suppliers', subLabel: 'सप्लायर', value: 'Supplier' },
+    { label: 'Both', subLabel: 'दोनों', value: 'Both' },
     { label: 'Farmers', subLabel: 'किसान', value: 'Farmer' },
     { label: 'Traders', subLabel: 'व्यापारी', value: 'Trader' },
     { label: 'Other', subLabel: 'अन्य', value: 'Other' },
@@ -61,22 +63,13 @@ export default function CashDebtScreen({ navigation }: any) {
           <Text style={styles.headerTitle}>Cash & Debt Management</Text>
           <Text style={styles.headerSubtitle}>रोकड़ एवं उधारी (खाताबही)</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity
-            onPress={toggleTheme}
-            style={styles.themeToggleBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.reportsButton}
-            onPress={() => navigation.navigate('Reports', { initialTab: 'financial' })}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="bar-chart-outline" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.reportsButton}
+          onPress={() => navigation.navigate('Reports', { initialTab: 'financial' })}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="bar-chart-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -128,11 +121,11 @@ export default function CashDebtScreen({ navigation }: any) {
             {/* 3. Cash Received */}
             <View style={[styles.metricTile, styles.tileGreen]}>
               <View style={styles.metricIconBox}>
-                <Ionicons name="wallet-outline" size={18} color="#16834A" />
+                <Ionicons name="wallet-outline" size={18} color={isDark ? '#4ADE80' : '#16834A'} />
               </View>
               <Text style={styles.metricLabel}>Cash Inflow</Text>
               <Text style={styles.metricHindi}>कुल नकद प्राप्त</Text>
-              <Text style={[styles.metricValue, { color: '#16834A' }]}>
+              <Text style={[styles.metricValue, { color: isDark ? '#4ADE80' : '#16834A' }]}>
                 ₹ {financialSummary.totalCashReceived.toLocaleString()}
               </Text>
             </View>
@@ -140,11 +133,11 @@ export default function CashDebtScreen({ navigation }: any) {
             {/* 4. Cash Paid */}
             <View style={[styles.metricTile, styles.tileBlue]}>
               <View style={styles.metricIconBox}>
-                <Ionicons name="cash-outline" size={18} color="#2563EB" />
+                <Ionicons name="cash-outline" size={18} color={isDark ? '#60A5FA' : '#2563EB'} />
               </View>
               <Text style={styles.metricLabel}>Cash Outflow</Text>
               <Text style={styles.metricHindi}>कुल नकद भुगतान</Text>
-              <Text style={[styles.metricValue, { color: '#2563EB' }]}>
+              <Text style={[styles.metricValue, { color: isDark ? '#60A5FA' : '#2563EB' }]}>
                 ₹ {financialSummary.totalCashPaid.toLocaleString()}
               </Text>
             </View>
@@ -157,8 +150,8 @@ export default function CashDebtScreen({ navigation }: any) {
               style={[
                 styles.netBalanceValue,
                 financialSummary.netOutstanding >= 0
-                  ? { color: '#16834A' }
-                  : { color: '#DC2626' },
+                  ? { color: isDark ? '#4ADE80' : '#16834A' }
+                  : { color: isDark ? '#F87171' : '#DC2626' },
               ]}
             >
               {financialSummary.netOutstanding >= 0
@@ -210,24 +203,24 @@ export default function CashDebtScreen({ navigation }: any) {
             onPress={() => navigation.navigate('AddCustomer')}
             activeOpacity={0.7}
           >
-            <Ionicons name="person-add-outline" size={16} color="#16834A" />
+            <Ionicons name="person-add-outline" size={16} color={isDark ? '#4ADE80' : '#16834A'} />
             <Text style={styles.addCustomerBtnText}>+ Add</Text>
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={18} color="#888888" style={{ marginRight: 8 }} />
+          <Ionicons name="search-outline" size={18} color={isDark ? colors.textMuted : '#888888'} style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search customer, mandi shop, mobile..."
-            placeholderTextColor="#888888"
+            placeholderTextColor={colors.inputPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#888888" />
+              <Ionicons name="close-circle" size={18} color={isDark ? colors.textMuted : '#888888'} />
             </TouchableOpacity>
           )}
         </View>
@@ -365,7 +358,7 @@ export default function CashDebtScreen({ navigation }: any) {
                     onPress={() => navigation.navigate('CustomerLedger', { customerId: cust.id })}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="document-text-outline" size={16} color="#16834A" />
+                    <Ionicons name="document-text-outline" size={16} color={isDark ? '#4ADE80' : '#16834A'} />
                     <Text style={styles.cardActionText}>View Full Ledger (खाता देखें)</Text>
                   </TouchableOpacity>
 
@@ -382,12 +375,12 @@ export default function CashDebtScreen({ navigation }: any) {
                     <Ionicons
                       name="cash-outline"
                       size={16}
-                      color={isPayable ? '#D97706' : '#16834A'}
+                      color={isPayable ? (isDark ? '#FBBF24' : '#D97706') : (isDark ? '#4ADE80' : '#16834A')}
                     />
                     <Text
                       style={[
                         styles.cardActionText,
-                        { color: isPayable ? '#D97706' : '#16834A' },
+                        { color: isPayable ? (isDark ? '#FBBF24' : '#D97706') : (isDark ? '#4ADE80' : '#16834A') },
                       ]}
                     >
                       {isPayable ? 'Pay Farmer (भुगतान)' : 'Receive Cash (वसूली)'}
@@ -405,16 +398,9 @@ export default function CashDebtScreen({ navigation }: any) {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-  themeToggleBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -423,7 +409,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingBottom: 12,
     backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 6,
@@ -439,12 +425,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   reportsButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
   },
   content: {
     padding: 16,
@@ -475,12 +461,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   summarySectionSub: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   badgeLive: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -489,13 +475,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#16834A',
+    backgroundColor: isDark ? '#4ADE80' : '#16834A',
     marginRight: 5,
   },
   badgeLiveText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -510,20 +496,20 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderWidth: 1,
   },
   tileRed: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FCA5A5',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
+    borderColor: isDark ? '#5C1D1D' : '#FCA5A5',
   },
   tileOrange: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
+    backgroundColor: isDark ? '#3B2904' : '#FFFBEB',
+    borderColor: isDark ? '#78350F' : '#FCD34D',
   },
   tileGreen: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: isDark ? '#143823' : '#ECFDF5',
+    borderColor: isDark ? '#235336' : '#A7F3D0',
   },
   tileBlue: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    backgroundColor: isDark ? '#082F49' : '#EFF6FF',
+    borderColor: isDark ? '#0C4A6E' : '#BFDBFE',
   },
   metricIconBox: {
     marginBottom: 6,
@@ -531,11 +517,11 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   metricLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#444444',
+    color: colors.textPrimary,
   },
   metricHindi: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   metricValue: {
@@ -546,16 +532,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
   },
   netBalanceLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#555555',
+    color: colors.textSecondary,
   },
   netBalanceValue: {
     fontSize: 14,
@@ -608,7 +594,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   sectionHeaderSub: {
     fontSize: 11,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   addCustomerBtn: {
     flexDirection: 'row',
@@ -616,20 +602,20 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     gap: 4,
   },
   addCustomerBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
@@ -650,17 +636,17 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 20,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     alignItems: 'center',
   },
   filterChipActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#444444',
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
@@ -730,32 +716,32 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: '700',
   },
   typeFarmer: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: isDark ? '#143823' : '#ECFDF5',
   },
   typeFarmerText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#065F46',
+    color: isDark ? '#4ADE80' : '#065F46',
   },
   typeBuyer: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: isDark ? '#082F49' : '#EFF6FF',
   },
   typeBuyerText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#1E40AF',
+    color: isDark ? '#60A5FA' : '#1E40AF',
   },
   typeTrader: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: isDark ? '#3B2904' : '#FFFBEB',
   },
   typeTraderText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#92400E',
+    color: isDark ? '#FBBF24' : '#92400E',
   },
   custBusiness: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   balanceBadge: {
     paddingHorizontal: 10,
@@ -764,10 +750,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     alignItems: 'flex-end',
   },
   balBadgeRed: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
   },
   balBadgeGreen: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: isDark ? '#143823' : '#ECFDF5',
   },
   balBadgeGrey: {
     backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
@@ -775,7 +761,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   balBadgeTitle: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#666666',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   balBadgeAmount: {
@@ -783,10 +769,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: '800',
   },
   balTextRed: {
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
   },
   balTextGreen: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   balTextGrey: {
     color: colors.textSecondary,
@@ -807,17 +793,17 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: 6,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     borderWidth: 1,
     borderColor: colors.border,
   },
   cardActionBtnHighlight: {
-    backgroundColor: colors.cardBackground,
-    borderColor: '#A7F3D0',
+    backgroundColor: isDark ? '#143823' : colors.cardBackground,
+    borderColor: isDark ? '#235336' : '#A7F3D0',
   },
   cardActionText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
 });

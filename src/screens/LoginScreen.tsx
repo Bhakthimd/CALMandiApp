@@ -15,8 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
-import { UserRole } from '../types';
+import { UserRole, UserProfile } from '../types';
 import CALMandiLogo from '../components/CALMandiLogo';
+import { getUserByMobile } from '../services/offlineStorage';
 
 export default function LoginScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -24,7 +25,7 @@ export default function LoginScreen({ route, navigation }: any) {
   const { colors, isDark, toggleTheme } = useTheme();
   const targetRole: UserRole = route?.params?.role || 'Owner';
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const cleanedMobile = mobile.replace(/\D/g, '');
 
     if (cleanedMobile.length !== 10) {
@@ -37,21 +38,46 @@ export default function LoginScreen({ route, navigation }: any) {
 
     Keyboard.dismiss();
 
-    const demoOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    // Check if user is registered in persistent SQLite
+    const user = await getUserByMobile(cleanedMobile);
 
-    let detectedRole: UserRole | undefined = undefined;
-    if (cleanedMobile === demoOwnerProfile.mobile) {
-      detectedRole = 'Owner';
-    } else if (cleanedMobile === demoOperatorProfile.mobile) {
-      detectedRole = 'Operator';
-    } else {
-      detectedRole = targetRole;
+    if (!user) {
+      // Check if it's one of the demo accounts
+      let matchedDemo: UserProfile | null = null;
+      if (cleanedMobile === demoOwnerProfile.mobile) {
+        matchedDemo = demoOwnerProfile;
+      } else if (cleanedMobile === demoOperatorProfile.mobile) {
+        matchedDemo = demoOperatorProfile;
+      }
+
+      if (!matchedDemo) {
+        Alert.alert(
+          'Mobile Not Registered',
+          `Mobile number +91 ${cleanedMobile} is not registered. Please create a new account to continue.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Register Now',
+              onPress: () =>
+                navigation.navigate('Registration', {
+                  mobile: cleanedMobile,
+                  role: targetRole,
+                }),
+            },
+          ]
+        );
+        return;
+      }
     }
+
+    const matchedProfile = user || (cleanedMobile === demoOwnerProfile.mobile ? demoOwnerProfile : demoOperatorProfile);
+    const demoOtp = '1234';
 
     navigation.navigate('Otp', {
       mobile: cleanedMobile,
       demoOtp,
-      detectedRole,
+      detectedRole: matchedProfile.role,
+      userProfile: matchedProfile,
     });
   };
 
@@ -147,7 +173,6 @@ export default function LoginScreen({ route, navigation }: any) {
             </Text>
           </View>
 
-          
           {/* Mobile Number Input */}
           <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number</Text>
           <View

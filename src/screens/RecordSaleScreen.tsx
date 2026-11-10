@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,237 +9,237 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { ThemeColors } from '../styles/theme';
-import { PaymentMethod } from '../types';
+import { getProductImage } from '../utils/productImages';
+
+const COMMON_UNITS = ['Kg', 'Crate', 'Box', 'Bag', 'Quintal'];
+
+type PaymentMode = 'CASH' | 'UPI' | 'CREDIT';
 
 export default function RecordSaleScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, toggleTheme } = useTheme();
-  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const {
     products,
     customers,
-    productGrades,
-    recordSale,
+    recordDispatchInvoice,
     getCustomerPrice,
   } = useMandi();
 
   const initialProductId = route?.params?.productId;
   const initialCustomerId = route?.params?.customerId;
-  const initialGradeId = route?.params?.gradeId;
 
   const initialProd = products.find((p) => p.id === initialProductId) || products[0];
   const initialCust = customers.find((c) => c.id === initialCustomerId);
 
+  // Customer Selection
+  const registeredBuyers = useMemo(() => {
+    return customers.filter((c) => {
+      const type = c.customerType || 'Buyer';
+      return type === 'Buyer' || type === 'Trader' || type === 'Both';
+    });
+  }, [customers]);
+
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
+    initialCust?.id || (registeredBuyers.length > 0 ? registeredBuyers[0].id : '')
+  );
+  const [customBuyerName, setCustomBuyerName] = useState<string>('');
+  const [isNewBuyer, setIsNewBuyer] = useState<boolean>(registeredBuyers.length === 0);
+
+  // Product Selection
   const [selectedProductId, setSelectedProductId] = useState<string>(
     initialProd ? initialProd.id : ''
   );
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
-    initialCust ? initialCust.id : ''
-  );
-  const [customBuyerName, setCustomBuyerName] = useState<string>('');
-  const [isCustomBuyer, setIsCustomBuyer] = useState<boolean>(!initialCust);
-
-  // Feature 2: Grade Selection
-  const availableGrades = useMemo(() => {
-    return productGrades.filter(
-      (g) => g.productId === selectedProductId && g.isActive
-    );
-  }, [productGrades, selectedProductId]);
-
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(
-    initialGradeId || (availableGrades[0]?.id ?? '')
-  );
-
-  const selectedGrade = useMemo(() => {
-    return availableGrades.find((g) => g.id === selectedGradeId) || availableGrades[0];
-  }, [availableGrades, selectedGradeId]);
-
-  // Pricing state
-  const [unitPrice, setUnitPrice] = useState<string>('30');
-  const [appliedPriceType, setAppliedPriceType] = useState<
-    'Customer-Specific' | 'Default Grade Price' | 'Manual Override'
-  >('Default Grade Price');
+  const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
 
   const [quantity, setQuantity] = useState<string>('10');
-  const [commissionRate, setCommissionRate] = useState<string>('0');
-  const [otherCharges, setOtherCharges] = useState<string>('0');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
-  const [notes, setNotes] = useState<string>('');
+  const [selectedUnit, setSelectedUnit] = useState<string>(
+    selectedProduct?.unit || 'Crate'
+  );
+  const [ratePerUnit, setRatePerUnit] = useState<string>(() => {
+    const custId = initialCust?.id || (registeredBuyers.length > 0 ? registeredBuyers[0].id : '');
+    const prodId = initialProd ? initialProd.id : '';
+    if (prodId) {
+      const priceInfo = getCustomerPrice(custId, prodId);
+      if (priceInfo?.price) return String(priceInfo.price);
+    }
+    if (initialProd?.price) return String(initialProd.price);
+    return '50';
+  });
+
+  // Payment & Dispatch
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
+  const [amountPaid, setAmountPaid] = useState<string>('0');
+  const [vehicleNo, setVehicleNo] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Automatically fetch customer-specific price when Customer, Product, or Grade changes
-  useEffect(() => {
-    if (!selectedProductId) return;
-
-    const timer = setTimeout(() => {
-      const priceInfo = getCustomerPrice(
-        isCustomBuyer ? '' : selectedCustomerId,
-        selectedProductId,
-        selectedGrade?.id
-      );
-
-      setUnitPrice(String(priceInfo.price));
-      setAppliedPriceType(
-        priceInfo.isCustom ? 'Customer-Specific' : 'Default Grade Price'
-      );
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [
-    selectedCustomerId,
-    selectedProductId,
-    selectedGrade?.id,
-    isCustomBuyer,
-    getCustomerPrice,
-  ]);
-
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
-  const currentGradeStock = selectedGrade?.stockQuantity ?? 0;
-
-  const qtyNum = parseFloat(quantity) || 0;
-  const priceNum = parseFloat(unitPrice) || 0;
-  const subtotal = qtyNum * priceNum;
-  const commRateNum = parseFloat(commissionRate) || 0;
-  const commissionAmount = (subtotal * commRateNum) / 100;
-  const otherChargesNum = parseFloat(otherCharges) || 0;
-  const netTotal = subtotal + commissionAmount + otherChargesNum;
-
-  const handleStepQuantity = (delta: number) => {
-    const current = parseFloat(quantity) || 0;
-    const next = Math.max(1, current + delta);
-    setQuantity(String(next));
+  const handleSelectCustomer = (id: string) => {
+    setSelectedCustomerId(id);
+    const priceInfo = getCustomerPrice(id, selectedProductId);
+    if (priceInfo?.price) {
+      setRatePerUnit(String(priceInfo.price));
+    } else if (selectedProduct?.price) {
+      setRatePerUnit(String(selectedProduct.price));
+    }
   };
 
-  const handleSave = async () => {
-    let resolvedBuyerName = '';
-    let resolvedCustomerId: string | undefined = undefined;
-
-    if (isCustomBuyer) {
-      const cleanBuyer = customBuyerName.trim();
-      if (!cleanBuyer) {
-        Alert.alert('Missing Detail', 'Please enter the Buyer / Customer name.');
-        return;
-      }
-      resolvedBuyerName = cleanBuyer;
-    } else {
-      const cust = customers.find((c) => c.id === selectedCustomerId);
-      if (!cust) {
-        Alert.alert('Select Customer', 'Please select a registered customer or choose "Other Buyer".');
-        return;
-      }
-      resolvedBuyerName = `${cust.name} (${cust.business})`;
-      resolvedCustomerId = cust.id;
+  const handleToggleNewBuyer = (newBuyerVal: boolean) => {
+    setIsNewBuyer(newBuyerVal);
+    const priceInfo = getCustomerPrice(newBuyerVal ? '' : selectedCustomerId, selectedProductId);
+    if (priceInfo?.price) {
+      setRatePerUnit(String(priceInfo.price));
+    } else if (selectedProduct?.price) {
+      setRatePerUnit(String(selectedProduct.price));
     }
+  };
 
-    if (!selectedProduct) {
-      Alert.alert('Select Commodity', 'Please select a commodity from the product list.');
+  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+  const activeBuyerName = isNewBuyer
+    ? customBuyerName.trim()
+    : selectedCustomer?.name || 'Customer / Buyer';
+
+  // Available stock of selected product
+  const availableStock = parseFloat(selectedProduct?.quantity || '0') || 0;
+
+  // Real-time calculations
+  const qtyNum = parseFloat(quantity) || 0;
+  const rateNum = parseFloat(ratePerUnit) || 0;
+  const lineAmount = Math.round(qtyNum * rateNum);
+  const grandTotal = lineAmount;
+
+  const paidNum = parseFloat(amountPaid) || 0;
+  const outstandingDebt = Math.max(0, grandTotal - paidNum);
+
+  const handleStepQuantity = (delta: number) => {
+    setQuantity((prev) => {
+      const curr = parseFloat(prev) || 0;
+      return String(Math.max(1, curr + delta));
+    });
+  };
+
+  const handleProductSelect = (prod: any) => {
+    setSelectedProductId(prod.id);
+    if (prod.unit) {
+      setSelectedUnit(prod.unit);
+    }
+    const priceInfo = getCustomerPrice(
+      isNewBuyer ? '' : selectedCustomerId,
+      prod.id
+    );
+    if (priceInfo?.price) {
+      setRatePerUnit(String(priceInfo.price));
+    } else if (prod.price) {
+      setRatePerUnit(String(prod.price));
+    }
+  };
+
+  const handleSetQuickPayment = (type: 'FULL' | 'ZERO') => {
+    if (type === 'FULL') {
+      setAmountPaid(String(grandTotal));
+    } else {
+      setAmountPaid('0');
+    }
+  };
+
+  const handleConfirmSale = async () => {
+    if (!activeBuyerName) {
+      Alert.alert(
+        t('missingBuyer', 'Customer Name Required'),
+        'Please select a customer or enter buyer name.'
+      );
       return;
     }
 
     if (qtyNum <= 0) {
-      Alert.alert('Invalid Quantity', 'Please enter a sale quantity greater than 0.');
-      return;
-    }
-
-    if (priceNum <= 0) {
-      Alert.alert('Invalid Rate', 'Please enter a valid rate/price per unit.');
-      return;
-    }
-
-    // Strict validation against grade-wise stock
-    if (selectedGrade && qtyNum > currentGradeStock) {
       Alert.alert(
-        'Stock Deficit Warning',
-        `Current available stock of ${selectedProduct.name} (${selectedGrade.name}) is only ${currentGradeStock} ${selectedProduct.unit}, but you entered ${qtyNum} ${selectedProduct.unit}.\n\nPlease adjust the quantity or select another grade.`,
-        [{ text: 'Adjust Quantity', style: 'cancel' }]
+        t('invalidQuantity', 'Invalid Quantity'),
+        'Please enter a dispatch quantity greater than 0.'
       );
       return;
     }
 
-    // Requirement 7: Confirmation dialog on dispatch transaction
-    // Requirement 8: Upfront payment given by customer, rest added to customer debt
-    Alert.alert(
-      'Confirm Dispatch Transaction',
-      `Buyer: ${resolvedBuyerName}\n` +
-      `Commodity: ${selectedProduct.name} (${selectedGrade?.name || 'Standard Grade'})\n` +
-      `Quantity: ${qtyNum} ${selectedProduct.unit} @ ₹${priceNum}\n` +
-      `Total Bill: ₹${netTotal.toLocaleString('en-IN')}\n` +
-      `Payment Mode: ${paymentMethod}\n` +
-      (paymentMethod === 'Credit'
-        ? `Entire ₹${netTotal.toLocaleString('en-IN')} will be added to Customer Debt.`
-        : `Upfront payment of ₹${netTotal.toLocaleString('en-IN')} received via ${paymentMethod}.`),
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm & Dispatch',
-          onPress: async () => {
-            await proceedSave(resolvedBuyerName, resolvedCustomerId);
-          },
-        },
-      ]
-    );
-  };
+    if (qtyNum > availableStock) {
+      Alert.alert(
+        t('insufficientStock', 'Insufficient Stock'),
+        `Only ${availableStock} ${selectedUnit} available in stock. Cannot dispatch ${qtyNum} ${selectedUnit}.`
+      );
+      return;
+    }
 
-  const proceedSave = async (buyerName: string, customerId?: string) => {
-    if (!selectedProduct) return;
+    if (rateNum <= 0) {
+      Alert.alert(
+        t('invalidRate', 'Invalid Rate'),
+        'Please enter a valid rate per unit.'
+      );
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      const saved = await recordSale({
-        customerId,
-        customerName: buyerName,
-        customerMobile: customerId
-          ? customers.find((c) => c.id === customerId)?.mobile
-          : undefined,
-        productId: selectedProduct.id,
-        productName: selectedProduct.name,
-        category: selectedProduct.category,
-        quantity: qtyNum,
-        unit: selectedProduct.unit,
-        unitPrice: priceNum,
-        totalAmount: subtotal,
-        paymentMethod,
-        notes: notes.trim() || undefined,
-        // Grade & Pricing extensions
-        gradeId: selectedGrade?.id,
-        gradeName: selectedGrade?.name,
-        appliedPriceType,
-        commissionRate: commRateNum,
-        commissionAmount,
-        otherCharges: otherChargesNum,
-        netTotal,
+      const cashPaid = paymentMode === 'CASH' ? paidNum : 0;
+      const upiPaid = paymentMode === 'UPI' ? paidNum : 0;
+
+      const invoice = await recordDispatchInvoice({
+        customerId: isNewSupplierId(isNewBuyer, selectedCustomerId),
+        customerName: activeBuyerName,
+        customerMobile: selectedCustomer?.mobile || undefined,
+        items: [
+          {
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            category: selectedProduct.category,
+            quantity: qtyNum,
+            unit: selectedUnit,
+            unitPrice: rateNum,
+            totalAmount: lineAmount,
+          },
+        ],
+        cashPaid,
+        upiPaid,
+        notes: vehicleNo.trim() ? `Vehicle: ${vehicleNo.trim()}` : 'Floor Direct',
       });
 
       setIsSaving(false);
 
-      Alert.alert(
-        'Sale Confirmed ✅',
-        `Sale recorded successfully!\n\n• ${qtyNum} ${selectedProduct.unit} ${selectedProduct.name} (${selectedGrade?.name || 'Standard'})\n• Unit Rate: ₹${priceNum} (${appliedPriceType})\n• Net Total: ₹${netTotal.toLocaleString('en-IN')} (${paymentMethod})\n• Buyer: ${buyerName}\n• Grade Stock Deducted: ${qtyNum} ${selectedProduct.unit}\n• Customer Ledger Updated.`,
-        [
+      navigation.replace('TransactionConfirmation', {
+        transactionNumber: invoice.invoiceNumber,
+        transactionType: 'SALE',
+        partyName: activeBuyerName,
+        partyType: 'Buyer',
+        items: [
           {
-            text: 'View Receipt / Bill',
-            onPress: () =>
-              navigation.replace('PattiReceipt', {
-                saleId: saved.id,
-                type: 'INVOICE',
-              }),
+            name: selectedProduct.name,
+            quantity: qtyNum,
+            unit: selectedUnit,
+            rate: rateNum,
+            amount: lineAmount,
+            productId: selectedProduct.id,
           },
-          {
-            text: 'Done',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
-    } catch {
+        ],
+        totalBill: grandTotal,
+        amountPaid: paidNum,
+        remainingBalance: outstandingDebt,
+        receiptId: invoice.id,
+      });
+    } catch (err: any) {
       setIsSaving(false);
-      Alert.alert('Error', 'Could not record sale. Please try again.');
+      Alert.alert('Sale Blocked', err?.message || 'Could not record sale dispatch.');
     }
+  };
+
+  const isNewSupplierId = (isNew: boolean, id: string) => {
+    return isNew ? undefined : id || undefined;
   };
 
   return (
@@ -251,411 +251,590 @@ export default function RecordSaleScreen({ route, navigation }: any) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: Math.max(insets.top + 16, 40),
-            paddingBottom: Math.max(insets.bottom + 25, 30),
+            paddingTop: Math.max(insets.top + 12, 34),
+            paddingBottom: Math.max(insets.bottom + 24, 36),
           },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            <Text style={styles.backText}>Back</Text>
+            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+            <Text style={[styles.backText, { color: colors.textPrimary }]}>{t('back', 'Back')}</Text>
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={styles.themeToggleBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
-            </TouchableOpacity>
-            <Text style={styles.logo}>CAL Mandi</Text>
-          </View>
-        </View>
-
-        {/* Title & Subtitle */}
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>Record Sale (जावक / Bikri)</Text>
-          <Text style={styles.subtitle}>
-            Grade-aware dispatch with customer custom rates.
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            {t('recordSale', 'Dispatch Products')}
           </Text>
+          <View style={{ width: 44 }} />
         </View>
 
-        
-        {/* 1. Buyer / Customer Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>1. Select Buyer / Customer (ग्राहक) *</Text>
-          <View style={styles.chipRow}>
-            {customers.map((c) => {
-              const isSelected = !isCustomBuyer && selectedCustomerId === c.id;
-              return (
-                <TouchableOpacity
-                  key={c.id}
-                  style={[
-                    styles.customerChip,
-                    isSelected && styles.customerChipSelected,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    setSelectedCustomerId(c.id);
-                    setIsCustomBuyer(false);
-                  }}
-                >
-                  <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'person-outline'}
-                    size={14}
-                    color={isSelected ? '#FFFFFF' : '#16834A'}
-                  />
-                  <Text
-                    style={[
-                      styles.customerChipText,
-                      isSelected && styles.customerChipTextSelected,
-                    ]}
-                  >
-                    {c.name} ({c.business})
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        {/* ================= GROUP 1: CUSTOMER SELECTION ================= */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+              borderColor: isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+              <Ionicons name="person" size={15} color={isDark ? '#4ADE80' : '#16834A'} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              1. Customer / Buyer
+            </Text>
+          </View>
 
+          {!isNewBuyer && registeredBuyers.length > 0 ? (
+            <View style={{ marginBottom: 8 }}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                Select Registered Customer:
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.buyerScroll}
+              >
+                {registeredBuyers.map((cust) => {
+                  const isSelected = cust.id === selectedCustomerId;
+                  return (
+                    <TouchableOpacity
+                      key={cust.id}
+                      style={[
+                        styles.buyerChip,
+                        {
+                          backgroundColor: isSelected
+                            ? (isDark ? '#143823' : '#F0FDF4')
+                            : (isDark ? '#1E293B' : '#F8FAFC'),
+                          borderColor: isSelected
+                            ? (isDark ? '#4ADE80' : '#16834A')
+                            : (isDark ? '#334155' : '#E2E8F0'),
+                        },
+                      ]}
+                      onPress={() => handleSelectCustomer(cust.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="person-outline"
+                        size={14}
+                        color={isSelected ? (isDark ? '#4ADE80' : '#16834A') : (isDark ? '#94A3B8' : '#64748B')}
+                      />
+                      <Text
+                        style={[
+                          styles.buyerChipText,
+                          {
+                            color: isSelected
+                              ? (isDark ? '#4ADE80' : '#16834A')
+                              : (isDark ? '#CBD5E1' : '#475569'),
+                            fontWeight: isSelected ? '700' : '500',
+                          },
+                        ]}
+                      >
+                        {cust.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : (
+            <View style={styles.formGroup}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                Customer / Buyer Full Name *
+              </Text>
+              <TextInput
+                style={[
+                  styles.largeTextInput,
+                  {
+                    color: colors.textPrimary,
+                    backgroundColor: isDark ? '#0A0F1D' : '#F8FAFC',
+                    borderColor: isDark ? '#334155' : '#CBD5E1',
+                  },
+                ]}
+                placeholder="e.g. Ramesh Traders"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={customBuyerName}
+                onChangeText={setCustomBuyerName}
+              />
+            </View>
+          )}
+
+          {/* Toggle New Customer Option */}
+          <View style={styles.toggleRow}>
             <TouchableOpacity
-              style={[
-                styles.customerChip,
-                isCustomBuyer && styles.customerChipSelected,
-              ]}
+              style={styles.toggleCustomerBtn}
+              onPress={() => handleToggleNewBuyer(!isNewBuyer)}
               activeOpacity={0.7}
-              onPress={() => setIsCustomBuyer(true)}
             >
               <Ionicons
-                name={isCustomBuyer ? 'checkmark-circle' : 'add'}
+                name={isNewBuyer ? 'people-outline' : 'person-add-outline'}
                 size={14}
-                color={isCustomBuyer ? '#FFFFFF' : '#16834A'}
+                color={isDark ? '#4ADE80' : '#16834A'}
               />
-              <Text
-                style={[
-                  styles.customerChipText,
-                  isCustomBuyer && styles.customerChipTextSelected,
-                ]}
-              >
-                + Walk-In / Other
+              <Text style={[styles.toggleCustomerText, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                {isNewBuyer ? 'Select Registered Customer' : '+ Add Walk-in Buyer'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('AddCustomer')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.fullRegisterLink, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Register New Customer ›
               </Text>
             </TouchableOpacity>
           </View>
-
-          {isCustomBuyer && (
-            <TextInput
-              style={styles.textInput}
-              placeholder="Enter Buyer Name or Stall Number"
-              placeholderTextColor={colors.textMuted}
-              value={customBuyerName}
-              onChangeText={setCustomBuyerName}
-            />
-          )}
         </View>
 
-        {/* 2. Commodity Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>2. Select Commodity (उत्पाद) *</Text>
-          <View style={styles.chipRow}>
+        {/* ================= GROUP 2: PRODUCT SELECTION & QUANTITY ================= */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+              borderColor: isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+              <Ionicons name="cube" size={15} color={isDark ? '#4ADE80' : '#16834A'} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              2. Product & Rates
+            </Text>
+          </View>
+
+          {/* Product Selection Tiles */}
+          <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+            Select Product:
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.productScroll}
+          >
             {products.map((p) => {
-              const isSelected = selectedProductId === p.id;
+              const isSelected = p.id === selectedProductId;
+              const stock = parseFloat(p.quantity || '0') || 0;
               return (
                 <TouchableOpacity
                   key={p.id}
                   style={[
-                    styles.productChip,
-                    isSelected && styles.productChipSelected,
+                    styles.productTile,
+                    {
+                      backgroundColor: isSelected
+                        ? (isDark ? '#143823' : '#F0FDF4')
+                        : (isDark ? '#1E293B' : '#F8FAFC'),
+                      borderColor: isSelected
+                        ? (isDark ? '#4ADE80' : '#16834A')
+                        : (isDark ? '#334155' : '#E2E8F0'),
+                    },
                   ]}
+                  onPress={() => handleProductSelect(p)}
                   activeOpacity={0.7}
-                  onPress={() => {
-                    setSelectedProductId(p.id);
-                    const gradesForP = productGrades.filter(
-                      (g) => g.productId === p.id && g.isActive
-                    );
-                    if (gradesForP.length > 0) {
-                      setSelectedGradeId(gradesForP[0].id);
-                    }
-                  }}
                 >
+                  <Image
+                    source={{ uri: getProductImage(p) }}
+                    style={styles.productTileThumb}
+                  />
                   <Text
                     style={[
-                      styles.productChipText,
-                      isSelected && styles.productChipTextSelected,
+                      styles.productTileName,
+                      {
+                        color: isSelected
+                          ? (isDark ? '#4ADE80' : '#16834A')
+                          : (isDark ? '#CBD5E1' : '#334155'),
+                        fontWeight: isSelected ? '700' : '600',
+                      },
                     ]}
+                    numberOfLines={1}
                   >
                     {p.name}
                   </Text>
-                  <Text
-                    style={[
-                      styles.productChipSub,
-                      isSelected && styles.productChipSubSelected,
-                    ]}
-                  >
-                    {p.quantity || 0} {p.unit}
+                  <Text style={[styles.productTileStock, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                    {stock} {p.unit || 'Crate'}
                   </Text>
                 </TouchableOpacity>
               );
             })}
-          </View>
-        </View>
+          </ScrollView>
 
-        {/* 3. Product Grade Selection (Feature 2 & 3) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>3. Select Quality Grade (गुणवत्ता ग्रेड) *</Text>
-          {availableGrades.length === 0 ? (
-            <Text style={styles.noGradesText}>Standard ungraded inventory</Text>
-          ) : (
-            <View style={styles.gradeGrid}>
-              {availableGrades.map((g) => {
-                const isSelected = selectedGrade?.id === g.id;
+          {/* Quantity & Stepper */}
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+              Dispatch Quantity *
+            </Text>
+            <View
+              style={[
+                styles.largeStepperContainer,
+                {
+                  backgroundColor: isDark ? '#0A0F1D' : '#F8FAFC',
+                  borderColor: isDark ? '#334155' : '#CBD5E1',
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={[styles.stepBtn, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' }]}
+                onPress={() => handleStepQuantity(-1)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.stepBtnText, { color: colors.textPrimary }]}>-1</Text>
+              </TouchableOpacity>
+
+              <TextInput
+                style={[styles.largeQtyInput, { color: colors.textPrimary }]}
+                keyboardType="numeric"
+                value={quantity}
+                onChangeText={setQuantity}
+              />
+
+              <TouchableOpacity
+                style={[styles.stepBtn, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' }]}
+                onPress={() => handleStepQuantity(1)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.stepBtnText, { color: colors.textPrimary }]}>+1</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Unit Selector */}
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+              Unit (Kg / Crate / etc.)
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.unitScroll}
+            >
+              {COMMON_UNITS.map((u) => {
+                const isUnitSelected = selectedUnit === u;
                 return (
                   <TouchableOpacity
-                    key={g.id}
+                    key={u}
                     style={[
-                      styles.gradeSelectCard,
-                      isSelected && styles.gradeSelectCardActive,
+                      styles.unitPill,
+                      {
+                        backgroundColor: isUnitSelected
+                          ? (isDark ? '#143823' : '#DCFCE7')
+                          : (isDark ? '#1E293B' : '#F8FAFC'),
+                        borderColor: isUnitSelected
+                          ? (isDark ? '#4ADE80' : '#16834A')
+                          : (isDark ? '#334155' : '#E2E8F0'),
+                      },
                     ]}
-                    onPress={() => setSelectedGradeId(g.id)}
+                    onPress={() => setSelectedUnit(u)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.gradeSelectTop}>
-                      <Text
-                        style={[
-                          styles.gradeSelectName,
-                          isSelected && styles.gradeSelectNameActive,
-                        ]}
-                      >
-                        {g.name}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={16} color="#16834A" />
-                      )}
-                    </View>
-                    <Text style={styles.gradeSelectStock}>
-                      Available: <Text style={{ fontWeight: '700' }}>{g.stockQuantity} {selectedProduct?.unit}</Text>
-                    </Text>
-                    <Text style={styles.gradeSelectDefPrice}>
-                      Base Rate: ₹{g.defaultPrice}/{selectedProduct?.unit}
+                    <Text
+                      style={[
+                        styles.unitPillText,
+                        {
+                          color: isUnitSelected
+                            ? (isDark ? '#4ADE80' : '#16834A')
+                            : (isDark ? '#CBD5E1' : '#475569'),
+                          fontWeight: isUnitSelected ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {u}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
-            </View>
-          )}
-        </View>
+            </ScrollView>
+          </View>
 
-        {/* 4. Automated Pricing Display & Input */}
-        <View style={styles.section}>
-          <View style={styles.priceHeaderRow}>
-            <Text style={styles.sectionLabel}>4. Price Per Unit (बिक्री दर ₹) *</Text>
-            {/* Tag showing whether customer custom or default grade rate */}
-            <View
-              style={[
-                styles.appliedTag,
-                appliedPriceType === 'Customer-Specific'
-                  ? styles.appliedTagCustom
-                  : styles.appliedTagDefault,
-              ]}
-            >
-              <Text
+          {/* Sale Rate (₹ per unit) & Automatic Total Calculation */}
+          <View style={styles.rateCalculationRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                Sale Rate (₹ per {selectedUnit})
+              </Text>
+              <View
                 style={[
-                  styles.appliedTagText,
-                  appliedPriceType === 'Customer-Specific'
-                    ? styles.appliedTagTextCustom
-                    : styles.appliedTagTextDefault,
+                  styles.rateInputWrap,
+                  {
+                    backgroundColor: isDark ? '#0A0F1D' : '#F8FAFC',
+                    borderColor: isDark ? '#334155' : '#CBD5E1',
+                  },
                 ]}
               >
-                {appliedPriceType === 'Customer-Specific'
-                  ? '★ Agreed Customer Rate'
-                  : '✓ Default Grade Rate'}
+                <Text style={[styles.currencyPrefix, { color: isDark ? '#4ADE80' : '#16834A' }]}>₹</Text>
+                <TextInput
+                  style={[styles.largeRateInput, { color: colors.textPrimary }]}
+                  keyboardType="numeric"
+                  value={ratePerUnit}
+                  onChangeText={setRatePerUnit}
+                  placeholder="0"
+                  placeholderTextColor={colors.inputPlaceholder}
+                />
+              </View>
+            </View>
+
+            {/* Calculated Line Amount */}
+            <View
+              style={[
+                styles.lineAmountBox,
+                {
+                  backgroundColor: isDark ? '#143823' : '#F0FDF4',
+                  borderColor: isDark ? '#166534' : '#BBF7D0',
+                },
+              ]}
+            >
+              <Text style={[styles.lineAmountLabel, { color: isDark ? '#4ADE80' : '#166534' }]}>
+                Subtotal
+              </Text>
+              <Text style={[styles.lineAmountValue, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                ₹{lineAmount.toLocaleString('en-IN')}
               </Text>
             </View>
           </View>
 
-          <View style={styles.priceInputWrap}>
-            <Text style={styles.rupeePrefix}>₹</Text>
-            <TextInput
-              style={styles.priceInput}
-              keyboardType="numeric"
-              value={unitPrice}
-              onChangeText={(val) => {
-                setUnitPrice(val);
-                setAppliedPriceType('Manual Override');
-              }}
-            />
-            <Text style={styles.unitSuffix}>/ {selectedProduct?.unit}</Text>
-          </View>
+          {/* Stock Availability Indicator */}
+          <Text
+            style={[
+              styles.stockAlert,
+              { color: qtyNum > availableStock ? '#DC2626' : (isDark ? '#4ADE80' : '#16834A') },
+            ]}
+          >
+            {qtyNum > availableStock
+              ? `⚠️ Exceeds physical stock! Only ${availableStock} ${selectedUnit} available.`
+              : `✓ ${availableStock} ${selectedUnit} available in inventory.`}
+          </Text>
         </View>
 
-        {/* 5. Quantity Input & Stock Check */}
-        <View style={styles.section}>
-          <View style={styles.stockStatusRow}>
-            <Text style={styles.sectionLabel}>5. Quantity (मात्रा) *</Text>
-            <Text style={styles.stockNoticeText}>
-              In Stock: {currentGradeStock} {selectedProduct?.unit}
+        {/* ================= GROUP 3: PAYMENT & BILL SUMMARY ================= */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+              borderColor: isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+              <Ionicons name="cash" size={15} color={isDark ? '#4ADE80' : '#16834A'} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              3. Payment & Settlement
             </Text>
           </View>
 
-          <View style={styles.qtyControlRow}>
-            <TouchableOpacity
-              style={styles.qtyStepBtn}
-              onPress={() => handleStepQuantity(-10)}
-            >
-              <Text style={styles.qtyStepBtnText}>-10</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.qtyStepBtn}
-              onPress={() => handleStepQuantity(-1)}
-            >
-              <Text style={styles.qtyStepBtnText}>-1</Text>
-            </TouchableOpacity>
-
-            <TextInput
-              style={styles.qtyInput}
-              keyboardType="numeric"
-              value={quantity}
-              onChangeText={setQuantity}
-            />
-
-            <TouchableOpacity
-              style={styles.qtyStepBtn}
-              onPress={() => handleStepQuantity(1)}
-            >
-              <Text style={styles.qtyStepBtnText}>+1</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.qtyStepBtn}
-              onPress={() => handleStepQuantity(10)}
-            >
-              <Text style={styles.qtyStepBtnText}>+10</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* 6. Payment Method */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>6. Payment Terms (भुगतान का प्रकार) *</Text>
-          <View style={styles.paymentMethodRow}>
-            {(['Cash', 'Credit', 'UPI / Online'] as PaymentMethod[]).map((method) => {
-              const isSelected = paymentMethod === method;
+          {/* Payment Method Selector */}
+          <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+            Payment Method
+          </Text>
+          <View style={styles.paymentModeRow}>
+            {(['CASH', 'UPI', 'CREDIT'] as PaymentMode[]).map((mode) => {
+              const isSelected = paymentMode === mode;
               return (
                 <TouchableOpacity
-                  key={method}
+                  key={mode}
                   style={[
-                    styles.paymentMethodBtn,
-                    isSelected && styles.paymentMethodBtnActive,
+                    styles.paymentModePill,
+                    {
+                      backgroundColor: isSelected
+                        ? (isDark ? '#143823' : '#DCFCE7')
+                        : (isDark ? '#1E293B' : '#F8FAFC'),
+                      borderColor: isSelected
+                        ? (isDark ? '#4ADE80' : '#16834A')
+                        : (isDark ? '#334155' : '#E2E8F0'),
+                    },
                   ]}
-                  onPress={() => setPaymentMethod(method)}
+                  onPress={() => {
+                    setPaymentMode(mode);
+                    if (mode === 'CREDIT') {
+                      setAmountPaid('0');
+                    } else if (paidNum === 0) {
+                      setAmountPaid(String(grandTotal));
+                    }
+                  }}
+                  activeOpacity={0.7}
                 >
                   <Text
                     style={[
-                      styles.paymentMethodBtnText,
-                      isSelected && styles.paymentMethodBtnTextActive,
+                      styles.paymentModeText,
+                      {
+                        color: isSelected
+                          ? (isDark ? '#4ADE80' : '#16834A')
+                          : (isDark ? '#CBD5E1' : '#475569'),
+                        fontWeight: isSelected ? '700' : '600',
+                      },
                     ]}
                   >
-                    {method === 'Cash'
-                      ? '💵 Cash'
-                      : method === 'Credit'
-                      ? '📒 Credit (उधारी)'
-                      : '📱 UPI'}
+                    {mode === 'CASH' ? 'Cash' : mode === 'UPI' ? 'UPI' : 'Full Credit'}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-        </View>
 
-        {/* 7. Charges (Optional Mandi Commission & Hamali) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>7. Commission & Mandi Charges (Optional)</Text>
-          <View style={styles.chargesRow}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.chargeLabel}>Commission (%):</Text>
-              <TextInput
-                style={styles.chargeInput}
-                keyboardType="numeric"
-                placeholder="0"
-                value={commissionRate}
-                onChangeText={setCommissionRate}
-              />
+          {/* Amount Paid Field */}
+          <View style={styles.formGroup}>
+            <View style={styles.labelRow}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                Amount Paid Upfront (₹)
+              </Text>
+              <View style={styles.quickPayRow}>
+                <TouchableOpacity
+                  style={[styles.quickPayChip, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}
+                  onPress={() => handleSetQuickPayment('FULL')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.quickPayText, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                    Full Paid
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickPayChip, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}
+                  onPress={() => handleSetQuickPayment('ZERO')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.quickPayText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                    ₹0 Credit
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.chargeLabel}>Hamali / Cess (₹):</Text>
+            <View
+              style={[
+                styles.rateInputWrap,
+                {
+                  backgroundColor: isDark ? '#0A0F1D' : '#F8FAFC',
+                  borderColor: isDark ? '#334155' : '#CBD5E1',
+                },
+              ]}
+            >
+              <Text style={[styles.currencyPrefix, { color: isDark ? '#4ADE80' : '#16834A' }]}>₹</Text>
               <TextInput
-                style={styles.chargeInput}
+                style={[styles.largeRateInput, { color: colors.textPrimary }]}
                 keyboardType="numeric"
+                value={amountPaid}
+                onChangeText={setAmountPaid}
                 placeholder="0"
-                value={otherCharges}
-                onChangeText={setOtherCharges}
+                placeholderTextColor={colors.inputPlaceholder}
               />
             </View>
           </View>
-        </View>
 
-        {/* Notes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Notes / Vehicle # (Optional)</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="e.g. Loading into tempo KA-04-E-1122"
-            placeholderTextColor="#888888"
-            value={notes}
-            onChangeText={setNotes}
-          />
-        </View>
+          {/* PROMINENT BILL SUMMARY CARD */}
+          <View
+            style={[
+              styles.billSummaryCard,
+              {
+                backgroundColor: isDark ? '#0A0F1D' : '#F8FAF8',
+                borderColor: isDark ? '#334155' : '#E2E8F0',
+              },
+            ]}
+          >
+            {/* Total Bill Amount (Prominent) */}
+            <View style={styles.billSummaryRow}>
+              <Text style={[styles.billSummaryLabel, { color: colors.textPrimary }]}>
+                Total Bill Amount:
+              </Text>
+              <Text style={[styles.billSummaryTotal, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                ₹ {grandTotal.toLocaleString('en-IN')}
+              </Text>
+            </View>
 
-        {/* Real-Time Billing Breakdown Box */}
-        <View style={styles.billBreakdownBox}>
-          <Text style={styles.billTitle}>Sale Bill Summary</Text>
-          <View style={styles.billLine}>
-            <Text style={styles.billLabel}>
-              {qtyNum} {selectedProduct?.unit} × ₹{priceNum}:
+            {/* Paid Upfront */}
+            <View style={styles.billSummaryRow}>
+              <Text style={[styles.billSummarySubLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Paid Upfront:
+              </Text>
+              <Text style={[styles.billSummarySubVal, { color: colors.textPrimary }]}>
+                ₹ {paidNum.toLocaleString('en-IN')}
+              </Text>
+            </View>
+
+            {/* Remaining Balance (Easy to identify) */}
+            <View
+              style={[
+                styles.remainingBalanceBox,
+                {
+                  backgroundColor: outstandingDebt > 0
+                    ? (isDark ? '#2D1616' : '#FEF2F2')
+                    : (isDark ? '#142E1F' : '#F0FDF4'),
+                  borderColor: outstandingDebt > 0
+                    ? (isDark ? '#991B1B' : '#FECACA')
+                    : (isDark ? '#166534' : '#BBF7D0'),
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.remainingBalanceLabel,
+                  { color: outstandingDebt > 0 ? '#DC2626' : (isDark ? '#4ADE80' : '#16834A') },
+                ]}
+              >
+                {outstandingDebt > 0 ? 'Remaining Balance (Due):' : 'Bill Status:'}
+              </Text>
+              <Text
+                style={[
+                  styles.remainingBalanceVal,
+                  { color: outstandingDebt > 0 ? '#DC2626' : (isDark ? '#4ADE80' : '#16834A') },
+                ]}
+              >
+                {outstandingDebt > 0
+                  ? `₹ ${outstandingDebt.toLocaleString('en-IN')}`
+                  : '✓ Fully Paid'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Vehicle / Tempo Number (Optional) */}
+          <View style={[styles.formGroup, { marginTop: 12 }]}>
+            <Text style={[styles.inputLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+              Vehicle / Tempo Number (Optional)
             </Text>
-            <Text style={styles.billVal}>₹ {subtotal.toLocaleString()}</Text>
-          </View>
-
-          {commRateNum > 0 && (
-            <View style={styles.billLine}>
-              <Text style={styles.billLabel}>Commission ({commRateNum}%):</Text>
-              <Text style={styles.billVal}>+ ₹ {commissionAmount.toLocaleString()}</Text>
-            </View>
-          )}
-
-          {otherChargesNum > 0 && (
-            <View style={styles.billLine}>
-              <Text style={styles.billLabel}>Hamali / Cess:</Text>
-              <Text style={styles.billVal}>+ ₹ {otherChargesNum.toLocaleString()}</Text>
-            </View>
-          )}
-
-          <View style={styles.billDivider} />
-
-          <View style={styles.billLine}>
-            <Text style={styles.billTotalLabel}>Final Payable Amount:</Text>
-            <Text style={styles.billTotalVal}>₹ {netTotal.toLocaleString()}</Text>
+            <TextInput
+              style={[
+                styles.largeTextInput,
+                {
+                  color: colors.textPrimary,
+                  backgroundColor: isDark ? '#0A0F1D' : '#F8FAFC',
+                  borderColor: isDark ? '#334155' : '#CBD5E1',
+                },
+              ]}
+              placeholder="e.g. KA-04-E-5678"
+              placeholderTextColor={colors.inputPlaceholder}
+              value={vehicleNo}
+              onChangeText={setVehicleNo}
+              autoCapitalize="characters"
+            />
           </View>
         </View>
 
-        {/* Save / Dispatch Button */}
+        {/* ================= CONFIRM & DISPATCH BUTTON ================= */}
         <TouchableOpacity
-          style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={isSaving}
+          style={[
+            styles.dispatchButton,
+            (isSaving || qtyNum > availableStock) && styles.dispatchButtonDisabled,
+          ]}
           activeOpacity={0.8}
+          onPress={handleConfirmSale}
+          disabled={isSaving || qtyNum > availableStock}
         >
-          <Ionicons name="receipt-outline" size={22} color="#FFFFFF" />
-          <Text style={styles.saveButtonText}>
-            {isSaving ? 'Processing Sale...' : `Confirm Sale • ₹ ${netTotal.toLocaleString()}`}
+          <Ionicons name="arrow-up-circle" size={22} color="#FFFFFF" />
+          <Text style={styles.dispatchButtonText}>
+            {isSaving
+              ? 'Dispatching...'
+              : `Confirm & Dispatch (₹${grandTotal.toLocaleString('en-IN')})`}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -665,371 +844,333 @@ export default function RecordSaleScreen({ route, navigation }: any) {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-  themeToggleBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F9F7',
-  },
-  content: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  backButton: {
-    paddingVertical: 6,
-    paddingRight: 10,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#16834A',
-    fontWeight: '600',
-  },
-  logo: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#16834A',
-  },
-  titleRow: {
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  section: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    marginBottom: 12,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  customerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    gap: 4,
-  },
-  customerChipSelected: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
-  },
-  customerChipText: {
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  customerChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  productChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  productChipSelected: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
-  },
-  productChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  productChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  productChipSub: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  productChipSubSelected: {
-    color: '#E0F2FE',
-  },
-  noGradesText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  gradeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  gradeSelectCard: {
-    width: '48%',
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  gradeSelectCardActive: {
-    backgroundColor: '#E8F4EC',
-    borderColor: '#16834A',
-  },
-  gradeSelectTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  gradeSelectName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  gradeSelectNameActive: {
-    color: '#16834A',
-  },
-  gradeSelectStock: {
-    fontSize: 11,
-    color: '#555555',
-  },
-  gradeSelectDefPrice: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  priceHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  appliedTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  appliedTagCustom: {
-    backgroundColor: '#FEF3C7',
-  },
-  appliedTagDefault: {
-    backgroundColor: '#E8F4EC',
-  },
-  appliedTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  appliedTagTextCustom: {
-    color: '#B45309',
-  },
-  appliedTagTextDefault: {
-    color: '#16834A',
-  },
-  priceInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1.5,
-    borderColor: '#16834A',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 48,
-  },
-  rupeePrefix: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginRight: 4,
-  },
-  priceInput: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  unitSuffix: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  stockStatusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stockNoticeText: {
-    fontSize: 12,
-    color: '#16834A',
-    fontWeight: '700',
-  },
-  qtyControlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 6,
-  },
-  qtyStepBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  qtyStepBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  qtyInput: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: 8,
-    height: 44,
-  },
-  paymentMethodRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  paymentMethodBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    alignItems: 'center',
-  },
-  paymentMethodBtnActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
-  },
-  paymentMethodBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#444444',
-  },
-  paymentMethodBtnTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  chargesRow: {
-    flexDirection: 'row',
-  },
-  chargeLabel: {
-    fontSize: 11,
-    color: '#555555',
-    marginBottom: 4,
-  },
-  chargeInput: {
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 13,
-  },
-  textInput: {
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-  },
-  billBreakdownBox: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    marginBottom: 16,
-  },
-  billTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 6,
-  },
-  billLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 2,
-  },
-  billLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  billVal: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  billDivider: {
-    height: 1,
-    backgroundColor: '#EEEEEE',
-    marginVertical: 6,
-  },
-  billTotalLabel: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  billTotalVal: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#16834A',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#16834A',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    elevation: 3,
-    marginBottom: 20,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: isDark ? '#0A0F1D' : '#F8FAF8',
+    },
+    content: {
+      paddingHorizontal: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    backButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 4,
+    },
+    backText: {
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+    },
+
+    /* Section Cards */
+    sectionCard: {
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      marginBottom: 14,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    sectionIconCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    inputLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      marginBottom: 6,
+    },
+    formGroup: {
+      marginBottom: 10,
+    },
+    labelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+
+    /* Customer Selection */
+    buyerScroll: {
+      gap: 8,
+      paddingVertical: 4,
+    },
+    buyerChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    buyerChipText: {
+      fontSize: 13,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    toggleCustomerBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 4,
+    },
+    toggleCustomerText: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    fullRegisterLink: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+
+    /* Large Inputs */
+    largeTextInput: {
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      minHeight: 48,
+      fontSize: 15,
+    },
+
+    /* Product Selection Tiles */
+    productScroll: {
+      gap: 8,
+      paddingVertical: 4,
+      marginBottom: 10,
+    },
+    productTile: {
+      width: 82,
+      padding: 8,
+      borderRadius: 10,
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    productTileThumb: {
+      width: 44,
+      height: 44,
+      borderRadius: 8,
+      marginBottom: 4,
+    },
+    productTileName: {
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    productTileStock: {
+      fontSize: 10,
+      marginTop: 2,
+    },
+
+    /* Quantity Stepper */
+    largeStepperContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderRadius: 10,
+      overflow: 'hidden',
+      minHeight: 48,
+    },
+    stepBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    stepBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    largeQtyInput: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 18,
+      fontWeight: '700',
+      paddingVertical: 10,
+    },
+
+    /* Unit Selector */
+    unitScroll: {
+      gap: 8,
+      paddingVertical: 2,
+    },
+    unitPill: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    unitPillText: {
+      fontSize: 13,
+    },
+
+    /* Rate & Subtotal */
+    rateCalculationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 6,
+    },
+    rateInputWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      minHeight: 48,
+    },
+    currencyPrefix: {
+      fontSize: 16,
+      fontWeight: '700',
+      marginRight: 4,
+    },
+    largeRateInput: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '700',
+      paddingVertical: 8,
+    },
+    lineAmountBox: {
+      flex: 1.1,
+      borderWidth: 1,
+      borderRadius: 10,
+      padding: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 48,
+    },
+    lineAmountLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    lineAmountValue: {
+      fontSize: 17,
+      fontWeight: '800',
+      marginTop: 2,
+    },
+    stockAlert: {
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: 4,
+    },
+
+    /* Payment Methods */
+    paymentModeRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    paymentModePill: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 10,
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    paymentModeText: {
+      fontSize: 13,
+    },
+    quickPayRow: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    quickPayChip: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    quickPayText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+
+    /* Prominent Bill Summary Card */
+    billSummaryCard: {
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      marginTop: 6,
+    },
+    billSummaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    billSummaryLabel: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    billSummaryTotal: {
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    billSummarySubLabel: {
+      fontSize: 13,
+    },
+    billSummarySubVal: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    remainingBalanceBox: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginTop: 4,
+    },
+    remainingBalanceLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    remainingBalanceVal: {
+      fontSize: 16,
+      fontWeight: '800',
+    },
+
+    /* Primary Dispatch Button */
+    dispatchButton: {
+      flexDirection: 'row',
+      backgroundColor: '#16834A',
+      borderRadius: 12,
+      minHeight: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginBottom: 16,
+    },
+    dispatchButtonDisabled: {
+      backgroundColor: '#9CA3AF',
+    },
+    dispatchButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+  });

@@ -170,7 +170,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
             onPress={handleOpenAddModal}
             activeOpacity={0.7}
           >
-            <Ionicons name="add" size={18} color="#16834A" />
+            <Ionicons name="add" size={18} color={isDark ? '#4ADE80' : '#16834A'} />
             <Text style={styles.addBtnHeaderText}>+ Add Rate</Text>
           </TouchableOpacity>
         )}
@@ -185,7 +185,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
       >
         {/* Info Banner */}
         <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={20} color="#16834A" />
+          <Ionicons name="information-circle-outline" size={20} color={isDark ? '#4ADE80' : '#16834A'} />
           <Text style={styles.infoBannerText}>
             Custom prices set here are auto-applied during sales. If no rule is configured, the standard grade price is used as default.
           </Text>
@@ -336,10 +336,10 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
                       style={[
                         styles.diffBadge,
                         diff < 0
-                          ? { color: '#16834A' }
+                          ? { color: isDark ? '#4ADE80' : '#16834A' }
                           : diff > 0
-                          ? { color: '#DC2626' }
-                          : { color: '#666666' },
+                          ? { color: isDark ? '#F87171' : '#DC2626' }
+                          : { color: colors.textSecondary },
                       ]}
                     >
                       {diff < 0
@@ -369,7 +369,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
                         style={styles.ruleActionBtn}
                         onPress={() => handleOpenEditModal(rule)}
                       >
-                        <Ionicons name="pencil-outline" size={14} color="#16834A" />
+                        <Ionicons name="pencil-outline" size={14} color={isDark ? '#4ADE80' : '#16834A'} />
                         <Text style={styles.ruleActionText}>Edit</Text>
                       </TouchableOpacity>
 
@@ -380,12 +380,12 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
                         <Ionicons
                           name={isActive ? 'eye-off-outline' : 'eye-outline'}
                           size={14}
-                          color={isActive ? '#D97706' : '#16834A'}
+                          color={isActive ? (isDark ? '#FBBF24' : '#D97706') : (isDark ? '#4ADE80' : '#16834A')}
                         />
                         <Text
                           style={[
                             styles.ruleActionText,
-                            isActive && { color: '#D97706' },
+                            isActive && { color: isDark ? '#FBBF24' : '#D97706' },
                           ]}
                         >
                           {isActive ? 'Deactivate' : 'Activate'}
@@ -421,7 +421,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
                 {editingRule ? 'Edit Customer Price' : 'Add Customer Price Rule'}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#666666" />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -527,7 +527,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
                   style={styles.modalPriceInput}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#AAAAAA"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={formPrice}
                   onChangeText={setFormPrice}
                 />
@@ -538,7 +538,7 @@ export default function CustomerPricingScreen({ route, navigation }: any) {
               <TextInput
                 style={styles.modalNotesInput}
                 placeholder="e.g. Volume order margin discount"
-                placeholderTextColor="#888888"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={formNotes}
                 onChangeText={setFormNotes}
               />
@@ -573,7 +573,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -582,7 +582,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingBottom: 12,
     backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   backBtn: {
     padding: 6,
@@ -598,12 +598,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   addBtnHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -612,7 +612,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   addBtnHeaderText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   content: {
     padding: 16,
@@ -620,7 +620,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     borderRadius: 10,
     padding: 12,
     marginBottom: 14,
@@ -629,13 +629,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   infoBannerText: {
     flex: 1,
     fontSize: 12,
-    color: '#065F46',
+    color: isDark ? '#A7F3D0' : '#065F46',
     lineHeight: 17,
   },
   filterTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   filterChipScroll: {
@@ -648,16 +648,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 16,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   filterChipActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#444444',
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
@@ -677,7 +677,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   rulesListAddLink: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   emptyCard: {
     alignItems: 'center',
@@ -685,17 +685,17 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     backgroundColor: colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
   },
   emptyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginTop: 8,
   },
   emptySub: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -704,7 +704,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 10,
   },
   ruleCardInactive: {
@@ -744,12 +744,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   rulePriceValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   rulePriceUnit: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   diffBadge: {
     fontSize: 10,
@@ -758,13 +758,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   ruleNotesBox: {
     marginTop: 8,
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F9FAFB',
     padding: 6,
     borderRadius: 6,
   },
   ruleNotesText: {
     fontSize: 11,
-    color: '#555555',
+    color: colors.textSecondary,
   },
   ruleBottomRow: {
     flexDirection: 'row',
@@ -777,7 +777,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   ruleEffectiveText: {
     fontSize: 11,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   ruleActions: {
     flexDirection: 'row',
@@ -789,19 +789,19 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     gap: 4,
   },
   ruleActionText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     padding: 16,
   },
@@ -810,6 +810,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 16,
     padding: 18,
     maxHeight: '85%',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -825,7 +827,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   formLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#444444',
+    color: colors.textPrimary,
     marginTop: 8,
     marginBottom: 4,
   },
@@ -839,16 +841,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 8,
     backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
   },
   formSelectChipActive: {
-    backgroundColor: '#16834A',
-    borderColor: '#16834A',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   formSelectChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#333333',
+    color: colors.textSecondary,
   },
   formSelectChipTextActive: {
     color: '#FFFFFF',
@@ -856,9 +858,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   modalInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     height: 46,
@@ -877,9 +879,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textPrimary,
   },
   modalNotesInput: {
-    backgroundColor: isDark ? colors.surface : '#F9FAFB',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,

@@ -37,7 +37,7 @@ export default function LanguageSelectorModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.modalOverlay }]} onPress={onClose}>
         <Pressable
           style={[
             styles.modalCard,
@@ -51,8 +51,17 @@ export default function LanguageSelectorModal({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={styles.titleWrap}>
-              <View style={[styles.iconWrap, { backgroundColor: '#DCFCE7' }]}>
-                <Ionicons name="globe-outline" size={22} color="#16834A" />
+              <View
+                style={[
+                  styles.iconWrap,
+                  { backgroundColor: isDark ? '#143823' : '#DCFCE7' },
+                ]}
+              >
+                <Ionicons
+                  name="globe-outline"
+                  size={22}
+                  color={isDark ? '#4ADE80' : '#16834A'}
+                />
               </View>
               <View>
                 <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -67,7 +76,7 @@ export default function LanguageSelectorModal({
             <TouchableOpacity
               style={[
                 styles.closeButton,
-                { backgroundColor: isDark ? '#334155' : '#F1F5F9' },
+                { backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9' },
               ]}
               onPress={onClose}
               activeOpacity={0.7}
@@ -92,15 +101,17 @@ export default function LanguageSelectorModal({
                     {
                       backgroundColor: isSelected
                         ? isDark
-                          ? '#14532D'
+                          ? '#143823'
                           : '#F0FDF4'
                         : isDark
-                        ? '#1E293B'
+                        ? colors.surfaceElevated
                         : '#FFFFFF',
                       borderColor: isSelected
-                        ? '#16834A'
+                        ? isDark
+                          ? colors.primary
+                          : '#16834A'
                         : isDark
-                        ? '#334155'
+                        ? colors.border
                         : '#E2E8F0',
                     },
                   ]}
@@ -117,7 +128,11 @@ export default function LanguageSelectorModal({
                         style={[
                           styles.nativeName,
                           {
-                            color: isSelected ? '#16834A' : colors.textPrimary,
+                            color: isSelected
+                              ? isDark
+                                ? '#4ADE80'
+                                : '#16834A'
+                              : colors.textPrimary,
                             fontWeight: isSelected ? '700' : '600',
                           },
                         ]}
@@ -135,28 +150,24 @@ export default function LanguageSelectorModal({
                         </Text>
                       )}
                     </View>
-                    <Text
-                      style={[
-                        styles.subText,
-                        {
-                          color: isSelected
-                            ? isDark
-                              ? '#86EFAC'
-                              : '#15803D'
-                            : colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      {opt.subText}
-                    </Text>
                   </View>
 
                   <View
                     style={[
                       styles.radioCircle,
                       {
-                        borderColor: isSelected ? '#16834A' : '#94A3B8',
-                        backgroundColor: isSelected ? '#16834A' : 'transparent',
+                        borderColor: isSelected
+                          ? isDark
+                            ? colors.primary
+                            : '#16834A'
+                          : isDark
+                          ? colors.textMuted
+                          : '#94A3B8',
+                        backgroundColor: isSelected
+                          ? isDark
+                            ? colors.primary
+                            : '#16834A'
+                          : 'transparent',
                       },
                     ]}
                   >
