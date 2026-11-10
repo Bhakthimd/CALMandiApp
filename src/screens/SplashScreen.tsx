@@ -8,27 +8,32 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useMandi } from '../context/MandiContext';
 import CALMandiLogo from '../components/CALMandiLogo';
 
 export default function SplashScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { currentUser } = useMandi();
   const [fadeAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    // Smooth fade-in
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 500,
+      duration: 400,
       useNativeDriver: true,
     }).start();
 
     const timer = setTimeout(() => {
-      navigation.replace('Welcome');
-    }, 2000);
+      if (currentUser) {
+        navigation.replace('Home');
+      } else {
+        navigation.replace('Welcome');
+      }
+    }, 1200);
 
     return () => clearTimeout(timer);
-  }, [navigation, fadeAnim]);
+  }, [navigation, fadeAnim, currentUser]);
 
   return (
     <View
@@ -37,7 +42,7 @@ export default function SplashScreen({ navigation }: any) {
         {
           backgroundColor: isDark ? colors.background : '#F8FAF8',
           paddingTop: insets.top,
-          paddingBottom: insets.bottom + 24,
+          paddingBottom: Math.max(insets.bottom + 20, 28),
         },
       ]}
     >
@@ -46,30 +51,28 @@ export default function SplashScreen({ navigation }: any) {
 
         <View style={styles.loaderWrap}>
           <ActivityIndicator
-            size="large"
+            size="small"
             color={isDark ? '#4ADE80' : colors.primary}
           />
           <Text
             style={[
               styles.loadingText,
-              { color: isDark ? colors.textSecondary : '#475569' },
+              { color: isDark ? colors.textSecondary : '#64748B' },
             ]}
           >
-            Loading Mandi Dashboard...
+            Loading Mandi Workspace...
           </Text>
         </View>
       </Animated.View>
 
-      <View style={styles.footerWrap}>
-        <Text
-          style={[
-            styles.footerText,
-            { color: isDark ? colors.textMuted : '#94A3B8' },
-          ]}
-        >
-          CAL Mandi v1.0 • APMC Krishi Platform
-        </Text>
-      </View>
+      <Text
+        style={[
+          styles.footerText,
+          { color: isDark ? colors.textMuted : '#94A3B8' },
+        ]}
+      >
+        CAL Mandi v1.0 • APMC Krishi Platform
+      </Text>
     </View>
   );
 }
@@ -89,20 +92,15 @@ const styles = StyleSheet.create({
   },
   loaderWrap: {
     alignItems: 'center',
-    marginTop: 36,
-    gap: 12,
+    marginTop: 28,
+    gap: 8,
   },
   loadingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  footerWrap: {
-    alignItems: 'center',
+    fontSize: 13,
+    fontWeight: '500',
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    letterSpacing: 0.2,
   },
 });

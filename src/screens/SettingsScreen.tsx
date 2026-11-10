@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,24 +10,112 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
 import { useMandi } from '../context/MandiContext';
+import { useTheme } from '../context/ThemeContext';
 import { SupportedLanguage } from '../types';
-import LanguageSelectorModal from '../components/LanguageSelectorModal';
+import BottomNavBar from '../components/BottomNavBar';
+
+type SettingsThemeMode = 'light' | 'dark' | 'system';
 
 export default function SettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, themeMode, setThemeMode } = useTheme();
   const { language, setLanguage, currentLanguageOption, availableLanguages, t } = useLanguage();
   const { currentUser, isOwner, switchRole, logout } = useMandi();
-  const [modalVisible, setModalVisible] = useState(false);
+  const { themeMode, setThemeMode, isDark } = useTheme();
+
+  const handleSelectTheme = (mode: SettingsThemeMode) => {
+    setThemeMode(mode);
+  };
+
+  // High-contrast, fully visible theme palette tailored for SettingsScreen
+  const colors = useMemo(() => {
+    return isDark
+      ? {
+          bg: '#121212',
+          headerBg: '#1E1E1E',
+          cardBg: '#1E1E1E',
+          cardBorder: '#383838',
+          border: '#383838',
+          textPrimary: '#FFFFFF',
+          textSecondary: '#BDBDBD',
+          textMuted: '#757575',
+          primaryGreen: '#22C55E',
+          greenText: '#4ADE80',
+          greenBadgeBg: '#143823',
+          greenBadgeBorder: '#22C55E',
+          greenWrapBg: '#143823',
+          activeOptionBg: '#143823',
+          activeOptionBorder: '#22C55E',
+          activeOptionText: '#4ADE80',
+          unselectedOptionBg: '#252525',
+          unselectedOptionBorder: '#383838',
+          unselectedOptionText: '#FFFFFF',
+          goldWrapBg: '#3B2904',
+          goldIcon: '#FBBF24',
+          purpleWrapBg: '#2E1065',
+          purpleIcon: '#A78BFA',
+          roleBtnBg: '#252525',
+          roleBtnBorder: '#383838',
+          roleBtnText: '#FFFFFF',
+          logoutBtnBg: '#3B1515',
+          logoutBtnBorder: '#5C1D1D',
+          logoutBtnText: '#FCA5A5',
+          logoutIcon: '#F87171',
+          syncBtnBg: '#143823',
+          syncBtnBorder: '#22C55E',
+          syncBtnText: '#4ADE80',
+          divider: '#383838',
+          chevron: '#BDBDBD',
+        }
+      : {
+          bg: '#F8FAF8',
+          headerBg: '#FFFFFF',
+          cardBg: '#FFFFFF',
+          cardBorder: '#E2E8F0',
+          border: '#E2E8F0',
+          textPrimary: '#0F172A',
+          textSecondary: '#475569',
+          textMuted: '#64748B',
+          primaryGreen: '#16864B',
+          greenText: '#15803D',
+          greenBadgeBg: '#DCFCE7',
+          greenBadgeBorder: '#BBF7D0',
+          greenWrapBg: '#DCFCE7',
+          activeOptionBg: '#F0FDF4',
+          activeOptionBorder: '#16864B',
+          activeOptionText: '#15803D',
+          unselectedOptionBg: '#F8FAFC',
+          unselectedOptionBorder: '#E2E8F0',
+          unselectedOptionText: '#334155',
+          goldWrapBg: '#FEF3C7',
+          goldIcon: '#D97706',
+          purpleWrapBg: '#E0E7FF',
+          purpleIcon: '#4F46E5',
+          roleBtnBg: '#F1F5F9',
+          roleBtnBorder: '#CBD5E1',
+          roleBtnText: '#0F172A',
+          logoutBtnBg: '#FEE2E2',
+          logoutBtnBorder: '#FECACA',
+          logoutBtnText: '#DC2626',
+          logoutIcon: '#DC2626',
+          syncBtnBg: '#DCFCE7',
+          syncBtnBorder: '#BBF7D0',
+          syncBtnText: '#15803D',
+          divider: '#E2E8F0',
+          chevron: '#64748B',
+        };
+  }, [isDark]);
 
   const handleToggleRole = () => {
     const nextRole = isOwner ? 'Operator' : 'Owner';
     switchRole(nextRole);
     Alert.alert(
       t('roleSwitched', 'Role Switched'),
-      t('roleSwitchedMsg', `You are now viewing as ${nextRole}. Dashboard metrics and permissions updated.`, { role: nextRole })
+      t(
+        'roleSwitchedMsg',
+        `You are now viewing as ${nextRole}. Dashboard metrics and permissions updated.`,
+        { role: nextRole }
+      )
     );
   };
 
@@ -50,31 +138,31 @@ export default function SettingsScreen({ navigation }: any) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Top Header */}
       <View
         style={[
           styles.header,
           {
-            paddingTop: Math.max(insets.top + 10, 36),
-            backgroundColor: colors.cardBackground,
+            paddingTop: Math.max(insets.top + 8, 34),
+            backgroundColor: colors.headerBg,
             borderBottomColor: colors.border,
           },
         ]}
       >
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: isDark ? '#252525' : '#F1F5F9' }]}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
             {t('settingsTitle', 'Settings & Preferences')}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('settingsSubtitle', 'Configure language, display mode, and offline mandi preferences')}
+            {t('settingsSubtitle', 'Appearance, language & mandi configuration')}
           </Text>
         </View>
       </View>
@@ -82,98 +170,93 @@ export default function SettingsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(insets.bottom + 24, 32) },
+          { paddingBottom: Math.max(insets.bottom + 90, 110) },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* SECTION 1: LANGUAGE SETTINGS */}
+        {/* SECTION A: LANGUAGE SETTINGS */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="globe-outline" size={20} color="#16834A" />
+            <View style={[styles.sectionIconWrap, { backgroundColor: colors.greenWrapBg }]}>
+              <Ionicons name="globe-outline" size={18} color={isDark ? '#4ADE80' : '#16834A'} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
                 {t('languageSectionTitle', 'Language Settings')}
               </Text>
               <Text style={[styles.sectionSubtext, { color: colors.textSecondary }]}>
-                {t('languageSectionSub', 'Select your preferred language for CAL Mandi')}
+                {t('languageSectionSub', 'Select your preferred language')}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.currentLangPill,
+                {
+                  backgroundColor: colors.greenBadgeBg,
+                  borderColor: colors.greenBadgeBorder,
+                },
+              ]}
+            >
+              <Text style={styles.currentLangEmoji}>{currentLanguageOption.flagEmoji}</Text>
+              <Text style={[styles.currentLangText, { color: colors.greenText }]}>
+                {currentLanguageOption.nativeName}
               </Text>
             </View>
           </View>
 
-          {/* Active Language Card */}
+          {/* Compact 2-Column Language Grid */}
           <View
             style={[
               styles.card,
               {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
+                backgroundColor: colors.cardBg,
+                borderColor: colors.cardBorder,
               },
             ]}
           >
-            <View style={styles.activeLangRow}>
-              <View style={styles.langLeftInfo}>
-                <Text style={styles.langEmoji}>{currentLanguageOption.flagEmoji}</Text>
-                <View>
-                  <Text style={[styles.activeLangTitle, { color: colors.textPrimary }]}>
-                    {currentLanguageOption.nativeName}
-                    {currentLanguageOption.nativeName !== currentLanguageOption.name &&
-                      ` (${currentLanguageOption.name})`}
-                  </Text>
-                  <Text style={[styles.activeLangDesc, { color: colors.textSecondary }]}>
-                    {currentLanguageOption.subText}
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.changeLangBtn}
-                onPress={() => setModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.changeLangBtnText}>Change</Text>
-                <Ionicons name="chevron-forward" size={16} color="#16834A" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Quick Language Selector Chips */}
-            <View style={styles.chipsContainer}>
+            <View style={styles.languageGrid}>
               {availableLanguages.map((opt) => {
                 const isSelected = opt.code === language;
                 return (
                   <TouchableOpacity
                     key={opt.code}
                     style={[
-                      styles.langChip,
+                      styles.langGridItem,
                       {
                         backgroundColor: isSelected
-                          ? '#16834A'
-                          : isDark
-                          ? '#1E293B'
-                          : '#F1F5F9',
+                          ? colors.activeOptionBg
+                          : colors.unselectedOptionBg,
                         borderColor: isSelected
-                          ? '#16834A'
-                          : isDark
-                          ? '#334155'
-                          : '#E2E8F0',
+                          ? colors.activeOptionBorder
+                          : colors.unselectedOptionBorder,
                       },
                     ]}
                     activeOpacity={0.7}
                     onPress={() => setLanguage(opt.code as SupportedLanguage)}
                   >
-                    <Text style={styles.chipEmoji}>{opt.flagEmoji}</Text>
+                    <Text style={styles.langGridEmoji}>{opt.flagEmoji}</Text>
                     <Text
                       style={[
-                        styles.chipText,
+                        styles.langGridName,
                         {
-                          color: isSelected ? '#FFFFFF' : colors.textPrimary,
+                          color: isSelected
+                            ? colors.activeOptionText
+                            : colors.unselectedOptionText,
                           fontWeight: isSelected ? '700' : '500',
                         },
                       ]}
+                      numberOfLines={1}
                     >
                       {opt.nativeName}
                     </Text>
+                    {isSelected && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color={colors.primaryGreen}
+                        style={styles.checkIcon}
+                      />
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -181,18 +264,64 @@ export default function SettingsScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* SECTION 2: THEME & DISPLAY */}
+        {/* SECTION B: AI MANDI OPERATIONS ASSISTANT */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={[
+              styles.aiCard,
+              {
+                backgroundColor: colors.cardBg,
+                borderColor: isDark ? '#2E4B37' : '#BBF7D0',
+              },
+            ]}
+            onPress={() => navigation.navigate('Chatbot')}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.aiIconWrap,
+                { backgroundColor: isDark ? '#22C55E' : '#16864B' },
+              ]}
+            >
+              <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.aiTitleRow}>
+                <Text style={[styles.aiTitle, { color: colors.textPrimary }]}>
+                  AI Mandi Operations Assistant
+                </Text>
+                <View
+                  style={[
+                    styles.aiBadge,
+                    {
+                      backgroundColor: colors.greenBadgeBg,
+                      borderColor: colors.greenBadgeBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.aiBadgeText, { color: colors.greenText }]}>AI</Text>
+                </View>
+              </View>
+              <Text style={[styles.aiSubtitle, { color: colors.textSecondary }]}>
+                Chatbot help, natural voice commands, & multilingual APMC support
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.chevron} />
+          </TouchableOpacity>
+        </View>
+
+        {/* SECTION C: APPEARANCE (ONLY LIGHT & DARK - SETTINGS SCOPED) */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="color-palette-outline" size={20} color="#D97706" />
+            <View style={[styles.sectionIconWrap, { backgroundColor: colors.goldWrapBg }]}>
+              <Ionicons name="color-palette-outline" size={18} color={colors.goldIcon} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
-                {t('appearanceTitle', 'Appearance & Display (थीम)')}
+                {t('appearanceTitle', 'Appearance (थीम)')}
               </Text>
               <Text style={[styles.sectionSubtext, { color: colors.textSecondary }]}>
-                {t('appearanceSub', 'Choose Light or Dark mode')}
+                {t('appearanceSub', 'Light or Dark mode for entire application')}
               </Text>
             </View>
           </View>
@@ -201,110 +330,131 @@ export default function SettingsScreen({ navigation }: any) {
             style={[
               styles.card,
               {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
+                backgroundColor: colors.cardBg,
+                borderColor: colors.cardBorder,
               },
             ]}
           >
             <View style={styles.themeOptionsRow}>
-              {/* Light Mode */}
+              {/* Option 1: Light Mode */}
               <TouchableOpacity
                 style={[
                   styles.themeOptionBtn,
                   themeMode === 'light' && styles.themeOptionBtnActive,
                   {
-                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                    borderColor: themeMode === 'light' ? '#16834A' : colors.border,
+                    backgroundColor: themeMode === 'light'
+                      ? colors.activeOptionBg
+                      : colors.unselectedOptionBg,
+                    borderColor: themeMode === 'light'
+                      ? colors.activeOptionBorder
+                      : colors.unselectedOptionBorder,
                   },
                 ]}
                 activeOpacity={0.7}
-                onPress={() => setThemeMode('light')}
+                onPress={() => handleSelectTheme('light')}
               >
                 <Ionicons
-                  name="sunny"
-                  size={24}
-                  color={themeMode === 'light' ? '#16834A' : '#94A3B8'}
+                  name={themeMode === 'light' ? 'sunny' : 'sunny-outline'}
+                  size={20}
+                  color={themeMode === 'light' ? colors.activeOptionText : colors.textMuted}
                 />
                 <Text
                   style={[
                     styles.themeOptionText,
                     {
-                      color:
-                        themeMode === 'light' ? '#16834A' : colors.textSecondary,
+                      color: themeMode === 'light'
+                        ? colors.activeOptionText
+                        : colors.unselectedOptionText,
                       fontWeight: themeMode === 'light' ? '700' : '500',
                     },
                   ]}
                 >
-                  {t('themeLight', 'Light Mode')}
+                  {t('themeLight', 'Light')}
                 </Text>
                 {themeMode === 'light' && (
-                  <View style={styles.activeThemeBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color="#16834A" />
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={15}
+                    color={colors.primaryGreen}
+                    style={styles.themeCheckIcon}
+                  />
                 )}
               </TouchableOpacity>
 
-              {/* Dark Mode */}
+              {/* Option 2: Dark Mode */}
               <TouchableOpacity
                 style={[
                   styles.themeOptionBtn,
                   themeMode === 'dark' && styles.themeOptionBtnActive,
                   {
-                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                    borderColor: themeMode === 'dark' ? '#16834A' : colors.border,
+                    backgroundColor: themeMode === 'dark'
+                      ? colors.activeOptionBg
+                      : colors.unselectedOptionBg,
+                    borderColor: themeMode === 'dark'
+                      ? colors.activeOptionBorder
+                      : colors.unselectedOptionBorder,
                   },
                 ]}
                 activeOpacity={0.7}
-                onPress={() => setThemeMode('dark')}
+                onPress={() => handleSelectTheme('dark')}
               >
                 <Ionicons
-                  name="moon"
-                  size={24}
-                  color={themeMode === 'dark' ? '#16834A' : '#94A3B8'}
+                  name={themeMode === 'dark' ? 'moon' : 'moon-outline'}
+                  size={20}
+                  color={themeMode === 'dark' ? colors.activeOptionText : colors.textMuted}
                 />
                 <Text
                   style={[
                     styles.themeOptionText,
                     {
-                      color:
-                        themeMode === 'dark' ? '#16834A' : colors.textSecondary,
+                      color: themeMode === 'dark'
+                        ? colors.activeOptionText
+                        : colors.unselectedOptionText,
                       fontWeight: themeMode === 'dark' ? '700' : '500',
                     },
                   ]}
                 >
-                  {t('themeDark', 'Dark Mode')}
+                  {t('themeDark', 'Dark')}
                 </Text>
                 {themeMode === 'dark' && (
-                  <View style={styles.activeThemeBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color="#16834A" />
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={15}
+                    color={colors.primaryGreen}
+                    style={styles.themeCheckIcon}
+                  />
                 )}
               </TouchableOpacity>
 
-              {/* System */}
+              {/* Option 3: System Auto Mode */}
               <TouchableOpacity
                 style={[
                   styles.themeOptionBtn,
                   themeMode === 'system' && styles.themeOptionBtnActive,
                   {
-                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                    borderColor: themeMode === 'system' ? '#16834A' : colors.border,
+                    backgroundColor: themeMode === 'system'
+                      ? colors.activeOptionBg
+                      : colors.unselectedOptionBg,
+                    borderColor: themeMode === 'system'
+                      ? colors.activeOptionBorder
+                      : colors.unselectedOptionBorder,
                   },
                 ]}
                 activeOpacity={0.7}
-                onPress={() => setThemeMode('system')}
+                onPress={() => handleSelectTheme('system')}
               >
                 <Ionicons
-                  name="phone-portrait-outline"
-                  size={24}
-                  color={themeMode === 'system' ? '#16834A' : '#94A3B8'}
+                  name={themeMode === 'system' ? 'phone-portrait' : 'phone-portrait-outline'}
+                  size={20}
+                  color={themeMode === 'system' ? colors.activeOptionText : colors.textMuted}
                 />
                 <Text
                   style={[
                     styles.themeOptionText,
                     {
-                      color:
-                        themeMode === 'system' ? '#16834A' : colors.textSecondary,
+                      color: themeMode === 'system'
+                        ? colors.activeOptionText
+                        : colors.unselectedOptionText,
                       fontWeight: themeMode === 'system' ? '700' : '500',
                     },
                   ]}
@@ -312,27 +462,48 @@ export default function SettingsScreen({ navigation }: any) {
                   {t('themeSystem', 'System')}
                 </Text>
                 {themeMode === 'system' && (
-                  <View style={styles.activeThemeBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color="#16834A" />
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={15}
+                    color={colors.primaryGreen}
+                    style={styles.themeCheckIcon}
+                  />
                 )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* SECTION 3: USER PROFILE & ROLE */}
+        {/* SECTION D: ACTIVE USER PROFILE */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#E0E7FF' }]}>
-              <Ionicons name="person-outline" size={20} color="#4F46E5" />
+            <View style={[styles.sectionIconWrap, { backgroundColor: colors.purpleWrapBg }]}>
+              <Ionicons name="person-outline" size={18} color={colors.purpleIcon} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
-                {t('profileSectionTitle', 'Active User Profile')}
+                {t('profileSectionTitle', 'Active Profile')}
               </Text>
               <Text style={[styles.sectionSubtext, { color: colors.textSecondary }]}>
-                {currentUser?.name || 'Mandi User'} ({isOwner ? 'Owner' : 'Operator'})
+                {currentUser?.mobile || 'Mandi Account'}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.roleBadge,
+                {
+                  backgroundColor: isOwner ? colors.greenBadgeBg : colors.goldWrapBg,
+                  borderColor: isOwner ? colors.greenBadgeBorder : colors.goldIcon,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.roleBadgeText,
+                  { color: isOwner ? colors.greenText : colors.goldIcon },
+                ]}
+              >
+                {isOwner ? 'Mandi Owner' : 'Operator'}
               </Text>
             </View>
           </View>
@@ -341,14 +512,23 @@ export default function SettingsScreen({ navigation }: any) {
             style={[
               styles.card,
               {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
+                backgroundColor: colors.cardBg,
+                borderColor: colors.cardBorder,
               },
             ]}
           >
-            <View style={styles.profileDetailsRow}>
-              <View style={styles.profileMetaItem}>
-                <Text style={[styles.profileMetaLabel, { color: colors.textSecondary }]}>
+            <View style={styles.profileInfoRow}>
+              <View style={styles.profileMetaBlock}>
+                <Text style={[styles.profileMetaLabel, { color: colors.textMuted }]}>
+                  User Name
+                </Text>
+                <Text style={[styles.profileMetaVal, { color: colors.textPrimary }]}>
+                  {currentUser?.name || 'Mandi User'}
+                </Text>
+              </View>
+
+              <View style={styles.profileMetaBlock}>
+                <Text style={[styles.profileMetaLabel, { color: colors.textMuted }]}>
                   Mandi Business
                 </Text>
                 <Text style={[styles.profileMetaVal, { color: colors.textPrimary }]}>
@@ -356,8 +536,8 @@ export default function SettingsScreen({ navigation }: any) {
                 </Text>
               </View>
 
-              <View style={styles.profileMetaItem}>
-                <Text style={[styles.profileMetaLabel, { color: colors.textSecondary }]}>
+              <View style={styles.profileMetaBlock}>
+                <Text style={[styles.profileMetaLabel, { color: colors.textMuted }]}>
                   Location
                 </Text>
                 <Text style={[styles.profileMetaVal, { color: colors.textPrimary }]}>
@@ -366,37 +546,57 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
             <View style={styles.profileActionsRow}>
               <TouchableOpacity
-                style={styles.switchRoleButton}
+                style={[
+                  styles.switchRoleButton,
+                  {
+                    backgroundColor: colors.roleBtnBg,
+                    borderColor: colors.roleBtnBorder,
+                  },
+                ]}
                 activeOpacity={0.7}
                 onPress={handleToggleRole}
               >
-                <Ionicons name="swap-horizontal" size={18} color="#16834A" />
-                <Text style={styles.switchRoleText}>
-                  {isOwner ? t('testAsOperator', 'Test as Operator') : t('testAsOwner', 'Test as Owner')}
+                <Ionicons name="swap-horizontal" size={16} color={colors.textSecondary} />
+                <Text style={[styles.switchRoleText, { color: colors.roleBtnText }]}>
+                  {isOwner
+                    ? t('testAsOperator', 'Test as Operator')
+                    : t('testAsOwner', 'Test as Owner')}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.logoutBtn}
+                style={[
+                  styles.logoutBtn,
+                  {
+                    backgroundColor: colors.logoutBtnBg,
+                    borderColor: colors.logoutBtnBorder,
+                  },
+                ]}
                 activeOpacity={0.7}
                 onPress={handleLogout}
               >
-                <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-                <Text style={styles.logoutBtnText}>{t('logout', 'Logout')}</Text>
+                <Ionicons name="log-out-outline" size={16} color={colors.logoutIcon} />
+                <Text style={[styles.logoutBtnText, { color: colors.logoutBtnText }]}>
+                  {t('logout', 'Logout')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* SECTION 4: OFFLINE DATA & STORAGE */}
+        {/* SECTION E: OFFLINE STORAGE & DATABASE */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#F0FDF4' }]}>
-              <Ionicons name="cloud-offline-outline" size={20} color="#16834A" />
+            <View style={[styles.sectionIconWrap, { backgroundColor: colors.greenWrapBg }]}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={18}
+                color={isDark ? '#4ADE80' : '#16834A'}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
@@ -412,46 +612,68 @@ export default function SettingsScreen({ navigation }: any) {
             style={[
               styles.card,
               {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
+                backgroundColor: colors.cardBg,
+                borderColor: colors.cardBorder,
               },
             ]}
           >
+            <View style={styles.storageStatusRow}>
+              <View style={styles.statusDot} />
+              <Text style={[styles.storageStatusTitle, { color: colors.textPrimary }]}>
+                Local SQLite Active • Offline-Ready
+              </Text>
+            </View>
+
             <Text style={[styles.storageText, { color: colors.textSecondary }]}>
               {t(
                 'storageStatusText',
-                'Local SQLite engine is active and tracking mandi records offline.'
+                'Mandi transactions, customer ledger and stock persist locally without internet.'
               )}
             </Text>
 
             <TouchableOpacity
-              style={styles.openSyncCenterBtn}
+              style={[
+                styles.openSyncCenterBtn,
+                {
+                  backgroundColor: colors.syncBtnBg,
+                  borderColor: colors.syncBtnBorder,
+                },
+              ]}
               activeOpacity={0.7}
               onPress={() => navigation.navigate('SyncCenter')}
             >
-              <Ionicons name="sync" size={18} color="#16834A" />
-              <Text style={styles.openSyncCenterText}>
+              <Ionicons name="sync" size={16} color={colors.syncBtnText} />
+              <Text style={[styles.openSyncCenterText, { color: colors.syncBtnText }]}>
                 {t('openSyncCenter', 'Open Sync Center')}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#16834A" />
+              <Ionicons name="chevron-forward" size={14} color={colors.syncBtnText} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* SECTION 5: ABOUT APP */}
+        {/* SECTION F: APP INFORMATION */}
         <View style={styles.section}>
           <View
             style={[
-              styles.card,
+              styles.aboutCard,
               {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
+                backgroundColor: colors.cardBg,
+                borderColor: colors.cardBorder,
               },
             ]}
           >
             <View style={styles.aboutRow}>
-              <View style={styles.aboutLogoWrap}>
-                <Ionicons name="leaf" size={26} color="#16834A" />
+              <View
+                style={[
+                  styles.aboutLogoWrap,
+                  { backgroundColor: isDark ? '#143823' : '#DCFCE7' },
+                ]}
+              >
+                <Ionicons
+                  name="leaf"
+                  size={20}
+                  color={isDark ? '#4ADE80' : '#16834A'}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.aboutTitle, { color: colors.textPrimary }]}>
@@ -462,21 +684,23 @@ export default function SettingsScreen({ navigation }: any) {
                 </Text>
               </View>
             </View>
-
-            <Text style={[styles.aboutDesc, { color: colors.textSecondary }]}>
+            <Text style={[styles.aboutDesc, { color: colors.textMuted }]}>
               {t(
                 'aboutAppDesc',
-                'Empowering APMC Mandi traders, commission agents, and farmers with instant tactile inventory & khata management.'
+                'Empowering APMC Mandi traders, commission agents, and farmers with instant inventory & khata management.'
               )}
             </Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Language Selector Bottom Sheet Modal */}
-      <LanguageSelectorModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+      {/* Bottom Navigation Bar */}
+      <BottomNavBar
+        activeTab="More"
+        navigation={navigation}
+        backgroundColor={colors.headerBg}
+        borderColor={colors.border}
+        isDark={isDark}
       />
     </View>
   );
@@ -488,16 +712,16 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -505,103 +729,126 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '700',
   },
   headerSubtitle: {
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 1,
   },
   content: {
     padding: 16,
-    gap: 20,
+    gap: 14,
   },
   section: {
-    gap: 10,
+    gap: 8,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sectionIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sectionHeading: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   sectionSubtext: {
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 1,
   },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  activeLangRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  langLeftInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  langEmoji: {
-    fontSize: 28,
-  },
-  activeLangTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  activeLangDesc: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  changeLangBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: '#DCFCE7',
-  },
-  changeLangBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#16834A',
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  langChip: {
+  currentLangPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
     borderWidth: 1,
   },
-  chipEmoji: {
-    fontSize: 16,
+  currentLangEmoji: {
+    fontSize: 14,
   },
-  chipText: {
+  currentLangText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  card: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+  },
+  languageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  langGridItem: {
+    width: '48.5%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    position: 'relative',
+  },
+  langGridEmoji: {
+    fontSize: 18,
+  },
+  langGridName: {
     fontSize: 13,
+    flex: 1,
+  },
+  checkIcon: {
+    marginLeft: 'auto',
+  },
+  aiCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  aiIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  aiBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  aiBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  aiSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 15,
   },
   themeOptionsRow: {
     flexDirection: 'row',
@@ -609,122 +856,156 @@ const styles = StyleSheet.create({
   },
   themeOptionBtn: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    gap: 8,
     position: 'relative',
   },
   themeOptionBtnActive: {
     borderWidth: 2,
   },
   themeOptionText: {
-    fontSize: 12,
+    fontSize: 13,
   },
-  activeThemeBadge: {
+  themeCheckIcon: {
     position: 'absolute',
     top: 6,
     right: 6,
   },
-  profileDetailsRow: {
-    flexDirection: 'row',
-    gap: 16,
+  roleBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  profileMetaItem: {
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  profileInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  profileMetaBlock: {
     flex: 1,
+    minWidth: '28%',
   },
   profileMetaLabel: {
-    fontSize: 12,
+    fontSize: 11,
   },
   profileMetaVal: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     marginTop: 2,
   },
   divider: {
     height: 1,
-    marginVertical: 14,
+    marginVertical: 10,
   },
   profileActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   switchRoleButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   switchRoleText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#16834A',
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: '#FEE2E2',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   logoutBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  storageStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
+  },
+  storageStatusTitle: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#DC2626',
+    fontWeight: '700',
   },
   storageText: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 12,
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 10,
   },
   openSyncCenterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
     alignSelf: 'flex-start',
   },
   openSyncCenterText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#16834A',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  aboutCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
   },
   aboutRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 6,
   },
   aboutLogoWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#DCFCE7',
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   aboutTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
   aboutVersion: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+    marginTop: 1,
   },
   aboutDesc: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

@@ -148,7 +148,11 @@ export default function ProductGradesScreen({ route, navigation }: any) {
             onPress={handleOpenAddModal}
             activeOpacity={0.7}
           >
-            <Ionicons name="add" size={20} color="#16834A" />
+            <Ionicons
+              name="add"
+              size={20}
+              color={isDark ? '#4ADE80' : '#16834A'}
+            />
             <Text style={styles.addGradeHeaderBtnText}>+ Grade</Text>
           </TouchableOpacity>
         )}
@@ -324,7 +328,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                         onPress={() => handleOpenEditModal(grade)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="pencil-outline" size={15} color="#16834A" />
+                        <Ionicons name="pencil-outline" size={15} color={isDark ? '#4ADE80' : '#16834A'} />
                         <Text style={styles.editBtnText}>Edit</Text>
                       </TouchableOpacity>
 
@@ -337,7 +341,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                         <Ionicons
                           name="trash-outline"
                           size={15}
-                          color="#DC2626"
+                          color={isDark ? '#F87171' : '#DC2626'}
                         />
                         <Text style={styles.deleteBtnText}>Delete</Text>
                       </TouchableOpacity>
@@ -364,7 +368,11 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                 {editingGrade ? 'Edit Grade Settings' : `Add Grade to ${selectedProduct?.name}`}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#666666" />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? colors.textSecondary : '#666666'}
+                />
               </TouchableOpacity>
             </View>
 
@@ -373,7 +381,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
               <TextInput
                 style={styles.modalInput}
                 placeholder="Grade Name"
-                placeholderTextColor="#888888"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={gradeName}
                 onChangeText={setGradeName}
               />
@@ -382,7 +390,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
               <TextInput
                 style={styles.modalInput}
                 placeholder="e.g. Premium export quality, bright red"
-                placeholderTextColor="#888888"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={gradeDesc}
                 onChangeText={setGradeDesc}
               />
@@ -395,7 +403,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                   <TextInput
                     style={styles.modalInput}
                     placeholder="Rate"
-                    placeholderTextColor="#888888"
+                    placeholderTextColor={colors.inputPlaceholder}
                     keyboardType="numeric"
                     value={gradePrice}
                     onChangeText={setGradePrice}
@@ -409,7 +417,7 @@ export default function ProductGradesScreen({ route, navigation }: any) {
                   <TextInput
                     style={styles.modalInput}
                     placeholder="Stock"
-                    placeholderTextColor="#888888"
+                    placeholderTextColor={colors.inputPlaceholder}
                     keyboardType="numeric"
                     value={gradeStock}
                     onChangeText={setGradeStock}
@@ -446,7 +454,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -455,7 +463,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingBottom: 12,
     backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   backBtn: {
     padding: 6,
@@ -476,7 +484,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   addGradeHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -485,7 +493,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   addGradeHeaderBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   content: {
     padding: 16,
@@ -515,14 +523,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   productTabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333333',
+    color: colors.textPrimary,
   },
   productTabTextActive: {
     color: '#FFFFFF',
   },
   productTabSub: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   productTabSubActive: {
@@ -533,7 +541,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 16,
     elevation: 2,
   },
@@ -554,7 +562,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginTop: 2,
   },
   stockCounterBadge: {
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -563,12 +571,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   stockBadgeTitle: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   stockBadgeValue: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   sortWastageShortcut: {
     flexDirection: 'row',
@@ -598,7 +606,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     backgroundColor: colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
   },
   emptyTitle: {
     fontSize: 14,
@@ -608,14 +616,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   emptySub: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.textSecondary,
   },
   gradeCard: {
     backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   gradeCardDisabled: {
@@ -649,7 +657,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 4,
   },
   activeTagOn: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: isDark ? '#143823' : '#ECFDF5',
   },
   activeTagOff: {
     backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
@@ -659,7 +667,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     fontWeight: '700',
   },
   activeTagTextOn: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   activeTagTextOff: {
     color: colors.textSecondary,
@@ -669,9 +677,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textSecondary,
   },
   gradeStockBadge: {
-    backgroundColor: '#F7F9F7',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F7F9F7',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -679,7 +687,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   gradeStockLabel: {
     fontSize: 10,
-    color: '#777777',
+    color: colors.textSecondary,
   },
   gradeStockValue: {
     fontSize: 14,
@@ -692,7 +700,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     alignItems: 'center',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -706,7 +714,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   priceValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   controlsRow: {
     flexDirection: 'row',
@@ -718,13 +726,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#E8F4EC',
+    backgroundColor: isDark ? '#143823' : '#E8F4EC',
     gap: 4,
   },
   editBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   deleteBtn: {
     flexDirection: 'row',
@@ -740,19 +748,21 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   deleteBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     padding: 16,
   },
   modalCard: {
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.modalBackground,
     borderRadius: 16,
     padding: 18,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: 'row',

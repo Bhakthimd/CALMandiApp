@@ -170,7 +170,7 @@ _Thank you for your business!_
                 {/* Party & Commodity Details */}
                 <Text style={styles.partyName}>{slip.partyName}</Text>
                 <Text style={styles.partyMobile}>
-                  <Ionicons name="call-outline" size={12} color="#666666" />{' '}
+                  <Ionicons name="call-outline" size={12} color={colors.textSecondary} />{' '}
                   {slip.partyMobile}
                 </Text>
 
@@ -255,13 +255,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   backText: {
     fontSize: 18,
-    color: '#16834A',
+    color: isDark ? colors.textPrimary : colors.primary,
     fontWeight: '600',
   },
   logo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   title: {
     fontSize: 24,
@@ -306,7 +306,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 20,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
   },
   filterChipActive: {
     backgroundColor: '#16834A',
@@ -326,18 +326,18 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     padding: 30,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
     marginTop: 10,
   },
   emptyText: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#555555',
+    color: colors.textPrimary,
     marginTop: 8,
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#888888',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -371,20 +371,20 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginRight: 8,
   },
   inBadgeBg: {
-    backgroundColor: '#E8F5EC',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
   },
   outBadgeBg: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: isDark ? '#082F49' : '#E0F2FE',
   },
   typeBadgeText: {
     fontSize: 11,
     fontWeight: '800',
   },
   inBadgeText: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   outBadgeText: {
-    color: '#0284C7',
+    color: isDark ? '#38BDF8' : '#0284C7',
   },
   slipNum: {
     fontSize: 13,
@@ -427,7 +427,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   detailQty: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
   },
   detailRate: {
     fontSize: 12,
@@ -450,24 +450,24 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     color: colors.textPrimary,
   },
   balanceBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDark ? '#3B2904' : '#FEF3C7',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   balanceBadgeText: {
-    color: '#D97706',
+    color: isDark ? '#FBBF24' : '#D97706',
     fontSize: 12,
     fontWeight: '700',
   },
   settledBadge: {
-    backgroundColor: '#E8F5EC',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   settledBadgeText: {
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     fontSize: 12,
     fontWeight: '700',
   },

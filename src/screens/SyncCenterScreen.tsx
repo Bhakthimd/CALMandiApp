@@ -25,7 +25,7 @@ interface UnifiedItem {
 
 export default function SyncCenterScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const {
     arrivals,
@@ -130,19 +130,10 @@ export default function SyncCenterScreen({ navigation }: any) {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Ionicons name="arrow-back" size={20} color={isDark ? colors.textPrimary : colors.primary} />
             <Text style={styles.backText}>Home</Text>
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={styles.themeToggleBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
-            </TouchableOpacity>
-            <Text style={styles.logo}>CAL Mandi</Text>
-          </View>
+          <Text style={[styles.logo, { color: isDark ? colors.primaryDark : colors.primary }]}>CAL Mandi</Text>
         </View>
 
         {/* Title & Description */}
@@ -175,7 +166,7 @@ export default function SyncCenterScreen({ navigation }: any) {
               <Text
                 style={[
                   styles.connectionBadgeText,
-                  { color: isEffectiveOnline ? '#065F46' : '#92400E' },
+                  { color: isEffectiveOnline ? (isDark ? '#4ADE80' : '#065F46') : (isDark ? '#FBBF24' : '#92400E') },
                 ]}
               >
                 {isEffectiveOnline ? 'ONLINE • MANDI CLOUD' : '⚡ OFFLINE MODE ACTIVE'}
@@ -194,7 +185,7 @@ export default function SyncCenterScreen({ navigation }: any) {
               <Ionicons
                 name={isSimulatedOffline ? 'wifi' : 'airplane'}
                 size={14}
-                color={isSimulatedOffline ? '#FFFFFF' : '#374151'}
+                color={isSimulatedOffline ? '#FFFFFF' : (isDark ? colors.textPrimary : '#374151')}
               />
               <Text
                 style={[
@@ -212,10 +203,10 @@ export default function SyncCenterScreen({ navigation }: any) {
             {/* 1. Pending Offline Arrivals */}
             <View style={[styles.metricTile, styles.tileAmber]}>
               <View style={styles.metricTileHeader}>
-                <Ionicons name="arrow-down-circle" size={16} color="#D97706" />
+                <Ionicons name="arrow-down-circle" size={16} color={isDark ? '#FBBF24' : '#D97706'} />
                 <Text style={styles.metricTileLabel}>Pending Arrivals</Text>
               </View>
-              <Text style={[styles.metricTileNumber, { color: '#D97706' }]}>
+              <Text style={[styles.metricTileNumber, { color: isDark ? '#FBBF24' : '#D97706' }]}>
                 {pendingArrivalsCount}
               </Text>
               <Text style={styles.metricTileSub}>Recorded offline</Text>
@@ -224,10 +215,10 @@ export default function SyncCenterScreen({ navigation }: any) {
             {/* 2. Pending Offline Sales */}
             <View style={[styles.metricTile, styles.tileBlue]}>
               <View style={styles.metricTileHeader}>
-                <Ionicons name="receipt" size={16} color="#0284C7" />
+                <Ionicons name="receipt" size={16} color={isDark ? '#38BDF8' : '#0284C7'} />
                 <Text style={styles.metricTileLabel}>Pending Sales</Text>
               </View>
-              <Text style={[styles.metricTileNumber, { color: '#0284C7' }]}>
+              <Text style={[styles.metricTileNumber, { color: isDark ? '#38BDF8' : '#0284C7' }]}>
                 {pendingSalesCount}
               </Text>
               <Text style={styles.metricTileSub}>Ready to sync</Text>
@@ -236,10 +227,10 @@ export default function SyncCenterScreen({ navigation }: any) {
             {/* 3. Successfully Synced Records */}
             <View style={[styles.metricTile, styles.tileGreen]}>
               <View style={styles.metricTileHeader}>
-                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                <Ionicons name="checkmark-circle" size={16} color={isDark ? '#4ADE80' : '#16A34A'} />
                 <Text style={styles.metricTileLabel}>Synced Records</Text>
               </View>
-              <Text style={[styles.metricTileNumber, { color: '#16A34A' }]}>
+              <Text style={[styles.metricTileNumber, { color: isDark ? '#4ADE80' : '#16A34A' }]}>
                 {syncedRecordsCount}
               </Text>
               <Text style={styles.metricTileSub}>In Mandi Cloud</Text>
@@ -248,13 +239,13 @@ export default function SyncCenterScreen({ navigation }: any) {
             {/* 4. Failed Sync Records */}
             <View style={[styles.metricTile, styles.tileRed]}>
               <View style={styles.metricTileHeader}>
-                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Ionicons name="alert-circle" size={16} color={isDark ? '#F87171' : '#DC2626'} />
                 <Text style={styles.metricTileLabel}>Failed Records</Text>
               </View>
               <Text
                 style={[
                   styles.metricTileNumber,
-                  { color: failedRecordsCount > 0 ? '#DC2626' : '#6B7280' },
+                  { color: failedRecordsCount > 0 ? (isDark ? '#F87171' : '#DC2626') : (isDark ? colors.textMuted : '#6B7280') },
                 ]}
               >
                 {failedRecordsCount}
@@ -267,10 +258,10 @@ export default function SyncCenterScreen({ navigation }: any) {
 
           {/* 5. Last Synchronization Time */}
           <View style={styles.lastSyncRow}>
-            <Ionicons name="time" size={15} color="#16834A" />
+            <Ionicons name="time" size={15} color={isDark ? '#4ADE80' : '#16834A'} />
             <Text style={styles.lastSyncText}>
               Last Synchronization Time:{' '}
-              <Text style={{ fontWeight: 'bold', color: '#1F2937' }}>
+              <Text style={{ fontWeight: 'bold', color: isDark ? colors.textPrimary : '#1F2937' }}>
                 {lastSyncedAt ? lastSyncedAt : 'Never'}
               </Text>
             </Text>
@@ -488,12 +479,12 @@ export default function SyncCenterScreen({ navigation }: any) {
                     <Ionicons
                       name={isArrival ? 'arrow-down-circle' : 'receipt-outline'}
                       size={14}
-                      color={isArrival ? '#16834A' : '#0284C7'}
+                      color={isArrival ? (isDark ? '#4ADE80' : '#16834A') : (isDark ? '#38BDF8' : '#0284C7')}
                     />
                     <Text
                       style={[
                         styles.typeBadgeText,
-                        { color: isArrival ? '#16834A' : '#0284C7' },
+                        { color: isArrival ? (isDark ? '#4ADE80' : '#16834A') : (isDark ? '#38BDF8' : '#0284C7') },
                       ]}
                     >
                       {isArrival ? 'Arrival (आवक)' : 'Sale (जावक)'}
@@ -520,17 +511,23 @@ export default function SyncCenterScreen({ navigation }: any) {
                           : 'checkmark-circle'
                       }
                       size={12}
-                      color={isPending ? '#B45309' : isFailed ? '#DC2626' : '#15803D'}
+                      color={
+                        isPending
+                          ? (isDark ? '#FBBF24' : '#B45309')
+                          : isFailed
+                          ? (isDark ? '#F87171' : '#DC2626')
+                          : (isDark ? '#4ADE80' : '#15803D')
+                      }
                     />
                     <Text
                       style={[
                         styles.syncStatusText,
                         {
                           color: isPending
-                            ? '#B45309'
+                            ? (isDark ? '#FBBF24' : '#B45309')
                             : isFailed
-                            ? '#DC2626'
-                            : '#15803D',
+                            ? (isDark ? '#F87171' : '#DC2626')
+                            : (isDark ? '#4ADE80' : '#15803D'),
                         },
                       ]}
                     >
@@ -623,16 +620,9 @@ export default function SyncCenterScreen({ navigation }: any) {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-  themeToggleBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F7',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -649,13 +639,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   backText: {
     fontSize: 17,
-    color: '#16834A',
+    color: isDark ? colors.textPrimary : colors.primary,
     fontWeight: '600',
   },
   logo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#16834A',
+    color: colors.primary,
   },
   title: {
     fontSize: 26,
@@ -682,10 +672,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     elevation: 2,
   },
   heroCardOnline: {
-    borderColor: '#BBF7D0',
+    borderColor: isDark ? '#1E5E35' : '#BBF7D0',
   },
   heroCardOffline: {
-    borderColor: '#FDE68A',
+    borderColor: isDark ? '#78350F' : '#FDE68A',
   },
   heroHeaderRow: {
     flexDirection: 'row',
@@ -702,12 +692,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderWidth: 1,
   },
   badgeOnlineBg: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: isDark ? '#143823' : '#ECFDF5',
+    borderColor: isDark ? '#1E5E35' : '#A7F3D0',
   },
   badgeOfflineBg: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#FDE68A',
+    backgroundColor: isDark ? '#3B2904' : '#FEF3C7',
+    borderColor: isDark ? '#78350F' : '#FDE68A',
   },
   statusDot: {
     width: 8,
@@ -716,10 +706,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     marginRight: 6,
   },
   dotOnline: {
-    backgroundColor: '#16A34A',
+    backgroundColor: isDark ? '#4ADE80' : '#16A34A',
   },
   dotOffline: {
-    backgroundColor: '#D97706',
+    backgroundColor: isDark ? '#FBBF24' : '#D97706',
   },
   connectionBadgeText: {
     fontSize: 11,
@@ -736,7 +726,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   simToggleBtnNormal: {
     backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
   },
   simToggleBtnActive: {
     backgroundColor: '#D97706',
@@ -763,20 +753,20 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderWidth: 1,
   },
   tileAmber: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
+    backgroundColor: isDark ? '#3B2904' : '#FFFBEB',
+    borderColor: isDark ? '#78350F' : '#FDE68A',
   },
   tileBlue: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
+    backgroundColor: isDark ? '#082F49' : '#F0F9FF',
+    borderColor: isDark ? '#0369A1' : '#BAE6FD',
   },
   tileGreen: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
+    backgroundColor: isDark ? '#143823' : '#F0FDF4',
+    borderColor: isDark ? '#1E5E35' : '#BBF7D0',
   },
   tileRed: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: isDark ? '#3B1212' : '#FEF2F2',
+    borderColor: isDark ? '#7F1D1D' : '#FECACA',
   },
   metricTileHeader: {
     flexDirection: 'row',
@@ -802,14 +792,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: isDark ? colors.surfaceElevated : '#F8FAFC',
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
     gap: 6,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.border,
   },
   lastSyncText: {
     fontSize: 12,
@@ -878,10 +868,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: isDark ? colors.surfaceElevated : '#E5E7EB',
   },
   filterTabActive: {
-    backgroundColor: '#16834A',
+    backgroundColor: colors.primary,
   },
   filterTabText: {
     fontSize: 13,
@@ -897,7 +887,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     gap: 6,
   },
   badgePillAmber: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDark ? '#3B2904' : '#FEF3C7',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
@@ -905,10 +895,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   badgePillTextAmber: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#B45309',
+    color: isDark ? '#FBBF24' : '#B45309',
   },
   badgePillRed: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3B1212' : '#FEE2E2',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
@@ -916,7 +906,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   badgePillTextRed: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
   },
   listHeaderRow: {
     flexDirection: 'row',
@@ -945,12 +935,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   emptyTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#475569',
+    color: colors.textPrimary,
     marginTop: 10,
   },
   emptyDesc: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,
@@ -969,12 +959,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     elevation: 1,
   },
   recordCardPending: {
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFDF5',
+    borderColor: isDark ? '#78350F' : '#FDE68A',
+    backgroundColor: isDark ? '#231D12' : '#FFFDF5',
   },
   recordCardFailed: {
-    borderColor: '#FECACA',
-    backgroundColor: '#FFF8F8',
+    borderColor: isDark ? '#7F1D1D' : '#FECACA',
+    backgroundColor: isDark ? '#261414' : '#FFF8F8',
   },
   recordTopRow: {
     flexDirection: 'row',
@@ -991,10 +981,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     gap: 4,
   },
   arrivalBadgeBg: {
-    backgroundColor: '#E8F5EC',
+    backgroundColor: isDark ? '#143823' : '#E8F5EC',
   },
   saleBadgeBg: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: isDark ? '#082F49' : '#E0F2FE',
   },
   typeBadgeText: {
     fontSize: 11,
@@ -1009,13 +999,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     gap: 4,
   },
   badgePending: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDark ? '#3B2904' : '#FEF3C7',
   },
   badgeSynced: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: isDark ? '#143823' : '#DCFCE7',
   },
   badgeFailed: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3B1212' : '#FEE2E2',
   },
   syncStatusText: {
     fontSize: 11,
@@ -1049,7 +1039,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   recordErrorText: {
     fontSize: 11,
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     fontWeight: '600',
     marginTop: 4,
   },
@@ -1064,7 +1054,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   recordAmount: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#16834A',
+    color: isDark ? '#4ADE80' : '#16834A',
     marginTop: 2,
   },
   recordPayMethod: {
@@ -1087,17 +1077,17 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   offlineHintText: {
     fontSize: 11,
-    color: '#B45309',
+    color: isDark ? '#FBBF24' : '#B45309',
     fontWeight: '600',
   },
   retryHintText: {
     fontSize: 11,
-    color: '#DC2626',
+    color: isDark ? '#F87171' : '#DC2626',
     fontWeight: '700',
   },
   syncedHintText: {
     fontSize: 11,
-    color: '#15803D',
+    color: isDark ? '#4ADE80' : '#15803D',
     fontWeight: '600',
   },
 });
