@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,53 +10,39 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { useMandi } from '../context/MandiContext';
 import { UserRole } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ThemeColors } from '../styles/theme';
-import LanguageSelectorModal from '../components/LanguageSelectorModal';
+import BottomNavBar from '../components/BottomNavBar';
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { isDark, toggleTheme, colors } = useTheme();
-  const { t, currentLanguageOption } = useLanguage();
-  const [langModalVisible, setLangModalVisible] = React.useState(false);
-  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const { isDark, colors } = useTheme();
+  const { t } = useLanguage();
+
   const {
-    slips,
     currentUser,
     isOwner,
-    isOperator,
     switchRole,
     logout,
-    totalInventoryValue,
-    totalStockUnits,
-    lowStockCount,
-    shiftUpdatesCount,
     customers,
     products,
+    totalStockUnits,
+    lowStockCount,
     financialSummary,
-    pricingRules,
+    totalUdhaar,
+    todaySales,
+    operatorCashDrawer,
+    arrivals,
+    sales,
+    dispatchInvoices,
+    ledgerTransactions,
+    getCustomerBalance,
   } = useMandi();
 
-  const handleLogout = () => {
-    Alert.alert(
-      t('logoutConfirmTitle', 'Logout'),
-      t('logoutConfirmMsg', 'Are you sure you want to log out of CAL Mandi?'),
-      [
-        { text: t('cancel', 'Cancel'), style: 'cancel' },
-        {
-          text: t('logout', 'Logout'),
-          style: 'destructive',
-          onPress: () => {
-            logout();
-            navigation.replace('Welcome');
-          },
-        },
-      ]
-    );
-  };
+  const [recentTab, setRecentTab] = useState<'sales' | 'arrivals' | 'payments'>('sales');
 
   const handleToggleRole = () => {
     const nextRole: UserRole = isOwner ? 'Operator' : 'Owner';
@@ -69,1196 +55,1051 @@ export default function HomeScreen({ navigation }: any) {
     );
   };
 
+  const handleLogoutPress = () => {
+    Alert.alert(
+      'Log Out',
+      `Are you sure you want to log out of ${currentUser?.business || 'CAL Mandi'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  const userName = currentUser?.name || 'Mandi Operator';
+  const businessName = currentUser?.business || 'CAL Mandi';
+  const locationName = currentUser?.location || 'APMC Yard';
+
+  // Today's date string YYYY-MM-DD
+  const todayDateStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Today's Arrivals calculations
+  const todayArrivalsList = useMemo(() => {
+    return arrivals.filter(
+      (a) =>
+        (a.timestamp && a.timestamp.startsWith(todayDateStr)) ||
+        ((a as any).date && (a as any).date.startsWith(todayDateStr))
+    );
+  }, [arrivals, todayDateStr]);
+
+  const todayArrivalsCount = todayArrivalsList.length;
+  const todayArrivalsQty = todayArrivalsList.reduce((acc, a) => acc + (a.quantity || 0), 0);
+
+  // Pending customers count
+  const pendingCustomersCount = useMemo(() => {
+    return customers.filter((c) => {
+      const bal = getCustomerBalance(c.id);
+      return bal.currentBalance > 0;
+    }).length;
+  }, [customers, getCustomerBalance]);
+
+  // Outstanding receivables
+  const outstandingReceivables = totalUdhaar || financialSummary.totalReceivable || 0;
+
+  // Recent Activity data
+  const recentSalesList = useMemo(() => {
+    if (dispatchInvoices.length > 0) {
+      return dispatchInvoices.slice(0, 3);
+    }
+    return sales.slice(0, 3);
+  }, [dispatchInvoices, sales]);
+
+  const recentArrivalsList = useMemo(() => {
+    return arrivals.slice(0, 3);
+  }, [arrivals]);
+
+  const recentPaymentsList = useMemo(() => {
+    return ledgerTransactions
+      .filter((t) => t.type === 'CASH_RECEIVED' || t.type === 'CASH_PAID' || t.type === 'PARTIAL_PAYMENT')
+      .slice(0, 3);
+  }, [ledgerTransactions]);
+
+  const formatActivityTime = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      const now = new Date();
+      if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    } catch {
+      return '';
+    }
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={[styles.rootContainer, { backgroundColor: isDark ? colors.background : '#F8FAFC' }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+
       <ScrollView
-        style={styles.container}
+        style={styles.scrollView}
         contentContainerStyle={[
-          styles.content,
+          styles.scrollContent,
           {
-            paddingTop: Math.max(insets.top + 16, 40),
-            paddingBottom: Math.max(insets.bottom + 25, 36),
+            paddingTop: Math.max(insets.top + 8, 34),
+            paddingBottom: Math.max(insets.bottom + 85, 105),
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header Bar */}
+        {/* ============================================================== */}
+        {/* TOP BAR: Branding Logo, Business Info, Chatbot & Logout Button */}
+        {/* ============================================================== */}
         <View style={styles.topHeader}>
           <View style={styles.logoRow}>
-            <View style={styles.logoIconContainer}>
-              <Image
-                source={require('../../assets/app_logo.png')}
-                style={styles.logoIcon}
-                resizeMode="cover"
-              />
+            <Image
+              source={require('../../assets/app_logo.png')}
+              style={styles.logoAvatar}
+              resizeMode="cover"
+            />
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Text style={[styles.headerBrandTitle, { color: isDark ? colors.primaryDark : colors.primary }]}>
+                CAL Mandi
+              </Text>
+              <Text style={[styles.headerBrandSub, { color: isDark ? colors.textSecondary : '#64748B' }]} numberOfLines={1}>
+                {businessName} • {locationName}
+              </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {/* Top Language Switcher (Only language setting option on Home Page) */}
+
+          {/* Right Header Actions: Chatbot & Logout */}
+          <View style={styles.headerRightActions}>
             <TouchableOpacity
-              style={styles.topLangBtn}
+              style={[
+                styles.headerActionBtn,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                  borderColor: isDark ? colors.border : '#E2E8F0',
+                },
+              ]}
               activeOpacity={0.7}
-              onPress={() => setLangModalVisible(true)}
+              onPress={() => navigation.navigate('Chatbot')}
+              accessibilityLabel="Help and AI Assistant"
             >
-              <Ionicons name="globe-outline" size={15} color="#16834A" />
-              <Text style={styles.topLangText}>
-                {currentLanguageOption.nativeName}
-              </Text>
-              <Ionicons name="chevron-down" size={12} color={isDark ? '#94A3B8' : '#64748B'} />
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={isDark ? '#4ADE80' : '#16834A'} />
             </TouchableOpacity>
 
-            {/* Theme Toggle */}
             <TouchableOpacity
-              style={styles.themeToggleBtn}
+              style={[
+                styles.headerActionBtn,
+                styles.logoutBtn,
+                {
+                  backgroundColor: isDark ? '#2D1616' : '#FEF2F2',
+                  borderColor: isDark ? '#991B1B' : '#FECACA',
+                },
+              ]}
               activeOpacity={0.7}
-              onPress={toggleTheme}
+              onPress={handleLogoutPress}
+              accessibilityLabel="Log Out"
             >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#D97706" />
-            </TouchableOpacity>
-
-            {/* Settings Screen Shortcut */}
-            <TouchableOpacity
-              style={styles.settingsToggleBtn}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('Settings')}
-            >
-              <Ionicons name="settings-outline" size={18} color={isDark ? '#CBD5E1' : '#475569'} />
-            </TouchableOpacity>
-
-            {/* Logout */}
-            <TouchableOpacity
-              style={styles.logoutButton}
-              activeOpacity={0.7}
-              onPress={handleLogout}
-            >
-              <Ionicons name="log-out-outline" size={17} color="#DC2626" />
-              <Text style={styles.logoutText}>{t('logout', 'Logout')}</Text>
+              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* User Profile & Role Banner Card */}
+        {/* ============================================================== */}
+        {/* WELCOME SECTION: Welcome message & Role Badge                  */}
+        {/* ============================================================== */}
         <View
           style={[
-            styles.profileCard,
-            isOwner ? styles.ownerCardBorder : styles.operatorCardBorder,
+            styles.greetingCard,
+            {
+              backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+              borderColor: isDark ? colors.border : '#E2E8F0',
+            },
           ]}
         >
-          <View style={styles.profileHeaderRow}>
-            <View style={styles.profileInfo}>
-              <Text style={styles.welcomeGreeting}>{t('welcome', 'Welcome')},</Text>
-              <Text style={styles.userName}>{currentUser?.name || 'Mandi User'}</Text>
-              <Text style={styles.mandiBusiness}>
-                {currentUser?.business || 'CAL Mandi APMC'} • {currentUser?.location || 'Bangalore'}
-              </Text>
-            </View>
-
-            {/* Role Badge */}
-            <View
-              style={[
-                styles.roleBadge,
-                isOwner ? styles.ownerBadgeBg : styles.operatorBadgeBg,
-              ]}
-            >
-              <Ionicons
-                name={isOwner ? 'shield-checkmark' : 'briefcase'}
-                size={15}
-                color="#FFFFFF"
-              />
-              <Text style={styles.roleBadgeText}>
-                {isOwner ? t('ownerBadge', '👑 Owner') : t('operatorBadge', '👷 Operator')}
-              </Text>
-            </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greetingSmall, { color: isDark ? colors.textSecondary : '#64748B' }]}>
+              {t('welcome', 'Welcome back')},
+            </Text>
+            <Text style={[styles.greetingName, { color: colors.textPrimary }]} numberOfLines={1}>
+              {userName}
+            </Text>
           </View>
 
-          {/* Quick Role Switcher Banner */}
-          <View style={styles.roleSwitcherRow}>
-            <View style={styles.roleDescContainer}>
-              <Text style={styles.roleTagline}>
-                {isOwner
-                  ? t('roleOwnerDesc', 'Full Administrative & Financial Access')
-                  : t('roleOperatorDesc', 'Stock Counter & Daily Operations Desk')}
-              </Text>
-            </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleToggleRole}
+            style={[
+              styles.rolePill,
+              { backgroundColor: isOwner ? '#16834A' : '#0284C7' },
+            ]}
+          >
+            <Ionicons
+              name={isOwner ? 'shield-checkmark' : 'id-card'}
+              size={13}
+              color="#FFFFFF"
+              style={{ marginRight: 5 }}
+            />
+            <Text style={styles.rolePillText}>
+              {isOwner ? 'Owner' : 'Operator'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-            <TouchableOpacity
-              style={styles.roleSwitchBtn}
-              activeOpacity={0.7}
-              onPress={handleToggleRole}
-            >
-              <Ionicons name="swap-horizontal" size={15} color="#16834A" />
-              <Text style={styles.roleSwitchBtnText}>
-                {isOwner ? t('testAsOperator', 'Test as Operator') : t('testAsOwner', 'Test as Owner')}
+        {/* ============================================================== */}
+        {/* 1. BUSINESS OVERVIEW: Total Customers, Products, Inventory     */}
+        {/* ============================================================== */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Business Overview
+          </Text>
+        </View>
+
+        <View style={styles.overviewRow}>
+          {/* Total Customers */}
+          <TouchableOpacity
+            style={[
+              styles.overviewCard,
+              {
+                backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+                borderColor: isDark ? colors.border : '#E2E8F0',
+              },
+            ]}
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('Customers')}
+          >
+            <View style={[styles.overviewIconCircle, { backgroundColor: isDark ? '#0C2D48' : '#E0F2FE' }]}>
+              <Ionicons name="people-outline" size={18} color={isDark ? '#38BDF8' : '#0284C7'} />
+            </View>
+            <Text style={[styles.overviewValue, { color: colors.textPrimary }]}>
+              {customers.length}
+            </Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Total Customers
+            </Text>
+          </TouchableOpacity>
+
+          {/* Total Products */}
+          <TouchableOpacity
+            style={[
+              styles.overviewCard,
+              {
+                backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+                borderColor: isDark ? colors.border : '#E2E8F0',
+              },
+            ]}
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('Products')}
+          >
+            <View style={[styles.overviewIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+              <Ionicons name="cube-outline" size={18} color={isDark ? '#4ADE80' : '#16834A'} />
+            </View>
+            <Text style={[styles.overviewValue, { color: colors.textPrimary }]}>
+              {products.length}
+            </Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Total Products
+            </Text>
+          </TouchableOpacity>
+
+          {/* Total Inventory */}
+          <TouchableOpacity
+            style={[
+              styles.overviewCard,
+              {
+                backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+                borderColor: isDark ? colors.border : '#E2E8F0',
+              },
+            ]}
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('Inventory')}
+          >
+            <View style={[styles.overviewIconCircle, { backgroundColor: isDark ? '#3B2904' : '#FEF3C7' }]}>
+              <Ionicons name="layers-outline" size={18} color={isDark ? '#FBBF24' : '#D97706'} />
+            </View>
+            <Text style={[styles.overviewValue, { color: colors.textPrimary }]}>
+              {totalStockUnits}
+            </Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Total Inventory
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ============================================================== */}
+        {/* 2. TODAY'S BUSINESS SUMMARY: Sales, Arrivals, Collections      */}
+        {/* ============================================================== */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Today&apos;s Business Summary
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Reports')}>
+            <Text style={[styles.viewAllLink, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+              Reports ›
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View
+          style={[
+            styles.todaySummaryCard,
+            {
+              backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+              borderColor: isDark ? colors.border : '#E2E8F0',
+            },
+          ]}
+        >
+          {/* Today's Sales */}
+          <View style={styles.todayMetricCol}>
+            <Text style={[styles.todayMetricVal, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+              ₹{todaySales.toLocaleString('en-IN')}
+            </Text>
+            <Text style={[styles.todayMetricLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+              Today&apos;s Sales
+            </Text>
+          </View>
+
+          <View style={[styles.todayDivider, { backgroundColor: isDark ? colors.border : '#E2E8F0' }]} />
+
+          {/* Today's Arrivals */}
+          <View style={styles.todayMetricCol}>
+            <Text style={[styles.todayMetricVal, { color: colors.textPrimary }]}>
+              {todayArrivalsCount} {todayArrivalsCount === 1 ? 'Lot' : 'Lots'}
+            </Text>
+            <Text style={[styles.todayMetricLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+              Today&apos;s Arrivals
+            </Text>
+            {todayArrivalsQty > 0 ? (
+              <Text style={[styles.todayMetricSub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                {todayArrivalsQty} units
               </Text>
-            </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <View style={[styles.todayDivider, { backgroundColor: isDark ? colors.border : '#E2E8F0' }]} />
+
+          {/* Today's Collections */}
+          <View style={styles.todayMetricCol}>
+            <Text style={[styles.todayMetricVal, { color: colors.textPrimary }]}>
+              ₹{operatorCashDrawer.toLocaleString('en-IN')}
+            </Text>
+            <Text style={[styles.todayMetricLabel, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+              Today&apos;s Collections
+            </Text>
           </View>
         </View>
 
-        {/* Role-Specific Metric Overview */}
-        {isOwner ? (
-          /* OWNER OVERVIEW: Financials & Business Insights */
-          <View style={styles.ownerMetricsSection}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>{t('businessOverview', 'Business Overview')}</Text>
-              <View style={styles.liveIndicator}>
-                <View style={styles.greenDot} />
-                <Text style={styles.liveText}>{t('liveAnalytics', 'Live Analytics')}</Text>
+        {/* Quick Operations: Record Arrival & Record Sale */}
+        <View style={styles.quickOpsRow}>
+          <TouchableOpacity
+            style={[
+              styles.quickOpBtn,
+              { backgroundColor: isDark ? '#064E3B' : '#16834A' },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('RecordArrival')}
+          >
+            <Ionicons name="arrow-down-circle" size={18} color="#FFFFFF" />
+            <Text style={styles.quickOpBtnText}>Record Inward Arrival</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.quickOpBtn,
+              { backgroundColor: isDark ? '#082F49' : '#0284C7' },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('RecordSale')}
+          >
+            <Ionicons name="arrow-up-circle" size={18} color="#FFFFFF" />
+            <Text style={styles.quickOpBtnText}>Record Sale</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ============================================================== */}
+        {/* 3. IMPORTANT ALERTS: Low Stock, Pending Payments, Receivables  */}
+        {/* ============================================================== */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Important Alerts
+          </Text>
+        </View>
+
+        <View style={styles.alertsContainer}>
+          {/* Low Stock Alert */}
+          {lowStockCount > 0 ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Inventory')}
+              style={[
+                styles.alertItem,
+                {
+                  backgroundColor: isDark ? '#431407' : '#FFF7ED',
+                  borderColor: isDark ? '#9A3412' : '#FFEDD5',
+                },
+              ]}
+            >
+              <View style={[styles.alertIconCircle, { backgroundColor: isDark ? '#7C2D12' : '#FFEDD5' }]}>
+                <Ionicons name="alert-circle" size={18} color="#EA580C" />
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={[styles.alertTitle, { color: isDark ? '#FDBA74' : '#9A3412' }]}>
+                  Low Stock Alert
+                </Text>
+                <Text style={[styles.alertSubtitle, { color: isDark ? '#FB923C' : '#C2410C' }]}>
+                  {lowStockCount} {lowStockCount === 1 ? 'commodity' : 'commodities'} running low on inventory
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#EA580C" />
+            </TouchableOpacity>
+          ) : (
+            <View
+              style={[
+                styles.alertItem,
+                {
+                  backgroundColor: isDark ? '#064E3B20' : '#F0FDF4',
+                  borderColor: isDark ? '#065F46' : '#DCFCE7',
+                },
+              ]}
+            >
+              <View style={[styles.alertIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+                <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={[styles.alertTitle, { color: isDark ? '#86EFAC' : '#15803D' }]}>
+                  Stock Healthy
+                </Text>
+                <Text style={[styles.alertSubtitle, { color: isDark ? '#4ADE80' : '#166534' }]}>
+                  All commodities are well stocked
+                </Text>
               </View>
             </View>
+          )}
 
-            <View style={styles.metricsGrid}>
-              {/* Total Inventory Value */}
-              <View style={[styles.metricCard, styles.metricCardPrimary]}>
-                <View style={styles.metricIconWrapPrimary}>
-                  <Ionicons name="cash-outline" size={20} color="#16834A" />
-                </View>
-                <Text style={styles.metricLabel}>{t('totalInventoryValue', 'Total Inventory Value')}</Text>
-                <Text style={styles.metricValueLarge}>
-                  ₹ {totalInventoryValue.toLocaleString('en-IN')}
-                </Text>
-                <Text style={styles.metricSubtext}>
-                  {t('acrossProducts', `Across ${products.length} products`, { count: products.length })}
-                </Text>
-              </View>
-
-              {/* Total Stock Units */}
-              <View style={styles.metricCard}>
-                <View style={styles.metricIconWrapBlue}>
-                  <Ionicons name="cube-outline" size={20} color="#0284C7" />
-                </View>
-                <Text style={styles.metricLabel}>{t('totalStockUnits', 'Total Stock Units')}</Text>
-                <Text style={styles.metricValue}>{totalStockUnits}</Text>
-                <Text style={styles.metricSubtext}>{t('physicalQuantity', 'Physical quantity in mandi')}</Text>
-              </View>
-
-              {/* Customers Count */}
-              <View style={styles.metricCard}>
-                <View style={styles.metricIconWrapPurple}>
-                  <Ionicons name="people-outline" size={20} color="#7C3AED" />
-                </View>
-                <Text style={styles.metricLabel}>{t('activeBuyers', 'Active Buyers')}</Text>
-                <Text style={styles.metricValue}>{customers.length}</Text>
-                <Text style={styles.metricSubtext}>{t('registeredAccounts', 'Registered mandi accounts')}</Text>
-              </View>
-
-              {/* Low Stock Alert */}
-              <View style={[styles.metricCard, lowStockCount > 0 && styles.metricCardAlert]}>
-                <View
-                  style={[
-                    styles.metricIconWrapAmber,
-                    lowStockCount > 0 && styles.metricIconWrapRed,
-                  ]}
-                >
-                  <Ionicons
-                    name={lowStockCount > 0 ? 'warning-outline' : 'checkmark-done'}
-                    size={20}
-                    color={lowStockCount > 0 ? '#DC2626' : '#16834A'}
-                  />
-                </View>
-                <Text style={styles.metricLabel}>{t('stockStatus', 'Stock Status')}</Text>
-                <Text
-                  style={[
-                    styles.metricValue,
-                    lowStockCount > 0 && { color: '#DC2626' },
-                  ]}
-                >
-                  {lowStockCount > 0 ? t('lowStockNotice', `${lowStockCount} Low`, { count: lowStockCount }) : t('healthyStock', 'Healthy')}
-                </Text>
-                <Text style={styles.metricSubtext}>
-                  {lowStockCount > 0 ? t('reorderNeeded', 'Reorder needed soon') : t('allStocked', 'All items well stocked')}
-                </Text>
-              </View>
+          {/* Pending Customer Payments Alert */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Customers')}
+            style={[
+              styles.alertItem,
+              {
+                backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+                borderColor: isDark ? colors.border : '#E2E8F0',
+              },
+            ]}
+          >
+            <View style={[styles.alertIconCircle, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+              <Ionicons name="time-outline" size={18} color={isDark ? '#FBBF24' : '#D97706'} />
             </View>
-          </View>
-        ) : (
-          /* OPERATOR OVERVIEW: Shift & Counter Operations Desk */
-          <View style={styles.operatorShiftSection}>
-            <View style={styles.operatorShiftCard}>
-              <View style={styles.operatorShiftHeader}>
-                <View style={styles.shiftBadge}>
-                  <View style={styles.pulseDot} />
-                  <Text style={styles.shiftBadgeText}>{t('counterDeskActive', 'COUNTER DESK ACTIVE')}</Text>
-                </View>
-                <Text style={styles.shiftTimeText}>{t('todayShift', "Today's Shift")}</Text>
-              </View>
-
-              <Text style={styles.shiftCardTitle}>{t('operationalStockCounter', 'Operational Stock Counter')}</Text>
-              <Text style={styles.shiftCardDesc}>
-                {t('operatorShiftDesc', 'Quick adjustments for crates, boxes, and bags arriving from farmers or departing to buyers.')}
+            <View style={styles.alertContent}>
+              <Text style={[styles.alertTitle, { color: colors.textPrimary }]}>
+                Pending Customer Payments
               </Text>
-
-              <View style={styles.shiftStatsRow}>
-                <View style={styles.shiftStatItem}>
-                  <Text style={styles.shiftStatNumber}>{shiftUpdatesCount}</Text>
-                  <Text style={styles.shiftStatLabel}>{t('updatesToday', 'Updates Today')}</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.shiftStatItem}>
-                  <Text style={styles.shiftStatNumber}>{products.length}</Text>
-                  <Text style={styles.shiftStatLabel}>{t('floorItems', 'Floor Items')}</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.shiftStatItem}>
-                  <Text style={[styles.shiftStatNumber, { color: '#16834A' }]}>
-                    {slips ? slips.length : 0}
-                  </Text>
-                  <Text style={styles.shiftStatLabel}>{t('activeSlips', 'Active Slips')}</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.shiftStatItem}>
-                  <Text style={[styles.shiftStatNumber, { color: '#D97706' }]}>
-                    {lowStockCount}
-                  </Text>
-                  <Text style={styles.shiftStatLabel}>{t('lowStock', 'Low Stock')}</Text>
-                </View>
-              </View>
+              <Text style={[styles.alertSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                {pendingCustomersCount > 0
+                  ? `${pendingCustomersCount} customers have outstanding balances`
+                  : 'All customer accounts are settled'}
+              </Text>
             </View>
-          </View>
-        )}
+            <Ionicons name="chevron-forward" size={16} color={isDark ? '#94A3B8' : '#CBD5E1'} />
+          </TouchableOpacity>
 
-        {/* 1. VISIBLE DATA SYNC CENTER & OFFLINE OPERATIONS */}
-        <Text style={styles.sectionTitle}>
-          {isOwner ? t('dailyOperations', 'Mandi Daily Operations') : t('floorOperations', 'Floor Operations')}
-        </Text>
-
-        {/* Record Arrival Card */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.arrivalMenuCard]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('RecordArrival')}
-        >
-          <View style={[styles.iconContainer, styles.arrivalIconContainer]}>
-            <Ionicons name="arrow-down-circle" size={28} color="#16834A" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('recordArrival', 'Record Arrival')}</Text>
+          {/* Outstanding Receivables Alert */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('CashDebt')}
+            style={[
+              styles.alertItem,
+              {
+                backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+                borderColor: isDark ? colors.border : '#E2E8F0',
+              },
+            ]}
+          >
+            <View style={[styles.alertIconCircle, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+              <Ionicons name="wallet-outline" size={18} color={isDark ? '#F87171' : '#DC2626'} />
             </View>
-
-            <Text style={styles.cardDescription}>
-              {t('recordArrivalDesc', 'Record incoming farmer produce, lot numbers, and add crates to stock to live inventory')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Record Sale Card */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.saleMenuCard]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('RecordSale')}
-        >
-          <View style={[styles.iconContainer, styles.saleIconContainer]}>
-            <Ionicons name="receipt-outline" size={28} color="#0284C7" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('recordSale', 'Record Sale')}</Text>
+            <View style={styles.alertContent}>
+              <Text style={[styles.alertTitle, { color: colors.textPrimary }]}>
+                Outstanding Receivables
+              </Text>
+              <Text style={[styles.alertSubtitle, { color: outstandingReceivables > 0 ? '#DC2626' : (isDark ? '#94A3B8' : '#64748B'), fontWeight: '600' }]}>
+                ₹ {outstandingReceivables.toLocaleString('en-IN')} total due from buyers
+              </Text>
             </View>
+            <Ionicons name="chevron-forward" size={16} color={isDark ? '#94A3B8' : '#CBD5E1'} />
+          </TouchableOpacity>
+        </View>
 
-            <Text style={styles.cardDescription}>
-              {t('recordSaleDesc', 'Dispatch produce to buyers, calculate totals, and record cash/credit bills at the counter')}
-            </Text>
-          </View>
+        {/* ============================================================== */}
+        {/* 4. RECENT ACTIVITY: Sales, Arrivals, Payments                  */}
+        {/* ============================================================== */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Recent Activity
+          </Text>
+        </View>
 
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Floor Crate Tally Clicker Card */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.specialMenuCard, { borderColor: '#7DD3FC', backgroundColor: '#F0F9FF' }]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('CrateTally')}
+        <View
+          style={[
+            styles.activityCard,
+            {
+              backgroundColor: isDark ? colors.cardBackground : '#FFFFFF',
+              borderColor: isDark ? colors.border : '#E2E8F0',
+            },
+          ]}
         >
-          <View style={[styles.iconContainer, { backgroundColor: '#E0F2FE' }]}>
-            <Ionicons name="finger-print" size={26} color="#0284C7" />
-          </View>
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('floorCrateTally', 'Floor Crate Tally')}</Text>
-              <View style={[styles.moduleTag, { backgroundColor: '#E0F2FE' }]}>
-                <Text style={[styles.moduleTagText, { color: '#0284C7' }]}>{t('floorCrateTallyTag', 'Live Clicker')}</Text>
-              </View>
-            </View>
-            <Text style={styles.cardDescription}>
-              {t('floorCrateTallyDesc', 'High-speed tactile counter for loading/unloading crates & bags on the mandi floor.')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
-        </TouchableOpacity>
-
-        {/* 2. DASHBOARD SHORTCUTS: FEATURE 1, 2, 3 & ANALYTICS */}
-        <Text style={styles.sectionTitle}>
-          {isOwner ? t('financialsAndPricing', 'Financials, Grades & Pricing') : t('mandiServices', 'Mandi Services & Ledgers')}
-        </Text>
-
-        {/* Cash & Debt Management Shortcut */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.cashDebtMenuCard]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('CashDebt')}
-        >
-          <View style={[styles.iconContainer, styles.cashDebtIconWrap]}>
-            <Ionicons name="wallet-outline" size={28} color="#16834A" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('cashDebt', 'Cash & Debt')}</Text>
-              <View style={[styles.moduleTag, styles.cashDebtTag]}>
-                <Text style={styles.cashDebtTagText}>
-                  {financialSummary.totalReceivable > 0
-                    ? t('dueAmount', `₹${financialSummary.totalReceivable.toLocaleString('en-IN')} Due`, {
-                        amount: financialSummary.totalReceivable.toLocaleString('en-IN'),
-                      })
-                    : t('balancesSettled', 'Balances Settled')}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {t('cashDebtDesc', 'Individual customer ledgers, debt balance tracking, receive payments & farmer disbursements')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Product Grades Shortcut */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.gradesMenuCard]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('ProductGrades')}
-        >
-          <View style={[styles.iconContainer, styles.gradesIconWrap]}>
-            <Ionicons name="ribbon-outline" size={28} color="#0284C7" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('productGrades', 'Product Grades')}</Text>
-              <View style={[styles.moduleTag, styles.gradesTag]}>
-                <Text style={styles.gradesTagText}>{t('productGradesTag', 'Grades A, B, C, D')}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {t('productGradesDesc', 'Configure grade quality price tiers, record sorting batches, and track culled wastage')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Customer Pricing Shortcut */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.pricingMenuCard]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('CustomerPricing')}
-        >
-          <View style={[styles.iconContainer, styles.pricingIconWrap]}>
-            <Ionicons name="pricetag-outline" size={28} color="#D97706" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('customerPricing', 'Customer Pricing')}</Text>
-              <View style={[styles.moduleTag, styles.pricingTag]}>
-                <Text style={styles.pricingTagText}>
-                  {t('customerPricingTag', `${pricingRules.length} Custom Rates`, { count: pricingRules.length })}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {t('customerPricingDesc', 'Negotiated selling rates by customer, commodity & quality grade with automatic dispatch lookup')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Reports & Analytics Shortcut */}
-        <TouchableOpacity
-          style={[styles.menuCard, styles.reportsMenuCard]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Reports')}
-        >
-          <View style={[styles.iconContainer, styles.reportsIconWrap]}>
-            <Ionicons name="bar-chart-outline" size={28} color="#7C3AED" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('reportsAnalytics', 'Reports & Analytics')}</Text>
-              <View style={[styles.moduleTag, styles.reportsTag]}>
-                <Text style={styles.reportsTagText}>{t('reportsAnalyticsTag', 'Financials & Wastage')}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {t('reportsAnalyticsDesc', 'Customer balance sheets, cash flow summaries, grade sales revenue & wastage loss reports')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Mandi Slips & Invoices Card */}
-        <TouchableOpacity
-          style={[styles.menuCard, { borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Slips')}
-        >
-          <View style={[styles.iconContainer, { backgroundColor: '#DCFCE7' }]}>
-            <Ionicons name="receipt-outline" size={26} color="#16834A" />
-          </View>
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('mandiSlipsReceipts', 'Mandi Slips & Receipts')}</Text>
-              <View style={[styles.moduleTag, { backgroundColor: '#DCFCE7' }]}>
-                <Text style={[styles.moduleTagText, { color: '#15803D' }]}>
-                  {t('slipsCount', `${slips ? slips.length : 0} Slips`, { count: slips ? slips.length : 0 })}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.cardDescription}>
-              {t('mandiSlipsDesc', 'View, search, print and WhatsApp digital arrival/dispatch patti slips.')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
-        </TouchableOpacity>
-
-        {/* 3. MAIN MASTER MANAGEMENT MODULES */}
-        <Text style={styles.sectionTitle}>
-          {isOwner
-            ? t('mandiCatalogManagement', 'Mandi Catalog & Management')
-            : t('mandiCatalogDirectory', 'Mandi Catalog Directory')}
-        </Text>
-
-        {/* Products Module Card */}
-        <TouchableOpacity
-          style={styles.menuCard}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Products')}
-        >
-          <View style={styles.iconContainer}>
-            <Ionicons name="cube-outline" size={28} color="#16834A" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('productsAndCategories', 'Products & Categories')}</Text>
-              <View
+          {/* Activity Category Tabs */}
+          <View style={[styles.activityTabs, { backgroundColor: isDark ? '#0A0F1D' : '#F1F5F9' }]}>
+            <TouchableOpacity
+              style={[
+                styles.activityTabBtn,
+                recentTab === 'sales' && {
+                  backgroundColor: isDark ? '#143823' : '#FFFFFF',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 1,
+                  elevation: 1,
+                },
+              ]}
+              onPress={() => setRecentTab('sales')}
+              activeOpacity={0.7}
+            >
+              <Text
                 style={[
-                  styles.moduleTag,
-                  isOwner ? styles.ownerTag : styles.operatorTag,
+                  styles.activityTabText,
+                  {
+                    color: recentTab === 'sales'
+                      ? (isDark ? '#4ADE80' : '#16834A')
+                      : (isDark ? '#94A3B8' : '#64748B'),
+                    fontWeight: recentTab === 'sales' ? '700' : '500',
+                  },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.moduleTagText,
-                    isOwner ? styles.ownerTagText : styles.operatorTagText,
-                  ]}
-                >
-                  {isOwner ? t('fullControl', 'Full Control') : t('dailyStockEntry', 'Daily Stock Entry')}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {isOwner
-                ? t('productsOwnerDesc', 'Browse commodities with photos, categories, pricing & catalog')
-                : t('productsOperatorDesc', 'Adjust stock quantities (+ / -), view photos & check category stock')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Customers Module Card */}
-        <TouchableOpacity
-          style={styles.menuCard}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Customers')}
-        >
-          <View style={styles.iconContainer}>
-            <Ionicons name="people-outline" size={28} color="#16834A" />
-          </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('customers', 'Customers')}</Text>
-              <View style={[styles.moduleTag, styles.commonTag]}>
-                <Text style={styles.commonTagText}>
-                  {isOwner
-                    ? t('ownerAccountsLedgersTag', 'Accounts & Ledgers')
-                    : t('operatorDirectoryCallingTag', 'Directory & Calling')}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {isOwner
-                ? t('customersOwnerDesc', 'View customer directory, balances, and add new mandi buyers')
-                : t('customersOperatorDesc', 'Search registered buyers & quickly verify for dispatch and billing')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
-
-        {/* Staff & Permissions Matrix (Owner Feature) */}
-        {isOwner && (
-          <TouchableOpacity
-            style={[styles.menuCard, styles.specialMenuCard]}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('Staff')}
-          >
-            <View style={[styles.iconContainer, styles.specialIconContainer]}>
-              <Ionicons name="shield-outline" size={28} color="#7C3AED" />
-            </View>
-
-            <View style={styles.cardText}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>{t('teamAndPermissions', 'Team & Permissions')}</Text>
-                <View style={[styles.moduleTag, styles.purpleTag]}>
-                  <Text style={styles.purpleTagText}>{t('ownerOnly', 'Owner Only')}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.cardDescription}>
-                {t('staffTeamDesc', 'Manage mandi operators, desk assignments, and role access permissions')}
+                Recent Sales
               </Text>
-            </View>
+            </TouchableOpacity>
 
-            <Ionicons name="chevron-forward" size={22} color="#888888" />
-          </TouchableOpacity>
-        )}
-
-        {/* Operator Permission Guidance Banner */}
-        {isOperator && (
-          <View style={styles.operatorNoticeCard}>
-            <Ionicons name="information-circle" size={24} color="#0284C7" />
-            <View style={styles.operatorNoticeContent}>
-              <Text style={styles.operatorNoticeTitle}>{t('operatorNoticeTitle', 'Operator Privileges Notice')}</Text>
-              <Text style={styles.operatorNoticeText}>
-                {t('operatorNoticeText', 'You have operational access for recording arrivals, dispatches, stock tracking, and customer lookups. Master category additions and commodity removals require Mandi Owner authorization.')}
+            <TouchableOpacity
+              style={[
+                styles.activityTabBtn,
+                recentTab === 'arrivals' && {
+                  backgroundColor: isDark ? '#143823' : '#FFFFFF',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 1,
+                  elevation: 1,
+                },
+              ]}
+              onPress={() => setRecentTab('arrivals')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.activityTabText,
+                  {
+                    color: recentTab === 'arrivals'
+                      ? (isDark ? '#4ADE80' : '#16834A')
+                      : (isDark ? '#94A3B8' : '#64748B'),
+                    fontWeight: recentTab === 'arrivals' ? '700' : '500',
+                  },
+                ]}
+              >
+                Recent Arrivals
               </Text>
-            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.activityTabBtn,
+                recentTab === 'payments' && {
+                  backgroundColor: isDark ? '#143823' : '#FFFFFF',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 1,
+                  elevation: 1,
+                },
+              ]}
+              onPress={() => setRecentTab('payments')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.activityTabText,
+                  {
+                    color: recentTab === 'payments'
+                      ? (isDark ? '#4ADE80' : '#16834A')
+                      : (isDark ? '#94A3B8' : '#64748B'),
+                    fontWeight: recentTab === 'payments' ? '700' : '500',
+                  },
+                ]}
+              >
+                Recent Payments
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Settings Screen Shortcut Card */}
-        <TouchableOpacity
-          style={[styles.menuCard, { borderColor: isDark ? '#334155' : '#E2E8F0', marginTop: 10 }]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Settings')}
-        >
-          <View style={[styles.iconContainer, { backgroundColor: isDark ? '#064E3B' : '#DCFCE7' }]}>
-            <Ionicons name="settings-outline" size={24} color="#16834A" />
+          {/* Activity Content List */}
+          <View style={styles.activityContentList}>
+            {/* Tab 1: Sales */}
+            {recentTab === 'sales' && (
+              recentSalesList.length === 0 ? (
+                <Text style={[styles.emptyActivityText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                  No sales recorded yet.
+                </Text>
+              ) : (
+                recentSalesList.map((item, idx) => {
+                  const isInv = 'invoiceNumber' in item;
+                  const party = isInv ? item.customerName : (item as any).customerName;
+                  const amt = item.totalAmount || 0;
+                  const detail = isInv && item.items?.length > 0
+                    ? `${item.items[0].productName} (${item.items[0].quantity} ${item.items[0].unit})`
+                    : (item as any).productName
+                    ? `${(item as any).productName} (${(item as any).quantity} ${(item as any).unit})`
+                    : 'Dispatch produce';
+
+                  return (
+                    <View
+                      key={item.id || idx}
+                      style={[
+                        styles.activityRow,
+                        idx < recentSalesList.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: isDark ? '#334155' : '#F1F5F9',
+                        },
+                      ]}
+                    >
+                      <View style={[styles.activityIconCircle, { backgroundColor: isDark ? '#082F49' : '#E0F2FE' }]}>
+                        <Ionicons name="cart-outline" size={16} color="#0284C7" />
+                      </View>
+                      <View style={styles.activityMain}>
+                        <Text style={[styles.activityParty, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {party}
+                        </Text>
+                        <Text style={[styles.activitySub, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+                          {detail}
+                        </Text>
+                      </View>
+                      <View style={styles.activityRight}>
+                        <Text style={[styles.activityAmount, { color: isDark ? '#4ADE80' : '#16834A' }]}>
+                          ₹{amt.toLocaleString('en-IN')}
+                        </Text>
+                        <Text style={[styles.activityTime, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                          {formatActivityTime(item.timestamp)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )
+            )}
+
+            {/* Tab 2: Arrivals */}
+            {recentTab === 'arrivals' && (
+              recentArrivalsList.length === 0 ? (
+                <Text style={[styles.emptyActivityText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                  No arrivals recorded yet.
+                </Text>
+              ) : (
+                recentArrivalsList.map((item, idx) => (
+                  <View
+                    key={item.id || idx}
+                    style={[
+                      styles.activityRow,
+                      idx < recentArrivalsList.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: isDark ? '#334155' : '#F1F5F9',
+                      },
+                    ]}
+                  >
+                    <View style={[styles.activityIconCircle, { backgroundColor: isDark ? '#143823' : '#DCFCE7' }]}>
+                      <Ionicons name="leaf-outline" size={16} color="#16834A" />
+                    </View>
+                    <View style={styles.activityMain}>
+                      <Text style={[styles.activityParty, { color: colors.textPrimary }]} numberOfLines={1}>
+                        {item.farmerName}
+                      </Text>
+                      <Text style={[styles.activitySub, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+                        {item.productName} • {item.quantity} {item.unit}
+                      </Text>
+                    </View>
+                    <View style={styles.activityRight}>
+                      <Text style={[styles.activityAmount, { color: colors.textPrimary }]}>
+                        {item.quantity} {item.unit}
+                      </Text>
+                      <Text style={[styles.activityTime, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                        {formatActivityTime(item.timestamp)}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )
+            )}
+
+            {/* Tab 3: Payments */}
+            {recentTab === 'payments' && (
+              recentPaymentsList.length === 0 ? (
+                <Text style={[styles.emptyActivityText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                  No payment transactions yet.
+                </Text>
+              ) : (
+                recentPaymentsList.map((item, idx) => {
+                  const isReceived = item.category === 'CREDIT' || item.type === 'CASH_RECEIVED';
+                  return (
+                    <View
+                      key={item.id || idx}
+                      style={[
+                        styles.activityRow,
+                        idx < recentPaymentsList.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: isDark ? '#334155' : '#F1F5F9',
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityIconCircle,
+                          {
+                            backgroundColor: isReceived
+                              ? (isDark ? '#143823' : '#DCFCE7')
+                              : (isDark ? '#2D1616' : '#FEF2F2'),
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={isReceived ? 'arrow-down-circle-outline' : 'arrow-up-circle-outline'}
+                          size={16}
+                          color={isReceived ? '#16834A' : '#DC2626'}
+                        />
+                      </View>
+                      <View style={styles.activityMain}>
+                        <Text style={[styles.activityParty, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {item.customerName}
+                        </Text>
+                        <Text style={[styles.activitySub, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+                          {isReceived ? 'Payment Received' : 'Payment Given'} • {item.paymentMethod}
+                        </Text>
+                      </View>
+                      <View style={styles.activityRight}>
+                        <Text
+                          style={[
+                            styles.activityAmount,
+                            { color: isReceived ? '#16834A' : '#DC2626' },
+                          ]}
+                        >
+                          {isReceived ? '+ ' : '- '}₹{item.amount.toLocaleString('en-IN')}
+                        </Text>
+                        <Text style={[styles.activityTime, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                          {formatActivityTime(item.createdAt || item.date)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )
+            )}
           </View>
-
-          <View style={styles.cardText}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>{t('settingsTitle', 'Settings & Preferences')}</Text>
-            </View>
-
-            <Text style={styles.cardDescription}>
-              {t('settingsSubtitle', 'Configure display theme, offline sync, and user profile')}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={22} color="#888888" />
-        </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      {/* LANGUAGE SELECTOR MODAL (6 OPTIONS: English, हिन्दी, ಕನ್ನಡ, मराठी, తెలుగు, தமிழ்) */}
-      <LanguageSelectorModal
-        visible={langModalVisible}
-        onClose={() => setLangModalVisible(false)}
-      />
+      {/* 5-Item Bottom Navigation */}
+      <BottomNavBar activeTab="Home" navigation={navigation} />
     </View>
   );
 }
 
-const getStyles = (colors: ThemeColors, isDark: boolean) =>
-  StyleSheet.create({
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  topLangBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 9,
-    borderRadius: 8,
-    backgroundColor: isDark ? '#064E3B40' : '#ECFDF5',
-    borderWidth: 1,
-    borderColor: isDark ? '#059669' : '#A7F3D0',
-  },
-  topLangText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: isDark ? '#4ADE80' : '#15803D',
-  },
-  settingsToggleBtn: {
-    padding: 7,
-    borderRadius: 8,
-    backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  themeToggleBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  container: {
+const styles = StyleSheet.create({
+  rootContainer: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  content: {
-    padding: 20,
+  scrollView: {
+    flex: 1,
   },
+  scrollContent: {
+    paddingHorizontal: 16,
+  },
+
+  /* Top Header */
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  logoIconContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#050D0A',
-    borderWidth: 1.5,
-    borderColor: isDark ? '#16834A' : '#86EFAC',
-    shadowColor: '#16834A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  logoIcon: {
-    width: '100%',
-    height: '100%',
-  },
-  logoutButton: {
+  logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-  },
-  logoutText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#DC2626',
-    marginLeft: 4,
-  },
-  profileCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  ownerCardBorder: {
-    borderColor: '#A7F3D0',
-  },
-  operatorCardBorder: {
-    borderColor: isDark ? '#0284C7' : '#BAE6FD',
-  },
-  profileHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  profileInfo: {
     flex: 1,
-    paddingRight: 10,
   },
-  welcomeGreeting: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500',
+  logoAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
   },
-  userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginTop: 2,
+  headerBrandTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
-  mandiBusiness: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4,
+  headerBrandSub: {
+    fontSize: 11,
+    marginTop: 1,
   },
-  roleBadge: {
+  headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
   },
-  ownerBadgeBg: {
-    backgroundColor: '#16834A',
-  },
-  operatorBadgeBg: {
-    backgroundColor: '#0284C7',
-  },
-  roleBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    marginLeft: 4,
-  },
-  roleSwitcherRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
     alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  roleDescContainer: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  roleTagline: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  roleSwitchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5EC',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#C7E8D3',
   },
-  roleSwitchBtnText: {
+  logoutBtn: {
+    marginLeft: 8,
+  },
+
+  /* Greeting Card */
+  greetingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  greetingSmall: {
     fontSize: 12,
+    fontWeight: '500',
+  },
+  greetingName: {
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 1,
+  },
+  rolePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  rolePillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
     fontWeight: '700',
-    color: '#16834A',
-    marginLeft: 4,
   },
-  ownerMetricsSection: {
-    marginBottom: 20,
-  },
+
+  /* Section Header */
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 8,
+    marginTop: 2,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  viewAllLink: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  /* 1. Business Overview Row */
+  overviewRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginBottom: 14,
   },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  greenDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#16834A',
-    marginRight: 6,
-  },
-  liveText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#16834A',
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  metricCard: {
-    width: '48%',
-    backgroundColor: colors.cardBackground,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  metricCardPrimary: {
-    width: '100%',
-    borderColor: '#A7F3D0',
-    backgroundColor: isDark ? '#143823' : '#F8FCF9',
-  },
-  metricCardAlert: {
-    borderColor: '#FECACA',
-    backgroundColor: isDark ? '#3B1212' : '#FFF8F8',
-  },
-  metricIconWrapPrimary: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#E8F5EC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricIconWrapBlue: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#E0F2FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricIconWrapPurple: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricIconWrapAmber: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#FEF3C7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricIconWrapRed: {
-    backgroundColor: '#FEE2E2',
-  },
-  metricLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  metricValueLarge: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#16834A',
-    marginBottom: 2,
-  },
-  metricValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  metricSubtext: {
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  operatorShiftSection: {
-    marginBottom: 20,
-  },
-  operatorShiftCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: isDark ? '#0284C7' : '#BAE6FD',
-  },
-  operatorShiftHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  shiftBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  pulseDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#0284C7',
-    marginRight: 6,
-  },
-  shiftBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#0284C7',
-  },
-  shiftTimeText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  shiftCardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  shiftCardDesc: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  shiftStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: isDark ? colors.surfaceElevated : '#F8FAFC',
-    borderRadius: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  shiftStatItem: {
-    alignItems: 'center',
+  overviewCard: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
   },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#CBD5E1',
+  overviewIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
-  shiftStatNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0284C7',
+  overviewValue: {
+    fontSize: 16,
+    fontWeight: '800',
     marginBottom: 2,
   },
-  shiftStatLabel: {
+  overviewLabel: {
     fontSize: 10,
-    color: colors.textSecondary,
     fontWeight: '600',
     textAlign: 'center',
   },
-  menuCard: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 14,
+
+  /* 2. Today's Business Summary */
+  todaySummaryCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  arrivalMenuCard: {
-    borderColor: '#A7F3D0',
-    backgroundColor: colors.cardBackground,
-  },
-  saleMenuCard: {
-    borderColor: isDark ? '#0284C7' : '#BAE6FD',
-    backgroundColor: colors.cardBackground,
-  },
-  syncMenuCard: {
-    borderColor: '#FCD34D',
-    backgroundColor: colors.cardBackground,
-    borderWidth: 1.5,
-  },
-  cashDebtMenuCard: {
-    borderColor: '#A7F3D0',
-    backgroundColor: colors.cardBackground,
-  },
-  cashDebtIconWrap: {
-    backgroundColor: '#E8F5EC',
-  },
-  cashDebtTag: {
-    backgroundColor: '#FEF2F2',
-  },
-  cashDebtTagText: {
-    color: '#DC2626',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  gradesMenuCard: {
-    borderColor: isDark ? '#0284C7' : '#BAE6FD',
-    backgroundColor: colors.cardBackground,
-  },
-  gradesIconWrap: {
-    backgroundColor: '#E0F2FE',
-  },
-  gradesTag: {
-    backgroundColor: '#E0F2FE',
-  },
-  gradesTagText: {
-    color: '#0284C7',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  pricingMenuCard: {
-    borderColor: '#FCD34D',
-    backgroundColor: colors.cardBackground,
-  },
-  pricingIconWrap: {
-    backgroundColor: '#FEF3C7',
-  },
-  pricingTag: {
-    backgroundColor: '#FEF3C7',
-  },
-  pricingTagText: {
-    color: '#B45309',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  reportsMenuCard: {
-    borderColor: '#DDD6FE',
-    backgroundColor: colors.cardBackground,
-  },
-  reportsIconWrap: {
-    backgroundColor: '#F3E8FF',
-  },
-  reportsTag: {
-    backgroundColor: '#F3E8FF',
-  },
-  reportsTagText: {
-    color: '#7C3AED',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  specialMenuCard: {
-    borderColor: '#DDD6FE',
-    backgroundColor: colors.cardBackground,
-  },
-  iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#E8F4EC',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginBottom: 10,
   },
-  arrivalIconContainer: {
-    backgroundColor: '#E8F5EC',
-  },
-  saleIconContainer: {
-    backgroundColor: '#E0F2FE',
-  },
-  syncIconContainer: {
-    backgroundColor: '#FEF3C7',
-  },
-  specialIconContainer: {
-    backgroundColor: '#F3E8FF',
-  },
-  cardText: {
+  todayMetricCol: {
     flex: 1,
-    paddingRight: 6,
+    alignItems: 'center',
   },
-  cardHeaderRow: {
+  todayMetricVal: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  todayMetricLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  todayMetricSub: {
+    fontSize: 9,
+    marginTop: 1,
+  },
+  todayDivider: {
+    width: 1,
+    height: 30,
+  },
+
+  /* Quick Operations Row */
+  quickOpsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  quickOpBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 10,
+    gap: 6,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  cardDescription: {
+  quickOpBtnText: {
+    color: '#FFFFFF',
     fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
+    fontWeight: '700',
   },
-  moduleTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+
+  /* 3. Important Alerts */
+  alertsContainer: {
+    gap: 8,
+    marginBottom: 14,
+  },
+  alertItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  alertIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  alertContent: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  alertSubtitle: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+
+  /* 4. Recent Activity */
+  activityCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  activityTabs: {
+    flexDirection: 'row',
+    padding: 3,
+  },
+  activityTabBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
     borderRadius: 6,
   },
-  moduleTagText: {
+  activityTabText: {
     fontSize: 11,
-    fontWeight: '700',
   },
-  ownerTag: {
-    backgroundColor: '#E8F5EC',
+  activityContentList: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  ownerTagText: {
-    color: '#16834A',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  operatorTag: {
-    backgroundColor: '#E0F2FE',
-  },
-  operatorTagText: {
-    color: '#0284C7',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  commonTag: {
-    backgroundColor: isDark ? colors.surfaceElevated : '#F3F4F6',
-  },
-  commonTagText: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  purpleTag: {
-    backgroundColor: '#F3E8FF',
-  },
-  purpleTagText: {
-    color: '#7C3AED',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  operatorNoticeCard: {
-    backgroundColor: isDark ? '#082F49' : '#F0F9FF',
-    borderRadius: 14,
-    padding: 16,
+  activityRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: isDark ? '#0284C7' : '#BAE6FD',
-    marginTop: 8,
-    marginBottom: 20,
+    alignItems: 'center',
+    paddingVertical: 10,
   },
-  operatorNoticeContent: {
+  activityIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  activityMain: {
     flex: 1,
-    marginLeft: 12,
+    marginRight: 8,
   },
-  operatorNoticeTitle: {
-    fontSize: 14,
+  activityParty: {
+    fontSize: 13,
     fontWeight: '700',
-    color: isDark ? '#38BDF8' : '#0369A1',
-    marginBottom: 4,
   },
-  operatorNoticeText: {
+  activitySub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  activityRight: {
+    alignItems: 'flex-end',
+  },
+  activityAmount: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activityTime: {
+    fontSize: 10,
+    marginTop: 1,
+  },
+  emptyActivityText: {
+    textAlign: 'center',
     fontSize: 12,
-    color: isDark ? '#BAE6FD' : '#334155',
-    lineHeight: 18,
+    paddingVertical: 18,
   },
 });

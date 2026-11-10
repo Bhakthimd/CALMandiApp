@@ -6,6 +6,7 @@ import React, {
   useRef,
   useCallback,
   ReactNode,
+  useMemo,
 } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { getProductImage } from '../utils/productImages';
@@ -19,6 +20,7 @@ import {
   UserRole,
   StaffMember,
   ArrivalRecord,
+  ArrivalLot,
   SaleRecord,
   LedgerTransaction,
   CustomerPricingRule,
@@ -26,6 +28,9 @@ import {
   FarmerPatti,
   MandiSlip,
   TallyRecord,
+  DispatchInvoice,
+  StockLedgerEntry,
+  MandiWorkspace,
 } from '../types';
 import {
   initialCustomers,
@@ -43,10 +48,12 @@ import {
   initialTallyRecords,
   availableUnits,
   demoOwnerProfile,
+  demoOperatorProfile,
 } from '../data/mockData';
 import {
   initOfflineStorage,
   saveArrivalToStorage,
+  loadArrivalLotsFromStorage,
   saveSaleToStorage,
   loadArrivalsFromStorage,
   loadSalesFromStorage,
@@ -56,15 +63,52 @@ import {
   loadLedgerTransactionsFromStorage,
   saveProductGradesToStorage,
   loadProductGradesFromStorage,
+  deleteProductGradeFromStorage,
   saveWastageRecordToStorage,
   loadWastageRecordsFromStorage,
   savePricingRuleToStorage,
   loadPricingRulesFromStorage,
+  deletePricingRuleFromStorage,
   saveFarmerPattiToStorage,
   loadFarmerPattisFromStorage,
+  saveCustomerToStorage,
+  loadCustomersFromStorage,
+  deleteCustomerFromStorage,
+  saveProductToStorage,
+  loadProductsFromStorage,
+  deleteProductFromStorage,
+  saveCategoryToStorage,
+  loadCategoriesFromStorage,
+  deleteCategoryFromStorage,
+  saveUserToStorage,
+  loadUsersFromStorage,
+  saveWorkspaceToStorage,
+  loadWorkspacesFromStorage,
+  saveStaffMemberToStorage,
+  loadStaffMembersFromStorage,
+  saveSlipToStorage,
+  loadSlipsFromStorage,
+  saveTallyRecordToStorage,
+  loadTallyRecordsFromStorage,
+  loadDispatchInvoicesFromStorage,
+  loadStockLedgerFromStorage,
   setMetaValue,
   getMetaValue,
 } from '../services/offlineStorage';
+import {
+  processArrivalInventory,
+  processGradingAndWastage,
+  calculateTotalGradedStock,
+  GradingAllocationInput,
+} from '../services/inventoryService';
+import {
+  calculateCustomerFinancials,
+  executeDispatchTransaction,
+  collectCustomerPayment,
+  cancelDispatchInvoice,
+  DispatchInvoiceInput,
+  PaymentCollectionInput,
+} from '../services/financeService';
 
 export interface FinancialSummary {
   totalCashReceived: number;
@@ -74,6 +118,15 @@ export interface FinancialSummary {
   netOutstanding: number;
 }
 
+const DEFAULT_WORKSPACE: MandiWorkspace = {
+  id: 'ws_patel_mandi',
+  name: 'MDessentials',
+  location: 'Mysuru',
+  ownerId: demoOwnerProfile.id,
+  joinCode: 'MYSURU101',
+  createdAt: new Date().toISOString(),
+};
+
 interface MandiContextType {
   currentUser: UserProfile | null;
   setCurrentUser: (user: UserProfile | null) => void;
@@ -82,6 +135,25 @@ interface MandiContextType {
   switchRole: (role: UserRole) => void;
   isOwner: boolean;
   isOperator: boolean;
+
+  // Workspace
+  currentWorkspace: MandiWorkspace | null;
+  workspaces: MandiWorkspace[];
+  registerOwner: (params: {
+    name: string;
+    mobile: string;
+    business: string;
+    location: string;
+    password?: string;
+  }) => Promise<UserProfile>;
+  registerOperator: (params: {
+    name: string;
+    mobile: string;
+    business?: string;
+    location?: string;
+    workspaceCode?: string;
+    password?: string;
+  }) => Promise<UserProfile>;
 
   // Permission flags
   canDeleteProduct: boolean;
@@ -97,12 +169,18 @@ interface MandiContextType {
   customers: Customer[];
   addCustomer: (customer: Omit<Customer, 'id'>) => boolean;
   updateCustomer: (id: string, updates: Partial<Customer>) => boolean;
+  deleteCustomer: (id: string) => boolean;
   categories: Category[];
-  addCategory: (name: string) => { success: boolean; error?: string };
+  addCategory: (name: string, image?: string) => { success: boolean; error?: string };
+  updateCategory: (id: string, updates: Partial<Category>) => { success: boolean; error?: string };
+  deleteCategory: (id: string) => { success: boolean; error?: string };
   products: Product[];
   addProduct: (product: Omit<Product, 'id'>) => boolean;
   deleteProduct: (productId: string) => boolean;
   updateProductQuantity: (productId: string, quantity: string) => void;
+  batchAddSelectedProducts: (
+    items: { productId: string; quantity: number; unit?: string; mode?: 'ADD' | 'SET' }[]
+  ) => { success: boolean; count: number };
   units: UnitType[];
 
   // Real-time Analytics & Operational Metrics
@@ -124,24 +202,23 @@ interface MandiContextType {
     openingBalance: number;
   };
   financialSummary: FinancialSummary;
+  collectPayment: (input: PaymentCollectionInput) => Promise<LedgerTransaction>;
 
   // FEATURE 2: Product Grading and Wastage Management
   productGrades: ProductGrade[];
   wastageRecords: WastageRecord[];
+  arrivalLots: ArrivalLot[];
+  stockLedger: StockLedgerEntry[];
   addProductGrade: (gradeData: Omit<ProductGrade, 'id'>) => Promise<ProductGrade>;
   updateProductGrade: (id: string, updates: Partial<ProductGrade>) => Promise<boolean>;
   deleteProductGrade: (id: string) => Promise<boolean>;
   toggleGradeActive: (id: string) => Promise<boolean>;
   getProductGrades: (productId: string) => ProductGrade[];
-  recordWastageAndSorting: (params: {
-    productId: string;
-    productName: string;
-    originalQuantity: number;
-    gradeQuantities: Record<string, number>;
-    wastageQuantity: number;
-    wastageReason: string;
-    notes?: string;
-  }) => Promise<{ success: boolean; error?: string; wastageRecord?: WastageRecord }>;
+  recordWastageAndSorting: (params: GradingAllocationInput) => Promise<{
+    success: boolean;
+    error?: string;
+    wastageRecord?: WastageRecord;
+  }>;
 
   // FEATURE 3: Customer-Wise and Product-Wise Pricing
   pricingRules: CustomerPricingRule[];
@@ -162,13 +239,12 @@ interface MandiContextType {
 
   // FEATURE 4: Farmer Patti Records
   pattis: FarmerPatti[];
-  generatePatti: (
-    params: Omit<FarmerPatti, 'id' | 'pattiNumber'>
-  ) => Promise<FarmerPatti>;
+  generatePatti: (params: Omit<FarmerPatti, 'id' | 'pattiNumber'>) => Promise<FarmerPatti>;
 
   // Offline Mode & Data Sync
   arrivals: ArrivalRecord[];
   sales: SaleRecord[];
+  dispatchInvoices: DispatchInvoice[];
   isOnline: boolean;
   isSimulatedOffline: boolean;
   isEffectiveOnline: boolean;
@@ -185,6 +261,8 @@ interface MandiContextType {
   recordSale: (
     data: Omit<SaleRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
   ) => Promise<SaleRecord>;
+  recordDispatchInvoice: (input: DispatchInvoiceInput) => Promise<DispatchInvoice>;
+  cancelDispatch: (invoiceId: string, reason: string) => Promise<boolean>;
   syncPendingRecords: () => Promise<{ success: boolean; syncedCount: number; message: string }>;
   toggleOfflineSimulation: (forced?: boolean) => void;
   deleteArrival: (id: string) => void;
@@ -217,35 +295,35 @@ interface MandiContextType {
 const MandiContext = createContext<MandiContextType | undefined>(undefined);
 
 export const MandiProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(demoOwnerProfile);
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(initialStaffMembers);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [shiftUpdatesCount, setShiftUpdatesCount] = useState<number>(14);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentWorkspace, setCurrentWorkspace] = useState<MandiWorkspace | null>(DEFAULT_WORKSPACE);
+  const [workspaces, setWorkspaces] = useState<MandiWorkspace[]>([DEFAULT_WORKSPACE]);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [shiftUpdatesCount, setShiftUpdatesCount] = useState<number>(0);
 
-  // Feature 1 State
-  const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>(initialLedgerTransactions);
-
-  // Feature 2 State
-  const [productGrades, setProductGrades] = useState<ProductGrade[]>(initialProductGrades);
-  const [wastageRecords, setWastageRecords] = useState<WastageRecord[]>(initialWastageRecords);
-
-  // Feature 3 State
-  const [pricingRules, setPricingRules] = useState<CustomerPricingRule[]>(initialCustomerPricingRules);
-
-  // Feature 4 State
-  const [pattis, setPattis] = useState<FarmerPatti[]>(initialFarmerPattis);
-  const [slips, setSlips] = useState<MandiSlip[]>(initialSlips);
-  const [tallyRecords, setTallyRecords] = useState<TallyRecord[]>(initialTallyRecords);
+  // Financial & Inventory Ledger State
+  const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>([]);
+  const [productGrades, setProductGrades] = useState<ProductGrade[]>([]);
+  const [wastageRecords, setWastageRecords] = useState<WastageRecord[]>([]);
+  const [pricingRules, setPricingRules] = useState<CustomerPricingRule[]>([]);
+  const [pattis, setPattis] = useState<FarmerPatti[]>([]);
+  const [slips, setSlips] = useState<MandiSlip[]>([]);
+  const [tallyRecords, setTallyRecords] = useState<TallyRecord[]>([]);
   const [shiftSubmitted, setShiftSubmitted] = useState<boolean>(false);
 
+  // Arrivals & Lots
+  const [arrivals, setArrivals] = useState<ArrivalRecord[]>([]);
+  const [arrivalLots, setArrivalLots] = useState<ArrivalLot[]>([]);
+  const [sales, setSales] = useState<SaleRecord[]>([]);
+  const [dispatchInvoices, setDispatchInvoices] = useState<DispatchInvoice[]>([]);
+  const [stockLedger, setStockLedger] = useState<StockLedgerEntry[]>([]);
 
-  // Offline Mode & Sync State
-  const [arrivals, setArrivals] = useState<ArrivalRecord[]>(initialArrivals);
-  const [sales, setSales] = useState<SaleRecord[]>(initialSales);
+  // Connectivity
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [isSimulatedOffline] = useState<boolean>(false);
+  const [isSimulatedOffline, setIsSimulatedOffline] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const isSyncingLockRef = useRef<boolean>(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
@@ -258,7 +336,6 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
   const canManageStaff = isOwner;
   const canViewFinancials = isOwner;
 
-  // Effective online status
   const isEffectiveOnline = isOnline && !isSimulatedOffline;
 
   // Offline sync counters
@@ -272,79 +349,180 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     sales.filter((s) => s.syncStatus === 'failed').length;
   const pendingSyncCount = pendingArrivalsCount + pendingSalesCount;
 
-  // Initialize offline SQLite storage & load cached records
+  // =========================================================================
+  // INITIALIZE OFFLINE STORAGE & LOAD FROM SQLITE
+  // =========================================================================
   useEffect(() => {
     let isMounted = true;
     async function initStorage() {
       await initOfflineStorage();
 
-      // Load arrivals & sales
-      const storedArrivals = await loadArrivalsFromStorage();
-      const storedSales = await loadSalesFromStorage();
-      const storedLastSync = await getMetaValue('lastSyncedAt');
+      // Load Workspaces & Users
+      let storedWorkspaces = await loadWorkspacesFromStorage();
+      if (!storedWorkspaces || storedWorkspaces.length === 0) {
+        await saveWorkspaceToStorage(DEFAULT_WORKSPACE);
+        storedWorkspaces = [DEFAULT_WORKSPACE];
+      }
+      let storedUsers = await loadUsersFromStorage();
+      if (!storedUsers || storedUsers.length === 0) {
+        await saveUserToStorage({ ...demoOwnerProfile, workspaceId: DEFAULT_WORKSPACE.id });
+        await saveUserToStorage({ ...demoOperatorProfile, workspaceId: DEFAULT_WORKSPACE.id });
+        storedUsers = [
+          { ...demoOwnerProfile, workspaceId: DEFAULT_WORKSPACE.id },
+          { ...demoOperatorProfile, workspaceId: DEFAULT_WORKSPACE.id },
+        ];
+      }
 
-      // Load feature records
-      const storedLedger = await loadLedgerTransactionsFromStorage();
-      const storedGrades = await loadProductGradesFromStorage();
-      const storedWastage = await loadWastageRecordsFromStorage();
-      const storedRules = await loadPricingRulesFromStorage();
-      const storedPattis = await loadFarmerPattisFromStorage();
+      // Check for saved session
+      const savedSessionMobile = await getMetaValue('current_user_session');
+      let activeUser: UserProfile | null = null;
+      if (savedSessionMobile) {
+        activeUser = storedUsers.find((u) => u.mobile === savedSessionMobile) || null;
+      }
+      setCurrentUser(activeUser);
 
-      if (!isMounted) return;
+      // Load Customers
+      let storedCustomers = await loadCustomersFromStorage();
+      if (!storedCustomers || storedCustomers.length === 0) {
+        for (const c of initialCustomers) {
+          await saveCustomerToStorage(c);
+        }
+        storedCustomers = initialCustomers;
+      }
 
-      if (storedArrivals && storedArrivals.length > 0) {
-        setArrivals(storedArrivals);
-      } else {
+      // Load Categories
+      let storedCategories = await loadCategoriesFromStorage();
+      if (!storedCategories || storedCategories.length === 0) {
+        for (const cat of initialCategories) {
+          await saveCategoryToStorage(cat);
+        }
+        storedCategories = initialCategories;
+      }
+
+      // Load Products
+      let storedProducts = await loadProductsFromStorage();
+      if (!storedProducts || storedProducts.length === 0) {
+        for (const p of initialProducts) {
+          await saveProductToStorage(p);
+        }
+        storedProducts = initialProducts;
+      }
+
+      // Load Product Grades
+      let storedGrades = await loadProductGradesFromStorage();
+      if (!storedGrades || storedGrades.length === 0) {
+        await saveProductGradesToStorage(initialProductGrades);
+        storedGrades = initialProductGrades;
+      }
+
+      // Load Arrivals & Lots
+      let storedArrivals = await loadArrivalsFromStorage();
+      if (!storedArrivals || storedArrivals.length === 0) {
         for (const arr of initialArrivals) {
           await saveArrivalToStorage(arr);
         }
+        storedArrivals = initialArrivals;
       }
+      const storedLots = await loadArrivalLotsFromStorage();
 
-      if (storedSales && storedSales.length > 0) {
-        setSales(storedSales);
-      } else {
+      // Load Sales & Invoices
+      let storedSales = await loadSalesFromStorage();
+      if (!storedSales || storedSales.length === 0) {
         for (const s of initialSales) {
           await saveSaleToStorage(s);
         }
+        storedSales = initialSales;
       }
+      const storedInvoices = await loadDispatchInvoicesFromStorage();
 
-      if (storedLedger && storedLedger.length > 0) {
-        setLedgerTransactions(storedLedger);
-      } else {
+      // Load Financial Ledger
+      let storedLedger = await loadLedgerTransactionsFromStorage();
+      if (!storedLedger || storedLedger.length === 0) {
         for (const tx of initialLedgerTransactions) {
           await saveLedgerTransactionToStorage(tx);
         }
+        storedLedger = initialLedgerTransactions;
       }
 
-      if (storedGrades && storedGrades.length > 0) {
-        setProductGrades(storedGrades);
-      } else {
-        await saveProductGradesToStorage(initialProductGrades);
-      }
+      // Load Stock Ledger
+      const storedStockLedger = await loadStockLedgerFromStorage();
 
-      if (storedWastage && storedWastage.length > 0) {
-        setWastageRecords(storedWastage);
-      } else {
+      // Load Wastage
+      let storedWastage = await loadWastageRecordsFromStorage();
+      if (!storedWastage || storedWastage.length === 0) {
         for (const w of initialWastageRecords) {
           await saveWastageRecordToStorage(w);
         }
+        storedWastage = initialWastageRecords;
       }
 
-      if (storedRules && storedRules.length > 0) {
-        setPricingRules(storedRules);
-      } else {
+      // Load Pricing Rules
+      let storedRules = await loadPricingRulesFromStorage();
+      if (!storedRules || storedRules.length === 0) {
         for (const r of initialCustomerPricingRules) {
           await savePricingRuleToStorage(r);
         }
+        storedRules = initialCustomerPricingRules;
       }
 
-      if (storedPattis && storedPattis.length > 0) {
-        setPattis(storedPattis);
-      } else {
+      // Load Pattis
+      let storedPattis = await loadFarmerPattisFromStorage();
+      if (!storedPattis || storedPattis.length === 0) {
         for (const p of initialFarmerPattis) {
           await saveFarmerPattiToStorage(p);
         }
+        storedPattis = initialFarmerPattis;
       }
+
+      // Load Slips & Tally
+      let storedSlips = await loadSlipsFromStorage();
+      if (!storedSlips || storedSlips.length === 0) {
+        for (const sl of initialSlips) {
+          await saveSlipToStorage(sl);
+        }
+        storedSlips = initialSlips;
+      }
+
+      let storedTally = await loadTallyRecordsFromStorage();
+      if (!storedTally || storedTally.length === 0) {
+        for (const t of initialTallyRecords) {
+          await saveTallyRecordToStorage(t);
+        }
+        storedTally = initialTallyRecords;
+      }
+
+      // Load Staff
+      let storedStaff = await loadStaffMembersFromStorage();
+      if (!storedStaff || storedStaff.length === 0) {
+        for (const sm of initialStaffMembers) {
+          await saveStaffMemberToStorage(sm);
+        }
+        storedStaff = initialStaffMembers;
+      }
+
+      const storedLastSync = await getMetaValue('lastSyncedAt');
+
+      if (!isMounted) return;
+
+      setCurrentUser(activeUser);
+      setWorkspaces(storedWorkspaces);
+      setCurrentWorkspace(storedWorkspaces[0] || DEFAULT_WORKSPACE);
+      setCustomers(storedCustomers);
+      setCategories(storedCategories);
+      setProducts(storedProducts);
+      setProductGrades(storedGrades);
+      setArrivals(storedArrivals);
+      setArrivalLots(storedLots || []);
+      setSales(storedSales);
+      setDispatchInvoices(storedInvoices || []);
+      setStockLedger(storedStockLedger || []);
+      setLedgerTransactions(storedLedger);
+      setWastageRecords(storedWastage);
+      setPricingRules(storedRules);
+      setPattis(storedPattis);
+      setSlips(storedSlips);
+      setTallyRecords(storedTally);
+      setStaffMembers(storedStaff);
 
       if (storedLastSync) {
         setLastSyncedAt(storedLastSync);
@@ -378,142 +556,107 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // --- SYNCHRONIZE PENDING RECORDS ---
-  const syncPendingRecords = useCallback(async (): Promise<{
-    success: boolean;
-    syncedCount: number;
-    message: string;
-  }> => {
-    if (!isEffectiveOnline) {
-      return {
-        success: false,
-        syncedCount: 0,
-        message: 'Cannot synchronize while in Offline Mode. Please connect to internet or turn off "Test Offline".',
-      };
-    }
-
-    if (isSyncingLockRef.current) {
-      return {
-        success: false,
-        syncedCount: 0,
-        message: 'Synchronization is already in progress.',
-      };
-    }
-
-    const pendingArrivalIds = arrivals
-      .filter((a) => a.syncStatus === 'pending' || a.syncStatus === 'failed')
-      .map((a) => a.id);
-    const pendingSaleIds = sales
-      .filter((s) => s.syncStatus === 'pending' || s.syncStatus === 'failed')
-      .map((s) => s.id);
-    const totalToSync = pendingArrivalIds.length + pendingSaleIds.length;
-
-    if (totalToSync === 0) {
-      return {
-        success: true,
-        syncedCount: 0,
-        message: 'All arrival and sale records are already synchronized with Mandi Cloud.',
-      };
-    }
-
-    isSyncingLockRef.current = true;
-    setIsSyncing(true);
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const nowIso = new Date().toISOString();
-      const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      setArrivals((prev) =>
-        prev.map((a) =>
-          pendingArrivalIds.includes(a.id)
-            ? { ...a, syncStatus: 'synced', syncedAt: nowIso, syncError: undefined }
-            : a
-        )
-      );
-
-      setSales((prev) =>
-        prev.map((s) =>
-          pendingSaleIds.includes(s.id)
-            ? { ...s, syncStatus: 'synced', syncedAt: nowIso, syncError: undefined }
-            : s
-        )
-      );
-
-      await markArrivalsAsSyncedInStorage(pendingArrivalIds, nowIso);
-      await markSalesAsSyncedInStorage(pendingSaleIds, nowIso);
-
-      setLastSyncedAt(nowTimeStr);
-      await setMetaValue('lastSyncedAt', nowTimeStr);
-
-      isSyncingLockRef.current = false;
-      setIsSyncing(false);
-
-      return {
-        success: true,
-        syncedCount: totalToSync,
-        message: `Successfully synchronized ${totalToSync} records (${pendingArrivalIds.length} arrivals, ${pendingSaleIds.length} sales) to Mandi Cloud!`,
-      };
-    } catch {
-      isSyncingLockRef.current = false;
-      setIsSyncing(false);
-      return {
-        success: false,
-        syncedCount: 0,
-        message: 'Synchronization failed due to a network interruption. Records remain safely stored offline.',
-      };
-    }
-  }, [isEffectiveOnline, arrivals, sales]);
-
-  // Automatic sync when connectivity returns
-  const prevEffectiveOnlineRef = useRef(isEffectiveOnline);
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    if (!prevEffectiveOnlineRef.current && isEffectiveOnline) {
-      const hasPending =
-        arrivals.some((a) => a.syncStatus === 'pending' || a.syncStatus === 'failed') ||
-        sales.some((s) => s.syncStatus === 'pending' || s.syncStatus === 'failed');
-      if (hasPending) {
-        timer = setTimeout(() => {
-          syncPendingRecords();
-        }, 150);
-      }
-    }
-    prevEffectiveOnlineRef.current = isEffectiveOnline;
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [isEffectiveOnline, arrivals, sales, syncPendingRecords]);
-
-  const toggleOfflineSimulation = () => {};
-
+  // =========================================================================
+  // USER & WORKSPACE REGISTRATION / AUTHENTICATION
+  // =========================================================================
   const loginUser = (user: UserProfile) => {
     setCurrentUser(user);
+    setMetaValue('current_user_session', user.mobile).catch(() => {});
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setMetaValue('current_user_session', '').catch(() => {});
   };
 
   const switchRole = (role: UserRole) => {
     if (currentUser) {
-      setCurrentUser({
-        ...currentUser,
-        role,
-      });
-    } else {
-      setCurrentUser({
-        id: Date.now().toString(),
-        name: role === 'Owner' ? 'Ramesh Patel' : 'Suresh Kumar',
-        mobile: role === 'Owner' ? '9876543210' : '9876509876',
-        business: 'Patel Krishi Mandi',
-        location: 'APMC Market Yard, Bangalore',
-        role,
-      });
+      const updated = { ...currentUser, role };
+      setCurrentUser(updated);
+      saveUserToStorage(updated).catch(() => {});
     }
   };
 
+  const registerOwner = async (params: {
+    name: string;
+    mobile: string;
+    business: string;
+    location: string;
+    password?: string;
+  }): Promise<UserProfile> => {
+    const cleanedMobile = params.mobile.replace(/\D/g, '');
+    const wsId = `ws_${Date.now()}`;
+    const code = params.business
+      .replace(/[^A-Za-z0-9]/g, '')
+      .slice(0, 5)
+      .toUpperCase() + Math.floor(100 + Math.random() * 900);
+
+    const newWorkspace: MandiWorkspace = {
+      id: wsId,
+      name: params.business.trim(),
+      location: params.location.trim(),
+      ownerId: `usr_${Date.now()}`,
+      joinCode: code,
+      createdAt: new Date().toISOString(),
+    };
+
+    const newOwner: UserProfile = {
+      id: newWorkspace.ownerId,
+      name: params.name.trim(),
+      mobile: cleanedMobile,
+      business: params.business.trim(),
+      location: params.location.trim(),
+      role: 'Owner',
+      workspaceId: wsId,
+      password: params.password,
+    };
+
+    await saveWorkspaceToStorage(newWorkspace);
+    await saveUserToStorage(newOwner);
+
+    setWorkspaces((prev) => [newWorkspace, ...prev]);
+    setCurrentWorkspace(newWorkspace);
+    loginUser(newOwner);
+
+    return newOwner;
+  };
+
+  const registerOperator = async (params: {
+    name: string;
+    mobile: string;
+    business?: string;
+    location?: string;
+    workspaceCode?: string;
+    password?: string;
+  }): Promise<UserProfile> => {
+    const cleanedMobile = params.mobile.replace(/\D/g, '');
+    let matchedWs = currentWorkspace;
+
+    if (params.workspaceCode) {
+      const found = workspaces.find(
+        (w) => w.joinCode.toUpperCase() === params.workspaceCode?.trim().toUpperCase()
+      );
+      if (found) matchedWs = found;
+    }
+
+    const newOperator: UserProfile = {
+      id: `usr_op_${Date.now()}`,
+      name: params.name.trim(),
+      mobile: cleanedMobile,
+      business: matchedWs?.name || params.business || 'Mandi Yard',
+      location: matchedWs?.location || params.location || 'APMC Yard',
+      role: 'Operator',
+      workspaceId: matchedWs?.id,
+      password: params.password,
+    };
+
+    await saveUserToStorage(newOperator);
+    loginUser(newOperator);
+
+    return newOperator;
+  };
+
+  // Staff management
   const addStaffMember = (staffData: Omit<StaffMember, 'id'>): boolean => {
     if (!staffData.name.trim() || !staffData.mobile.trim()) {
       return false;
@@ -527,15 +670,19 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       status: staffData.status || 'Active',
     };
     setStaffMembers((prev) => [...prev, newStaff]);
+    saveStaffMemberToStorage(newStaff).catch(() => {});
     return true;
   };
 
+  // =========================================================================
+  // MASTER ENTITIES: CUSTOMERS, CATEGORIES, PRODUCTS
+  // =========================================================================
   const addCustomer = (customerData: Omit<Customer, 'id'>): boolean => {
     const cleanName = customerData.name.trim();
     const cleanMobile = customerData.mobile.replace(/\D/g, '');
-    const cleanBusiness = customerData.business.trim();
+    const cleanBusiness = (customerData.business || '').trim() || cleanName;
 
-    if (!cleanName || cleanMobile.length !== 10 || !cleanBusiness) {
+    if (!cleanName || cleanMobile.length !== 10) {
       return false;
     }
 
@@ -546,62 +693,93 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       mobile: cleanMobile,
       business: cleanBusiness,
       customerType: customerData.customerType || 'Buyer',
+      customerRoles: customerData.customerRoles || (customerData.customerType ? [customerData.customerType] : ['Buyer']),
       openingBalance,
       totalReceivable: openingBalance > 0 ? openingBalance : 0,
       totalPayable: openingBalance < 0 ? Math.abs(openingBalance) : 0,
       currentBalance: openingBalance,
+      pendingAmount: openingBalance > 0 ? openingBalance : 0,
       balance:
         openingBalance > 0
           ? `₹ ${openingBalance.toLocaleString()} Pending`
           : openingBalance < 0
           ? `₹ ${Math.abs(openingBalance).toLocaleString()} Mandi Owes`
-          : 'Settled',
+          : 'Settled (₹ 0)',
       address: customerData.address || '',
       notes: customerData.notes || '',
       createdAt: new Date().toISOString(),
     };
 
     setCustomers((prev) => [newCustomer, ...prev]);
+    saveCustomerToStorage(newCustomer).catch(() => {});
     setShiftUpdatesCount((prev) => prev + 1);
     return true;
   };
 
   const updateCustomer = (id: string, updates: Partial<Customer>): boolean => {
     setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+      prev.map((c) => {
+        if (c.id === id) {
+          const updated = { ...c, ...updates };
+          saveCustomerToStorage(updated).catch(() => {});
+          return updated;
+        }
+        return c;
+      })
     );
     return true;
   };
 
-  const addCategory = (
-    name: string
-  ): { success: boolean; error?: string } => {
+  const deleteCustomer = (id: string): boolean => {
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    deleteCustomerFromStorage(id).catch(() => {});
+    return true;
+  };
+
+  const addCategory = (name: string, image?: string): { success: boolean; error?: string } => {
     const cleanName = name.trim();
-
     if (!cleanName) {
-      return {
-        success: false,
-        error: 'Please enter a category name.',
-      };
+      return { success: false, error: 'Please enter a category name.' };
     }
-
     const alreadyExists = categories.some(
       (cat) => cat.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
-
     if (alreadyExists) {
-      return {
-        success: false,
-        error: `Category "${cleanName}" already exists.`,
-      };
+      return { success: false, error: `Category "${cleanName}" already exists.` };
     }
 
     const newCategory: Category = {
-      id: Date.now().toString(),
+      id: `cat_${Date.now()}`,
       name: cleanName,
+      image: image || undefined,
     };
-
     setCategories((prev) => [...prev, newCategory]);
+    saveCategoryToStorage(newCategory).catch(() => {});
+    return { success: true };
+  };
+
+  const updateCategory = (
+    id: string,
+    updates: Partial<Category>
+  ): { success: boolean; error?: string } => {
+    let found = false;
+    setCategories((prev) =>
+      prev.map((c) => {
+        if (c.id === id) {
+          found = true;
+          const updated = { ...c, ...updates };
+          saveCategoryToStorage(updated).catch(() => {});
+          return updated;
+        }
+        return c;
+      })
+    );
+    return found ? { success: true } : { success: false, error: 'Category not found' };
+  };
+
+  const deleteCategory = (id: string): { success: boolean; error?: string } => {
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    deleteCategoryFromStorage(id).catch(() => {});
     return { success: true };
   };
 
@@ -609,7 +787,6 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     const cleanName = productData.name.trim();
     const category = productData.category.trim();
     const unit = productData.unit.trim();
-    const quantity = productData.quantity ? productData.quantity.toString().trim() : '0';
     const price = productData.price ? productData.price.toString().trim() : '';
 
     if (!cleanName || !category || !unit) {
@@ -617,9 +794,8 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const newId = `prod_${Date.now()}`;
-
-    // Create 4 standard default grades (A, B, C, D) for every new product
     const basePriceNum = parseFloat(price) || 20;
+
     const initialGrades: ProductGrade[] = [
       {
         id: `grd_${newId}_a`,
@@ -636,7 +812,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         name: 'Grade B',
         description: 'Standard market quality',
         defaultPrice: basePriceNum,
-        stockQuantity: parseFloat(quantity) || 0,
+        stockQuantity: 0,
         isActive: true,
       },
       {
@@ -648,15 +824,6 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         stockQuantity: 0,
         isActive: true,
       },
-      {
-        id: `grd_${newId}_d`,
-        productId: newId,
-        name: 'Grade D (Culled)',
-        description: 'Damaged or sorting rejects',
-        defaultPrice: Math.round(basePriceNum * 0.2),
-        stockQuantity: 0,
-        isActive: true,
-      },
     ];
 
     const newProduct: Product = {
@@ -664,8 +831,9 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       name: cleanName,
       category,
       unit,
-      quantity,
+      quantity: productData.quantity || '0',
       price,
+      costPrice: productData.costPrice || '',
       grades: initialGrades,
       ungradedStock: 0,
       image: productData.image || getProductImage({ name: cleanName, category }),
@@ -673,61 +841,71 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
     setProducts((prev) => [newProduct, ...prev]);
     setProductGrades((prev) => [...prev, ...initialGrades]);
-    saveProductGradesToStorage(initialGrades);
+    saveProductToStorage(newProduct).catch(() => {});
+    saveProductGradesToStorage(initialGrades).catch(() => {});
 
     setShiftUpdatesCount((prev) => prev + 1);
     return true;
   };
 
   const deleteProduct = (productId: string): boolean => {
-    if (!canDeleteProduct) {
-      return false;
-    }
+    if (!canDeleteProduct) return false;
     setProducts((prev) => prev.filter((p) => p.id !== productId));
     setProductGrades((prev) => prev.filter((g) => g.productId !== productId));
+    deleteProductFromStorage(productId).catch(() => {});
     return true;
   };
 
   const updateProductQuantity = (productId: string, quantity: string) => {
     setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, quantity } : p))
+      prev.map((p) => {
+        if (p.id === productId) {
+          const updated = { ...p, quantity };
+          saveProductToStorage(updated).catch(() => {});
+          return updated;
+        }
+        return p;
+      })
     );
     setShiftUpdatesCount((prev) => prev + 1);
   };
 
-  // =========================================================================
-  // FEATURE 1: CUSTOMER-WISE CASH AND DEBT MANAGEMENT
-  // =========================================================================
+  const batchAddSelectedProducts = (
+    items: { productId: string; quantity: number; unit?: string; mode?: 'ADD' | 'SET' }[]
+  ): { success: boolean; count: number } => {
+    if (!items || items.length === 0) return { success: false, count: 0 };
+    setProducts((prev) => {
+      return prev.map((prod) => {
+        const match = items.find((it) => it.productId === prod.id);
+        if (!match) return prod;
+        const currentNum = parseFloat(prod.quantity || '0') || 0;
+        const newQty =
+          match.mode === 'SET'
+            ? Math.max(0, match.quantity)
+            : Math.max(0, currentNum + match.quantity);
+        const updated: Product = {
+          ...prod,
+          quantity: String(newQty),
+          unit: match.unit || prod.unit,
+        };
+        saveProductToStorage(updated).catch(() => {});
+        return updated;
+      });
+    });
+    setShiftUpdatesCount((prev) => prev + items.length);
+    return { success: true, count: items.length };
+  };
 
-  // Calculate customer financial metrics dynamically from ledger & opening balance
+  // =========================================================================
+  // FINANCIAL LEDGER & BALANCES (SINGLE SOURCE OF TRUTH)
+  // =========================================================================
   const getCustomerBalance = useCallback(
     (customerId: string) => {
       const cust = customers.find((c) => c.id === customerId);
-      const opening = cust?.openingBalance || 0;
-
-      const custTxs = ledgerTransactions.filter((tx) => tx.customerId === customerId);
-
-      let debits = 0; // Increases what customer owes
-      let credits = 0; // Decreases what customer owes / increases what Mandi owes farmer
-
-      custTxs.forEach((tx) => {
-        if (tx.category === 'DEBIT') debits += tx.amount;
-        else if (tx.category === 'CREDIT') credits += tx.amount;
-      });
-
-      // Net balance convention:
-      // Positive = Customer owes Mandi (Receivable)
-      // Negative = Mandi owes Customer (Payable)
-      const currentBalance = opening + debits - credits;
-      const totalReceivable = currentBalance > 0 ? currentBalance : 0;
-      const totalPayable = currentBalance < 0 ? Math.abs(currentBalance) : 0;
-
-      return {
-        currentBalance,
-        totalReceivable,
-        totalPayable,
-        openingBalance: opening,
-      };
+      if (!cust) {
+        return { currentBalance: 0, totalReceivable: 0, totalPayable: 0, openingBalance: 0 };
+      }
+      return calculateCustomerFinancials(cust, ledgerTransactions);
     },
     [customers, ledgerTransactions]
   );
@@ -756,16 +934,16 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
     setLedgerTransactions((prev) => [newTx, ...prev]);
 
-    // Update customer cached balances
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === txData.customerId) {
           const nextBal = balanceAfter;
-          return {
+          const updated: Customer = {
             ...c,
             currentBalance: nextBal,
             totalReceivable: nextBal > 0 ? nextBal : 0,
             totalPayable: nextBal < 0 ? Math.abs(nextBal) : 0,
+            pendingAmount: nextBal > 0 ? nextBal : 0,
             balance:
               nextBal > 0
                 ? `₹ ${nextBal.toLocaleString()} Pending`
@@ -773,6 +951,8 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
                 ? `₹ ${Math.abs(nextBal).toLocaleString()} Mandi Owes`
                 : 'Settled (₹ 0)',
           };
+          saveCustomerToStorage(updated).catch(() => {});
+          return updated;
         }
         return c;
       })
@@ -780,48 +960,68 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
     await saveLedgerTransactionToStorage(newTx);
     setShiftUpdatesCount((prev) => prev + 1);
-
     return newTx;
   };
 
-  // Financial Summaries for Cash & Debt Dashboard
-  const financialSummary: FinancialSummary = React.useMemo(() => {
+  const collectPayment = async (input: PaymentCollectionInput): Promise<LedgerTransaction> => {
+    const cust = customers.find((c) => c.id === input.customerId);
+    if (!cust) throw new Error('Customer not found');
+
+    const result = await collectCustomerPayment({
+      input: { ...input, createdBy: currentUser?.name },
+      customer: cust,
+      allTransactions: ledgerTransactions,
+    });
+
+    setLedgerTransactions((prev) => [result.transaction, ...prev]);
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === input.customerId ? result.updatedCustomer : c))
+    );
+    setShiftUpdatesCount((prev) => prev + 1);
+    return result.transaction;
+  };
+
+  // Replaces arbitrary pendingAmount modification with unified payment recording
+  const settleCustomerBalance = (customerId: string, amountToSettle: number) => {
+    const cust = customers.find((c) => c.id === customerId);
+    if (!cust) return;
+
+    collectPayment({
+      customerId,
+      customerName: cust.name,
+      amount: amountToSettle,
+      paymentMethod: 'Cash',
+      notes: 'Balance settlement via Buyer Khata',
+    }).catch((err) => {
+      console.warn('[settleCustomerBalance] Error collecting payment:', err);
+    });
+  };
+
+  // Financial Summaries
+  const financialSummary: FinancialSummary = useMemo(() => {
     let totalCashReceived = 0;
     let totalCashPaid = 0;
 
-    ledgerTransactions.forEach((tx) => {
-      if (
-        tx.type === 'CASH_RECEIVED' ||
-        (tx.paymentMethod === 'Cash' && tx.category === 'CREDIT')
-      ) {
+    for (const tx of ledgerTransactions) {
+      if (tx.type === 'CASH_RECEIVED' || (tx.paymentMethod === 'Cash' && tx.category === 'CREDIT')) {
         totalCashReceived += tx.amount;
       }
-      if (
-        tx.type === 'CASH_PAID' ||
-        (tx.paymentMethod === 'Cash' && tx.category === 'DEBIT')
-      ) {
+      if (tx.type === 'CASH_PAID' || (tx.paymentMethod === 'Cash' && tx.category === 'DEBIT')) {
         totalCashPaid += tx.amount;
       }
-    });
-
-    // Also include cash sales in totalCashReceived if not in ledger
-    sales.forEach((s) => {
-      if (s.paymentMethod === 'Cash' && !s.customerId) {
-        totalCashReceived += s.totalAmount;
-      }
-    });
+    }
 
     let totalReceivable = 0;
     let totalPayable = 0;
 
-    customers.forEach((c) => {
-      const bal = getCustomerBalance(c.id);
+    for (const c of customers) {
+      const bal = calculateCustomerFinancials(c, ledgerTransactions);
       if (bal.currentBalance > 0) {
         totalReceivable += bal.currentBalance;
       } else if (bal.currentBalance < 0) {
         totalPayable += Math.abs(bal.currentBalance);
       }
-    });
+    }
 
     return {
       totalCashReceived,
@@ -830,12 +1030,11 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       totalPayable,
       netOutstanding: totalReceivable - totalPayable,
     };
-  }, [ledgerTransactions, sales, customers, getCustomerBalance]);
+  }, [ledgerTransactions, customers]);
 
   // =========================================================================
-  // FEATURE 2: PRODUCT GRADING AND WASTAGE MANAGEMENT
+  // PRODUCT GRADES & PRICING RULES
   // =========================================================================
-
   const getProductGrades = useCallback(
     (productId: string) => {
       return productGrades.filter((g) => g.productId === productId);
@@ -849,25 +1048,28 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       id: `grd_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     };
 
-    setProductGrades((prev) => [...prev, newGrade]);
+    const nextGrades = [...productGrades, newGrade];
+    setProductGrades(nextGrades);
 
-    // Update parent product's grades
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === gradeData.productId) {
-          const updated = [...(p.grades || []), newGrade];
-          const totalStock = updated.reduce((sum, g) => sum + (g.isActive ? g.stockQuantity : 0), 0);
-          return {
+          const proGrades = nextGrades.filter((g) => g.productId === p.id);
+          const gradedTotal = calculateTotalGradedStock(proGrades);
+          const ungraded = p.ungradedStock || 0;
+          const updated = {
             ...p,
-            grades: updated,
-            quantity: String(totalStock),
+            grades: proGrades,
+            quantity: String(gradedTotal + ungraded),
           };
+          saveProductToStorage(updated).catch(() => {});
+          return updated;
         }
         return p;
       })
     );
 
-    await saveProductGradesToStorage([...productGrades, newGrade]);
+    await saveProductGradesToStorage(nextGrades);
     return newGrade;
   };
 
@@ -890,12 +1092,15 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       prev.map((p) => {
         if (p.id === targetProductId) {
           const proGrades = nextGrades.filter((g) => g.productId === targetProductId);
-          const totalStock = proGrades.reduce((sum, g) => sum + (g.isActive ? g.stockQuantity : 0), 0);
-          return {
+          const gradedTotal = calculateTotalGradedStock(proGrades);
+          const ungraded = p.ungradedStock || 0;
+          const updated = {
             ...p,
             grades: proGrades,
-            quantity: String(totalStock),
+            quantity: String(gradedTotal + ungraded),
           };
+          saveProductToStorage(updated).catch(() => {});
+          return updated;
         }
         return p;
       })
@@ -914,6 +1119,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
   const deleteProductGrade = async (id: string): Promise<boolean> => {
     const target = productGrades.find((g) => g.id === id);
     if (!target) return false;
+
     const nextGrades = productGrades.filter((g) => g.id !== id);
     setProductGrades(nextGrades);
 
@@ -922,108 +1128,25 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       prev.map((p) => {
         if (p.id === targetProductId) {
           const proGrades = nextGrades.filter((g) => g.productId === targetProductId);
-          const totalStock = proGrades.reduce((sum, g) => sum + (g.isActive ? g.stockQuantity : 0), 0);
-          return {
+          const gradedTotal = calculateTotalGradedStock(proGrades);
+          const ungraded = p.ungradedStock || 0;
+          const updated = {
             ...p,
             grades: proGrades,
-            quantity: String(totalStock),
+            quantity: String(gradedTotal + ungraded),
           };
+          saveProductToStorage(updated).catch(() => {});
+          return updated;
         }
         return p;
       })
     );
 
-    await saveProductGradesToStorage(nextGrades);
+    await deleteProductGradeFromStorage(id);
     return true;
   };
 
-  // Record sorting batch and wastage with strict balance verification
-  const recordWastageAndSorting = async (params: {
-    productId: string;
-    productName: string;
-    originalQuantity: number;
-    gradeQuantities: Record<string, number>;
-    wastageQuantity: number;
-    wastageReason: string;
-    notes?: string;
-  }): Promise<{ success: boolean; error?: string; wastageRecord?: WastageRecord }> => {
-    const { productId, productName, originalQuantity, gradeQuantities, wastageQuantity, wastageReason, notes } = params;
-
-    // Strict validation
-    let totalGraded = 0;
-    Object.values(gradeQuantities).forEach((qty) => {
-      totalGraded += Math.max(0, qty || 0);
-    });
-
-    const totalProcessed = totalGraded + Math.max(0, wastageQuantity);
-
-    if (totalProcessed > originalQuantity) {
-      return {
-        success: false,
-        error: `Total processed quantity (${totalProcessed}) exceeds original available quantity (${originalQuantity}).`,
-      };
-    }
-
-    const remainingUngraded = Math.max(0, originalQuantity - totalProcessed);
-    const wastagePercentage = originalQuantity > 0 ? (wastageQuantity / originalQuantity) * 100 : 0;
-
-    const newWastageRecord: WastageRecord = {
-      id: `wst_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      productId,
-      productName,
-      originalQuantity,
-      gradeQuantities,
-      wastageQuantity,
-      wastageReason: wastageReason || 'Sorting Residue / Culled Produce',
-      wastagePercentage: parseFloat(wastagePercentage.toFixed(2)),
-      remainingUngradedQuantity: remainingUngraded,
-      timestamp: new Date().toISOString(),
-      recordedBy: currentUser?.name || 'Mandi Staff',
-      notes,
-    };
-
-    // Update grade stocks
-    const nextGrades = productGrades.map((g) => {
-      if (g.productId === productId && gradeQuantities[g.id] !== undefined) {
-        return {
-          ...g,
-          stockQuantity: g.stockQuantity + (gradeQuantities[g.id] || 0),
-        };
-      }
-      return g;
-    });
-
-    setProductGrades(nextGrades);
-    setWastageRecords((prev) => [newWastageRecord, ...prev]);
-
-    // Update main product stock
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === productId) {
-          const proGrades = nextGrades.filter((g) => g.productId === productId);
-          const totalStock = proGrades.reduce((sum, g) => sum + (g.isActive ? g.stockQuantity : 0), 0);
-          return {
-            ...p,
-            grades: proGrades,
-            quantity: String(totalStock),
-            ungradedStock: remainingUngraded,
-          };
-        }
-        return p;
-      })
-    );
-
-    await saveProductGradesToStorage(nextGrades);
-    await saveWastageRecordToStorage(newWastageRecord);
-    setShiftUpdatesCount((prev) => prev + 1);
-
-    return { success: true, wastageRecord: newWastageRecord };
-  };
-
-  // =========================================================================
-  // FEATURE 3: CUSTOMER-WISE AND PRODUCT-WISE PRICING
-  // =========================================================================
-
+  // Pricing rules
   const getCustomerPrice = useCallback(
     (
       customerId: string,
@@ -1035,7 +1158,6 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       rule?: CustomerPricingRule;
       defaultPrice: number;
     } => {
-      // Find matching product & grade default price
       const product = products.find((p) => p.id === productId);
       const grade = gradeId ? productGrades.find((g) => g.id === gradeId) : undefined;
       const defaultPrice = grade
@@ -1048,21 +1170,13 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
       const todayStr = new Date().toISOString().split('T')[0];
 
-      // Look for custom rule matching Customer + Product + Grade
       const matchingRule = pricingRules.find((rule) => {
         if (!rule.isActive) return false;
         if (rule.customerId !== customerId) return false;
         if (rule.productId !== productId) return false;
-
-        // If grade is specified, rule must match grade (or be product-wide)
-        if (gradeId && rule.gradeId && rule.gradeId !== gradeId) {
-          return false;
-        }
-
-        // Check effective & expiry date
+        if (gradeId && rule.gradeId && rule.gradeId !== gradeId) return false;
         if (rule.effectiveDate && rule.effectiveDate > todayStr) return false;
         if (rule.expiryDate && rule.expiryDate < todayStr) return false;
-
         return true;
       });
 
@@ -1075,11 +1189,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         };
       }
 
-      return {
-        price: defaultPrice,
-        isCustom: false,
-        defaultPrice,
-      };
+      return { price: defaultPrice, isCustom: false, defaultPrice };
     },
     [products, productGrades, pricingRules]
   );
@@ -1121,6 +1231,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
 
   const deletePricingRule = async (id: string): Promise<boolean> => {
     setPricingRules((prev) => prev.filter((r) => r.id !== id));
+    await deletePricingRuleFromStorage(id);
     return true;
   };
 
@@ -1130,345 +1241,6 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     return updatePricingRule(id, { isActive: !rule.isActive });
   };
 
-  // =========================================================================
-  // FEATURE 4: FARMER PATTI GENERATION
-  // =========================================================================
-
-  const generatePatti = async (
-    params: Omit<FarmerPatti, 'id' | 'pattiNumber'>
-  ): Promise<FarmerPatti> => {
-    const count = pattis.length + 1;
-    const pattiNumber = `PATTI-${new Date().getFullYear()}-${String(count).padStart(3, '0')}`;
-
-    const newPatti: FarmerPatti = {
-      ...params,
-      id: `patti_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      pattiNumber,
-    };
-
-    setPattis((prev) => [newPatti, ...prev]);
-
-    // Record credit transaction in Farmer's Ledger (Mandi owes farmer netPayable)
-    if (params.farmerId) {
-      await addLedgerTransaction({
-        customerId: params.farmerId,
-        customerName: params.farmerName,
-        customerType: 'Farmer',
-        date: params.date || new Date().toISOString().split('T')[0],
-        type: 'PURCHASE_CREDIT',
-        category: 'CREDIT', // Mandi owes farmer
-        amount: params.netPayable,
-        paymentMethod: 'Credit',
-        referenceNo: pattiNumber,
-        notes: `Farmer Patti for ${params.quantity} ${params.unit} ${params.productName} (${params.gradeName || 'Standard'})`,
-        arrivalId: params.arrivalId,
-        pattiId: newPatti.id,
-      });
-    }
-
-    await saveFarmerPattiToStorage(newPatti);
-    return newPatti;
-  };
-
-  // =========================================================================
-  // INTEGRATED RECORD ARRIVAL (WORKS OFFLINE & ONLINE)
-  // =========================================================================
-  const recordArrival = async (
-    data: Omit<ArrivalRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
-  ): Promise<ArrivalRecord> => {
-    const nowIso = new Date().toISOString();
-
-    const newArrival: ArrivalRecord = {
-      ...data,
-      id: `arr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      timestamp: nowIso,
-      syncStatus: 'synced',
-      recordedOffline: false,
-      syncedAt: nowIso,
-    };
-
-    // UPDATE PRODUCT & GRADE STOCK
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === data.productId || p.name.toLowerCase() === data.productName.toLowerCase()) {
-          const currentQty = parseFloat(p.quantity || '0') || 0;
-          return {
-            ...p,
-            quantity: String(currentQty + data.quantity),
-          };
-        }
-        return p;
-      })
-    );
-
-    // If product has Grade A or Grade B, add to Grade B as default standard incoming stock
-    setProductGrades((prev) =>
-      prev.map((g) => {
-        if (g.productId === data.productId && g.name.includes('Grade B')) {
-          return {
-            ...g,
-            stockQuantity: g.stockQuantity + data.quantity,
-          };
-        }
-        return g;
-      })
-    );
-
-    setArrivals((prev) => [newArrival, ...prev]);
-    setShiftUpdatesCount((prev) => prev + 1);
-
-    await saveArrivalToStorage(newArrival);
-    return newArrival;
-  };
-
-  // =========================================================================
-  // INTEGRATED RECORD SALE (WORKS OFFLINE & ONLINE, GRADE-AWARE, POSTS TO LEDGER)
-  // =========================================================================
-  const recordSale = async (
-    data: Omit<SaleRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
-  ): Promise<SaleRecord> => {
-    const nowIso = new Date().toISOString();
-
-    const newSale: SaleRecord = {
-      ...data,
-      id: `sale_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      timestamp: nowIso,
-      syncStatus: 'synced',
-      recordedOffline: false,
-      syncedAt: nowIso,
-    };
-
-    // 1. UPDATE GRADE-SPECIFIC STOCK
-    if (data.gradeId) {
-      setProductGrades((prev) =>
-        prev.map((g) => {
-          if (g.id === data.gradeId) {
-            return {
-              ...g,
-              stockQuantity: Math.max(0, g.stockQuantity - data.quantity),
-            };
-          }
-          return g;
-        })
-      );
-    }
-
-    // 2. UPDATE TOTAL PRODUCT QUANTITY
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === data.productId || p.name.toLowerCase() === data.productName.toLowerCase()) {
-          const currentQty = parseFloat(p.quantity || '0') || 0;
-          const nextQty = Math.max(0, currentQty - data.quantity);
-          return {
-            ...p,
-            quantity: String(nextQty),
-          };
-        }
-        return p;
-      })
-    );
-
-    // 3. POST TO CUSTOMER FINANCIAL LEDGER IF CUSTOMER IS REGISTERED
-    if (data.customerId) {
-      const finalAmount = data.netTotal || data.totalAmount;
-      const targetCust = customers.find((c) => c.id === data.customerId);
-
-      if (data.paymentMethod === 'Credit') {
-        // Credit sale: DEBIT customer account (increases what customer owes Mandi)
-        await addLedgerTransaction({
-          customerId: data.customerId,
-          customerName: data.customerName,
-          customerType: targetCust?.customerType || 'Buyer',
-          date: nowIso.split('T')[0],
-          type: 'CREDIT_SALE',
-          category: 'DEBIT',
-          amount: finalAmount,
-          paymentMethod: 'Credit',
-          referenceNo: newSale.id,
-          notes: `Credit Sale: ${data.quantity} ${data.unit} ${data.productName} (${data.gradeName || 'Standard'}) @ ₹${data.unitPrice}`,
-          saleId: newSale.id,
-        });
-      } else {
-        // Cash or UPI sale: record both debit bill and credit payment
-        await addLedgerTransaction({
-          customerId: data.customerId,
-          customerName: data.customerName,
-          customerType: targetCust?.customerType || 'Buyer',
-          date: nowIso.split('T')[0],
-          type: 'CASH_RECEIVED',
-          category: 'CREDIT',
-          amount: finalAmount,
-          paymentMethod: data.paymentMethod,
-          referenceNo: `BILL-${newSale.id.slice(-6).toUpperCase()}`,
-          notes: `Payment for ${data.quantity} ${data.unit} ${data.productName} (${data.paymentMethod})`,
-          saleId: newSale.id,
-        });
-      }
-    }
-
-    setSales((prev) => [newSale, ...prev]);
-    setShiftUpdatesCount((prev) => prev + 1);
-
-    await saveSaleToStorage(newSale);
-    return newSale;
-  };
-
-  const deleteArrival = (id: string) => {
-    setArrivals((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  const deleteSale = (id: string) => {
-    setSales((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  // =========================================================================
-  // MANDI SLIPS, FLOOR CRATE TALLY & SHIFT HANDOVER
-  // =========================================================================
-
-  const settleCustomerBalance = (customerId: string, amountToSettle: number) => {
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c.id === customerId) {
-          const currentPending = c.pendingAmount || 0;
-          const updated = Math.max(0, currentPending - amountToSettle);
-          return {
-            ...c,
-            pendingAmount: updated,
-            balance: updated > 0 ? `₹ ${updated.toLocaleString('en-IN')} Pending` : 'Settled',
-          };
-        }
-        return c;
-      })
-    );
-  };
-
-  const recordSlip = (
-    slipData: Omit<MandiSlip, 'id' | 'slipNumber' | 'date'>
-  ): MandiSlip => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dateFormatted = `Today, ${timeStr}`;
-
-    const newSlip: MandiSlip = {
-      id: `slip_${Date.now()}`,
-      slipNumber: `SLIP-${100 + slips.length + 1}`,
-      date: dateFormatted,
-      ...slipData,
-    };
-
-    // 1. Update physical product inventory in context
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === slipData.productId) {
-          const current = parseFloat(p.quantity || '0') || 0;
-          const delta = slipData.quantity;
-          const updated =
-            slipData.type === 'IN'
-              ? current + delta
-              : Math.max(0, current - delta);
-          return { ...p, quantity: updated.toString() };
-        }
-        return p;
-      })
-    );
-
-    // 2. If Outward dispatch with balance due, add directly to customer debt
-    if (slipData.type === 'OUT') {
-      const balanceDue = slipData.balanceAmount || 0;
-      if (slipData.customerId || slipData.partyMobile) {
-        setCustomers((prev) =>
-          prev.map((c) => {
-            if (
-              (slipData.customerId && c.id === slipData.customerId) ||
-              c.mobile === slipData.partyMobile ||
-              c.name === slipData.partyName
-            ) {
-              const currentPending = c.pendingAmount || 0;
-              const updatedPending = currentPending + balanceDue;
-              return {
-                ...c,
-                pendingAmount: updatedPending,
-                balance: `₹ ${updatedPending.toLocaleString('en-IN')} Pending`,
-              };
-            }
-            return c;
-          })
-        );
-      }
-    }
-
-    setSlips((prev) => [newSlip, ...prev]);
-    setShiftUpdatesCount((prev) => prev + 1);
-    return newSlip;
-  };
-
-  const recordTally = (
-    tallyData: Omit<TallyRecord, 'id' | 'time'>
-  ): TallyRecord => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const timeFormatted = `Today, ${timeStr}`;
-
-    const newRecord: TallyRecord = {
-      id: `tally_${Date.now()}`,
-      time: timeFormatted,
-      ...tallyData,
-    };
-
-    // Update physical product inventory in context
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === tallyData.productId) {
-          const current = parseFloat(p.quantity || '0') || 0;
-          const delta = tallyData.count;
-          const updated =
-            tallyData.mode === 'IN'
-              ? current + delta
-              : Math.max(0, current - delta);
-          return { ...p, quantity: updated.toString() };
-        }
-        return p;
-      })
-    );
-
-    // Auto-record corresponding MandiSlip for paperless audit
-    const matchingProduct = products.find((p) => p.id === tallyData.productId);
-    const rate = matchingProduct ? parseFloat(matchingProduct.price || '0') || 50 : 50;
-    const totalAmount = tallyData.count * rate;
-
-    const newSlip: MandiSlip = {
-      id: `slip_${Date.now()}`,
-      slipNumber: `TALLY-${100 + slips.length + 1}`,
-      date: timeFormatted,
-      type: tallyData.mode,
-      partyName:
-        tallyData.partyName?.trim() ||
-        (tallyData.mode === 'IN' ? 'Farmer Truck Unload' : 'Market Tempo Dispatch'),
-      partyMobile: '9876500000',
-      productId: tallyData.productId,
-      productName: tallyData.productName,
-      category: matchingProduct?.category || 'General',
-      quantity: tallyData.count,
-      unit: tallyData.unit,
-      ratePerUnit: rate,
-      totalAmount,
-      paidAmount: totalAmount,
-      balanceAmount: 0,
-      notes: `Counted via Floor Crate Tally. Vehicle: ${tallyData.vehicleNo || 'Floor Direct'}`,
-    };
-
-    setSlips((prev) => [newSlip, ...prev]);
-    setTallyRecords((prev) => [newRecord, ...prev]);
-    setShiftUpdatesCount((prev) => prev + 1);
-
-    return newRecord;
-  };
-
-  const submitShiftHandover = () => {
-    setShiftSubmitted(true);
-  };
-
-  // Helper shortcuts for customer product pricing
   const getCustomerProductPrice = useCallback(
     (customerId: string, productId: string, gradeName?: string): number | null => {
       if (!customerId || !productId) return null;
@@ -1479,20 +1251,9 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
           r.productId === productId &&
           (!gradeName || !r.gradeName || r.gradeName.toLowerCase() === gradeName.toLowerCase())
       );
-      if (matchingRule) return matchingRule.price;
-
-      const cust = customers.find((c) => c.id === customerId);
-      if (cust && cust.customPrices) {
-        const rule = cust.customPrices.find(
-          (cp) =>
-            cp.productId === productId &&
-            (!gradeName || !cp.gradeName || cp.gradeName.toLowerCase() === gradeName.toLowerCase())
-        );
-        if (rule) return rule.price;
-      }
-      return null;
+      return matchingRule ? matchingRule.price : null;
     },
-    [pricingRules, customers]
+    [pricingRules]
   );
 
   const setCustomerProductPrice = async (
@@ -1522,41 +1283,567 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  // Operator Cash in Drawer: sum of payments collected on sales today + base float
-  const operatorCashDrawer =
-    slips
-      .filter((s) => s.type === 'OUT')
-      .reduce((acc, curr) => acc + (curr.paidAmount || 0), 0) + 15000;
+  // =========================================================================
+  // ARRIVAL & LOT-BASED GRADING
+  // =========================================================================
+  const recordArrival = async (
+    data: Omit<ArrivalRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
+  ): Promise<ArrivalRecord> => {
+    const nowIso = new Date().toISOString();
+    const arrivalId = `arr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-  // Owner Financials
-  const todaySales =
-    slips
-      .filter((s) => s.type === 'OUT')
-      .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0) + 30000;
+    const newArrival: ArrivalRecord = {
+      ...data,
+      id: arrivalId,
+      timestamp: nowIso,
+      syncStatus: 'synced',
+      recordedOffline: false,
+      syncedAt: nowIso,
+    };
 
-  const todayProfit = Math.round(todaySales * 0.18);
+    let targetProduct = products.find(
+      (p) => p.id === data.productId || p.name.toLowerCase() === data.productName.toLowerCase()
+    );
 
-  const totalUdhaar = customers.reduce(
-    (acc, curr) => acc + (curr.pendingAmount || (curr.currentBalance && curr.currentBalance > 0 ? curr.currentBalance : 0)),
-    0
+    if (!targetProduct) {
+      targetProduct = {
+        id: data.productId,
+        name: data.productName,
+        category: data.category,
+        unit: data.unit,
+        quantity: '0',
+        ungradedStock: 0,
+      };
+    }
+
+    const { arrivalLot, updatedProduct, ledgerEntry } = await processArrivalInventory({
+      arrival: newArrival,
+      product: targetProduct,
+      currentProductGrades: productGrades.filter((g) => g.productId === targetProduct!.id),
+    });
+
+    setArrivals((prev) => [newArrival, ...prev]);
+    setArrivalLots((prev) => [arrivalLot, ...prev]);
+    setStockLedger((prev) => [ledgerEntry, ...prev]);
+    setProducts((prev) => {
+      const idx = prev.findIndex((p) => p.id === updatedProduct.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = updatedProduct;
+        return copy;
+      }
+      return [updatedProduct, ...prev];
+    });
+
+    setShiftUpdatesCount((prev) => prev + 1);
+    return newArrival;
+  };
+
+  const recordWastageAndSorting = async (
+    params: GradingAllocationInput
+  ): Promise<{ success: boolean; error?: string; wastageRecord?: WastageRecord }> => {
+    try {
+      const targetProduct = products.find((p) => p.id === params.productId);
+      if (!targetProduct) {
+        return { success: false, error: 'Product not found.' };
+      }
+
+      const lot = params.lotId ? arrivalLots.find((l) => l.id === params.lotId) : undefined;
+
+      const result = await processGradingAndWastage({
+        input: { ...params, recordedBy: currentUser?.name },
+        product: targetProduct,
+        productGrades,
+        lot,
+      });
+
+      setProducts((prev) =>
+        prev.map((p) => (p.id === result.updatedProduct.id ? result.updatedProduct : p))
+      );
+      setProductGrades(result.updatedGrades);
+      setWastageRecords((prev) => [result.wastageRecord, ...prev]);
+      setStockLedger((prev) => [...result.ledgerEntries, ...prev]);
+
+      if (result.updatedLot) {
+        setArrivalLots((prev) =>
+          prev.map((l) => (l.id === result.updatedLot!.id ? result.updatedLot! : l))
+        );
+      }
+
+      setShiftUpdatesCount((prev) => prev + 1);
+      return { success: true, wastageRecord: result.wastageRecord };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Error processing grading allocation.' };
+    }
+  };
+
+  // =========================================================================
+  // SALES & MULTI-ITEM DISPATCH INVOICES
+  // =========================================================================
+  const recordDispatchInvoice = async (input: DispatchInvoiceInput): Promise<DispatchInvoice> => {
+    const cust = input.customerId ? customers.find((c) => c.id === input.customerId) : undefined;
+
+    const result = await executeDispatchTransaction({
+      input: { ...input, createdBy: currentUser?.name },
+      customer: cust,
+      allCustomers: customers,
+      allTransactions: ledgerTransactions,
+      products,
+      productGrades,
+    });
+
+    setDispatchInvoices((prev) => [result.invoice, ...prev]);
+    setProducts(result.updatedProducts);
+    setProductGrades(result.updatedGrades);
+
+    if (result.updatedCustomer) {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === result.updatedCustomer!.id ? result.updatedCustomer! : c))
+      );
+    }
+    if (result.newTransactions.length > 0) {
+      setLedgerTransactions((prev) => [...result.newTransactions, ...prev]);
+    }
+
+    setShiftUpdatesCount((prev) => prev + 1);
+    return result.invoice;
+  };
+
+  // Legacy single-item sales adapter: delegates cleanly to dispatch invoice service
+  const recordSale = async (
+    data: Omit<SaleRecord, 'id' | 'timestamp' | 'syncStatus' | 'recordedOffline' | 'syncedAt' | 'syncError'>
+  ): Promise<SaleRecord> => {
+    const nowIso = new Date().toISOString();
+    const finalAmount = data.netTotal || data.totalAmount;
+
+    const invoice = await recordDispatchInvoice({
+      customerId: data.customerId,
+      customerName: data.customerName,
+      customerMobile: data.customerMobile,
+      items: [
+        {
+          productId: data.productId,
+          productName: data.productName,
+          category: data.category,
+          gradeId: data.gradeId,
+          gradeName: data.gradeName,
+          quantity: data.quantity,
+          unit: data.unit,
+          unitPrice: data.unitPrice,
+          totalAmount: data.totalAmount,
+          appliedPriceType: data.appliedPriceType,
+        },
+      ],
+      commissionRate: data.commissionRate,
+      commissionAmount: data.commissionAmount,
+      otherCharges: data.otherCharges,
+      cashPaid: data.paymentMethod === 'Cash' ? finalAmount : 0,
+      upiPaid: data.paymentMethod === 'UPI / Online' ? finalAmount : 0,
+      notes: data.notes,
+      createdBy: currentUser?.name,
+    });
+
+    const legacySale: SaleRecord = {
+      ...data,
+      id: invoice.id,
+      timestamp: nowIso,
+      syncStatus: 'synced',
+      recordedOffline: false,
+      syncedAt: nowIso,
+    };
+
+    setSales((prev) => [legacySale, ...prev]);
+    await saveSaleToStorage(legacySale);
+    return legacySale;
+  };
+
+  const cancelDispatch = async (invoiceId: string, reason: string): Promise<boolean> => {
+    const targetInvoice = dispatchInvoices.find((i) => i.id === invoiceId);
+    if (!targetInvoice) {
+      throw new Error(`Dispatch invoice #${invoiceId} not found.`);
+    }
+    if (targetInvoice.isReversed) {
+      throw new Error('This dispatch invoice has already been cancelled.');
+    }
+
+    const cust = targetInvoice.customerId
+      ? customers.find((c) => c.id === targetInvoice.customerId)
+      : undefined;
+
+    const result = await cancelDispatchInvoice({
+      invoice: targetInvoice,
+      customer: cust,
+      allTransactions: ledgerTransactions,
+      products,
+      productGrades,
+      reason,
+      cancelledBy: currentUser?.name,
+    });
+
+    setDispatchInvoices((prev) =>
+      prev.map((i) => (i.id === invoiceId ? result.reversedInvoice : i))
+    );
+    setProducts(result.updatedProducts);
+    setProductGrades(result.updatedGrades);
+
+    if (result.updatedCustomer) {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === result.updatedCustomer!.id ? result.updatedCustomer! : c))
+      );
+    }
+    if (result.reversalTransactions.length > 0) {
+      setLedgerTransactions((prev) => [...result.reversalTransactions, ...prev]);
+    }
+
+    setShiftUpdatesCount((prev) => prev + 1);
+    return true;
+  };
+
+  const deleteArrival = (id: string) => {
+    setArrivals((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const deleteSale = (id: string) => {
+    setSales((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // Farmer Patti
+  const generatePatti = async (
+    params: Omit<FarmerPatti, 'id' | 'pattiNumber'>
+  ): Promise<FarmerPatti> => {
+    const count = pattis.length + 1;
+    const pattiNumber = `PATTI-${new Date().getFullYear()}-${String(count).padStart(3, '0')}`;
+
+    const newPatti: FarmerPatti = {
+      ...params,
+      id: `patti_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      pattiNumber,
+    };
+
+    setPattis((prev) => [newPatti, ...prev]);
+
+    if (params.farmerId) {
+      await addLedgerTransaction({
+        customerId: params.farmerId,
+        customerName: params.farmerName,
+        customerType: 'Farmer',
+        date: params.date || new Date().toISOString().split('T')[0],
+        type: 'PURCHASE_CREDIT',
+        category: 'CREDIT',
+        amount: params.netPayable,
+        paymentMethod: 'Credit',
+        referenceNo: pattiNumber,
+        notes: `Farmer Patti for ${params.quantity} ${params.unit} ${params.productName} (${params.gradeName || 'Standard'})`,
+        arrivalId: params.arrivalId,
+        pattiId: newPatti.id,
+      });
+    }
+
+    await saveFarmerPattiToStorage(newPatti);
+    return newPatti;
+  };
+
+  // =========================================================================
+  // MANDI SLIPS, FLOOR CRATE TALLY & SHIFT HANDOVER
+  // =========================================================================
+  const recordSlip = (slipData: Omit<MandiSlip, 'id' | 'slipNumber' | 'date'>): MandiSlip => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateFormatted = `Today, ${timeStr}`;
+
+    const newSlip: MandiSlip = {
+      id: `slip_${Date.now()}`,
+      slipNumber: `SLIP-${100 + slips.length + 1}`,
+      date: dateFormatted,
+      ...slipData,
+    };
+
+    // Update physical product inventory in context
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === slipData.productId) {
+          const current = parseFloat(p.quantity || '0') || 0;
+          const delta = slipData.quantity;
+          const updated = slipData.type === 'IN' ? current + delta : Math.max(0, current - delta);
+          const next = { ...p, quantity: updated.toString() };
+          saveProductToStorage(next).catch(() => {});
+          return next;
+        }
+        return p;
+      })
+    );
+
+    // If outward dispatch with balance due, post to unified customer ledger
+    if (slipData.type === 'OUT' && (slipData.balanceAmount || 0) > 0) {
+      const targetCustomer = customers.find(
+        (c) =>
+          (slipData.customerId && c.id === slipData.customerId) ||
+          c.mobile === slipData.partyMobile ||
+          c.name === slipData.partyName
+      );
+
+      if (targetCustomer) {
+        addLedgerTransaction({
+          customerId: targetCustomer.id,
+          customerName: targetCustomer.name,
+          customerType: targetCustomer.customerType || 'Buyer',
+          date: new Date().toISOString().split('T')[0],
+          type: 'CREDIT_SALE',
+          category: 'DEBIT',
+          amount: slipData.balanceAmount,
+          paymentMethod: slipData.paymentMethod as any || 'Credit',
+          referenceNo: newSlip.slipNumber,
+          notes: `Slip #${newSlip.slipNumber} for ${slipData.quantity} ${slipData.unit} ${slipData.productName}`,
+        }).catch(() => {});
+      }
+    }
+
+    setSlips((prev) => [newSlip, ...prev]);
+    saveSlipToStorage(newSlip).catch(() => {});
+    setShiftUpdatesCount((prev) => prev + 1);
+    return newSlip;
+  };
+
+  const recordTally = (tallyData: Omit<TallyRecord, 'id' | 'time'>): TallyRecord => {
+    const matchingProduct = products.find((p) => p.id === tallyData.productId);
+    if (!matchingProduct) {
+      throw new Error(`Product not found for tally: ${tallyData.productName}`);
+    }
+
+    const currentStock = parseFloat(matchingProduct.quantity || '0') || 0;
+    const delta = tallyData.count;
+
+    if (tallyData.mode === 'OUT' && delta > currentStock) {
+      throw new Error(
+        `Insufficient stock: Cannot dispatch ${delta} ${matchingProduct.unit || 'units'}. Current available physical stock is only ${currentStock} ${matchingProduct.unit || 'units'}.`
+      );
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeFormatted = `Today, ${timeStr}`;
+
+    const newRecord: TallyRecord = {
+      id: `tally_${Date.now()}`,
+      time: timeFormatted,
+      ...tallyData,
+    };
+
+    const updatedQty = tallyData.mode === 'IN' ? currentStock + delta : currentStock - delta;
+
+    // Update physical product inventory in context
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === tallyData.productId) {
+          const next = { ...p, quantity: updatedQty.toString() };
+          saveProductToStorage(next).catch(() => {});
+          return next;
+        }
+        return p;
+      })
+    );
+
+    // Auto-record MandiSlip
+    const rate = matchingProduct ? parseFloat(matchingProduct.price || '0') || 50 : 50;
+    const totalAmount = tallyData.count * rate;
+
+    const newSlip: MandiSlip = {
+      id: `slip_${Date.now()}`,
+      slipNumber: `TALLY-${100 + slips.length + 1}`,
+      date: timeFormatted,
+      type: tallyData.mode,
+      partyName:
+        tallyData.partyName?.trim() ||
+        (tallyData.mode === 'IN' ? 'Farmer Floor Unload' : 'Market Tempo Dispatch'),
+      partyMobile: '9876500000',
+      productId: tallyData.productId,
+      productName: tallyData.productName,
+      category: matchingProduct?.category || 'General',
+      quantity: tallyData.count,
+      unit: tallyData.unit,
+      ratePerUnit: rate,
+      totalAmount,
+      paidAmount: totalAmount,
+      balanceAmount: 0,
+      notes: `Counted via Floor Crate Tally. Vehicle: ${tallyData.vehicleNo || 'Floor Direct'}`,
+    };
+
+    setSlips((prev) => [newSlip, ...prev]);
+    saveSlipToStorage(newSlip).catch(() => {});
+    setTallyRecords((prev) => [newRecord, ...prev]);
+    saveTallyRecordToStorage(newRecord).catch(() => {});
+    setShiftUpdatesCount((prev) => prev + 1);
+    return newRecord;
+  };
+
+  const submitShiftHandover = () => {
+    setShiftSubmitted(true);
+  };
+
+  // =========================================================================
+  // REAL OPERATIONAL FINANCIALS (NO HARDCODED OPERATIONAL ARTIFACTS)
+  // =========================================================================
+  const todayDateStr = new Date().toISOString().split('T')[0];
+
+  // Dispatches today from dispatch invoices
+  const todayInvoices = dispatchInvoices.filter(
+    (i) => i.timestamp.startsWith(todayDateStr) && !i.isReversed
   );
 
-  // Metrics calculation
-  const totalStockUnits = products.reduce((acc, curr) => {
-    const val = parseFloat(curr.quantity || '0');
-    return acc + (isNaN(val) ? 0 : val);
-  }, 0);
+  // Sales revenue today: calculated from actual dispatch records
+  const todaySales =
+    todayInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0) +
+    sales.filter((s) => s.timestamp.startsWith(todayDateStr)).reduce((sum, s) => sum + s.totalAmount, 0);
 
-  const totalInventoryValue = products.reduce((acc, curr) => {
-    const qty = parseFloat(curr.quantity || '0');
-    const price = parseFloat(curr.price || '0');
-    return acc + (isNaN(qty) || isNaN(price) ? 0 : qty * price);
-  }, 0);
+  // Actual cash collected today
+  const cashCollectedToday =
+    todayInvoices.reduce((sum, inv) => sum + (inv.cashPaid || 0), 0) +
+    ledgerTransactions
+      .filter((tx) => tx.date === todayDateStr && (tx.type === 'CASH_RECEIVED' || (tx.paymentMethod === 'Cash' && tx.category === 'CREDIT')))
+      .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const lowStockCount = products.filter((p) => {
-    const qty = parseFloat(p.quantity || '0');
-    return !isNaN(qty) && qty < 30;
-  }).length;
+  // Cash in drawer = actual cash collections today
+  const operatorCashDrawer = cashCollectedToday;
+
+  // Real gross profit: only calculated where costPrice is explicitly defined
+  const todayProfit = useMemo(() => {
+    let profit = 0;
+    for (const inv of todayInvoices) {
+      for (const item of inv.items) {
+        const prod = products.find((p) => p.id === item.productId);
+        const costPriceNum = parseFloat(prod?.costPrice || '0') || 0;
+        if (costPriceNum > 0) {
+          profit += (item.unitPrice - costPriceNum) * item.quantity;
+        }
+      }
+    }
+    return Math.round(profit);
+  }, [todayInvoices, products]);
+
+  // Total Udhaar: sum of actual outstanding receivables from customer ledger
+  const totalUdhaar = useMemo(() => {
+    let total = 0;
+    for (const c of customers) {
+      const bal = calculateCustomerFinancials(c, ledgerTransactions);
+      if (bal.currentBalance > 0) {
+        total += bal.currentBalance;
+      }
+    }
+    return total;
+  }, [customers, ledgerTransactions]);
+
+  // Inventory metrics
+  const totalStockUnits = useMemo(() => {
+    return products.reduce((acc, curr) => {
+      const val = parseFloat(curr.quantity || '0');
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+  }, [products]);
+
+  const totalInventoryValue = useMemo(() => {
+    return products.reduce((acc, curr) => {
+      const qty = parseFloat(curr.quantity || '0');
+      const price = parseFloat(curr.price || '0');
+      return acc + (isNaN(qty) || isNaN(price) ? 0 : qty * price);
+    }, 0);
+  }, [products]);
+
+  const lowStockCount = useMemo(() => {
+    return products.filter((p) => {
+      const qty = parseFloat(p.quantity || '0');
+      return !isNaN(qty) && qty < 30;
+    }).length;
+  }, [products]);
+
+  // Sync simulation
+  const toggleOfflineSimulation = (forced?: boolean) => {
+    setIsSimulatedOffline((prev) => (forced !== undefined ? forced : !prev));
+  };
+
+  const syncPendingRecords = useCallback(async (): Promise<{
+    success: boolean;
+    syncedCount: number;
+    message: string;
+  }> => {
+    if (!isEffectiveOnline) {
+      return {
+        success: false,
+        syncedCount: 0,
+        message: 'Cannot synchronize while in Offline Mode.',
+      };
+    }
+
+    if (isSyncingLockRef.current) {
+      return {
+        success: false,
+        syncedCount: 0,
+        message: 'Synchronization is already in progress.',
+      };
+    }
+
+    const pendingArrivalIds = arrivals
+      .filter((a) => a.syncStatus === 'pending' || a.syncStatus === 'failed')
+      .map((a) => a.id);
+    const pendingSaleIds = sales
+      .filter((s) => s.syncStatus === 'pending' || s.syncStatus === 'failed')
+      .map((s) => s.id);
+    const totalToSync = pendingArrivalIds.length + pendingSaleIds.length;
+
+    if (totalToSync === 0) {
+      return {
+        success: true,
+        syncedCount: 0,
+        message: 'All records are up to date locally.',
+      };
+    }
+
+    isSyncingLockRef.current = true;
+    setIsSyncing(true);
+
+    try {
+      const nowIso = new Date().toISOString();
+      const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      setArrivals((prev) =>
+        prev.map((a) =>
+          pendingArrivalIds.includes(a.id)
+            ? { ...a, syncStatus: 'synced', syncedAt: nowIso, syncError: undefined }
+            : a
+        )
+      );
+
+      setSales((prev) =>
+        prev.map((s) =>
+          pendingSaleIds.includes(s.id)
+            ? { ...s, syncStatus: 'synced', syncedAt: nowIso, syncError: undefined }
+            : s
+        )
+      );
+
+      await markArrivalsAsSyncedInStorage(pendingArrivalIds, nowIso);
+      await markSalesAsSyncedInStorage(pendingSaleIds, nowIso);
+
+      setLastSyncedAt(nowTimeStr);
+      await setMetaValue('lastSyncedAt', nowTimeStr);
+
+      isSyncingLockRef.current = false;
+      setIsSyncing(false);
+
+      return {
+        success: true,
+        syncedCount: totalToSync,
+        message: `Successfully synchronized ${totalToSync} records locally!`,
+      };
+    } catch {
+      isSyncingLockRef.current = false;
+      setIsSyncing(false);
+      return {
+        success: false,
+        syncedCount: 0,
+        message: 'Synchronization failed. Records remain safely stored offline.',
+      };
+    }
+  }, [isEffectiveOnline, arrivals, sales]);
 
   return (
     <MandiContext.Provider
@@ -1569,6 +1856,11 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         isOwner,
         isOperator,
 
+        currentWorkspace,
+        workspaces,
+        registerOwner,
+        registerOperator,
+
         canDeleteProduct,
         canAddCategory,
         canManageStaff,
@@ -1580,12 +1872,16 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         customers,
         addCustomer,
         updateCustomer,
+        deleteCustomer,
         categories,
         addCategory,
+        updateCategory,
+        deleteCategory,
         products,
         addProduct,
         deleteProduct,
         updateProductQuantity,
+        batchAddSelectedProducts,
         units: availableUnits,
 
         totalInventoryValue,
@@ -1599,10 +1895,13 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         getCustomerTransactions,
         getCustomerBalance,
         financialSummary,
+        collectPayment,
 
-        // Feature 2: Product Grades & Wastage
+        // Feature 2: Product Grades, Wastage & Lots
         productGrades,
         wastageRecords,
+        arrivalLots,
+        stockLedger,
         addProductGrade,
         updateProductGrade,
         deleteProductGrade,
@@ -1625,6 +1924,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         // Offline Mode & Data Sync
         arrivals,
         sales,
+        dispatchInvoices,
         isOnline,
         isSimulatedOffline,
         isEffectiveOnline,
@@ -1637,6 +1937,8 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         failedRecordsCount,
         recordArrival,
         recordSale,
+        recordDispatchInvoice,
+        cancelDispatch,
         syncPendingRecords,
         toggleOfflineSimulation,
         deleteArrival,

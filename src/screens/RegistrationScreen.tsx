@@ -16,12 +16,12 @@ import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors } from '../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { UserProfile, UserRole } from '../types';
+import { UserRole } from '../types';
 
 export default function RegistrationScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { loginUser } = useMandi();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { registerOwner, registerOperator } = useMandi();
+  const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState(route?.params?.mobile || '');
@@ -30,7 +30,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
   const [role, setRole] = useState<UserRole>(route?.params?.role || 'Owner');
 
   // Registration validation and navigation
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const cleanedName = name.trim();
     const cleanedMobile = mobile.replace(/\D/g, '');
     const cleanedBusiness = business.trim();
@@ -59,29 +59,38 @@ export default function RegistrationScreen({ route, navigation }: any) {
 
     Keyboard.dismiss();
 
-    const userProfile: UserProfile = {
-      id: `usr_${Date.now()}`,
-      name: cleanedName,
-      mobile: cleanedMobile,
-      business: cleanedBusiness,
-      location: cleanedLocation,
-      role,
-    };
+    try {
+      if (role === 'Owner') {
+        await registerOwner({
+          name: cleanedName,
+          mobile: cleanedMobile,
+          business: cleanedBusiness,
+          location: cleanedLocation,
+        });
+      } else {
+        await registerOperator({
+          name: cleanedName,
+          mobile: cleanedMobile,
+          business: cleanedBusiness,
+          location: cleanedLocation,
+        });
+      }
 
-    loginUser(userProfile);
-
-    Alert.alert(
-      'Registration Successful!',
-      `Welcome to CAL Mandi, ${cleanedName}!\nRegistered as ${role}.`,
-      [
-        {
-          text: 'Open Mandi Dashboard',
-          onPress: () => {
-            navigation.replace('Home');
+      Alert.alert(
+        'Registration Successful!',
+        `Welcome to CAL Mandi, ${cleanedName}!\nRegistered as ${role}.`,
+        [
+          {
+            text: 'Open Mandi Dashboard',
+            onPress: () => {
+              navigation.replace('Home');
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch {
+      Alert.alert('Registration Failed', 'Could not save profile. Please try again.');
+    }
   };
 
   return (
@@ -108,19 +117,10 @@ export default function RegistrationScreen({ route, navigation }: any) {
             activeOpacity={0.7}
             onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('Welcome')}
           >
-            <Ionicons name="arrow-back" size={22} color={colors.primary} />
+            <Ionicons name="arrow-back" size={22} color={isDark ? colors.textPrimary : colors.primary} />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={styles.themeToggleBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color={colors.gold} />
-            </TouchableOpacity>
-            <Text style={styles.headerLogo}>CAL Mandi</Text>
-          </View>
+          <Text style={styles.headerLogo}>CAL Mandi</Text>
         </View>
 
         <Text style={styles.title}>
@@ -137,7 +137,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter owner / trader name"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.inputPlaceholder}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -150,7 +150,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter mobile number"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.inputPlaceholder}
           keyboardType="number-pad"
           maxLength={10}
           value={mobile}
@@ -166,7 +166,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter business name"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.inputPlaceholder}
           value={business}
           onChangeText={setBusiness}
           autoCapitalize="words"
@@ -179,7 +179,7 @@ export default function RegistrationScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="Enter your location"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.inputPlaceholder}
           value={location}
           onChangeText={setLocation}
           autoCapitalize="words"
@@ -258,25 +258,18 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
   },
   backButtonText: {
     fontSize: 16,
-    color: colors.primary,
+    color: isDark ? colors.textPrimary : colors.primary,
     fontWeight: '600',
-  },
-  themeToggleBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: isDark ? colors.surfaceElevated : '#F1F5F9',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   headerLogo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: isDark ? '#FFFFFF' : colors.primary,
   },
   logo: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: isDark ? '#FFFFFF' : colors.primary,
     textAlign: 'center',
     marginBottom: 25,
   },
@@ -304,7 +297,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     color: colors.textPrimary,
   },
   roleContainer: {
@@ -319,7 +312,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     borderColor: colors.border,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: isDark ? colors.surfaceElevated : colors.surface,
   },
   selectedRole: {
     backgroundColor: colors.primary,

@@ -8,7 +8,7 @@ interface ThemeTogglePillProps {
 }
 
 export default function ThemeTogglePill({ style }: ThemeTogglePillProps) {
-  const { isDark, setThemeMode } = useTheme();
+  const { isDark, setThemeMode, colors } = useTheme();
 
   return (
     <View
@@ -16,9 +16,9 @@ export default function ThemeTogglePill({ style }: ThemeTogglePillProps) {
         styles.container,
         {
           backgroundColor: isDark
-            ? 'rgba(15, 23, 42, 0.9)'
+            ? colors.cardBackground
             : 'rgba(255, 255, 255, 0.95)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : '#E2E8F0',
+          borderColor: isDark ? colors.border : '#E2E8F0',
         },
         style,
       ]}
@@ -32,12 +32,12 @@ export default function ThemeTogglePill({ style }: ThemeTogglePillProps) {
         <Ionicons
           name="sunny"
           size={14}
-          color={!isDark ? '#FFFFFF' : isDark ? '#94A3B8' : '#475569'}
+          color={!isDark ? '#FFFFFF' : isDark ? colors.textSecondary : '#475569'}
         />
         <Text
           style={[
             styles.btnText,
-            !isDark ? styles.textActive : isDark ? styles.textInactiveDark : styles.textInactiveLight,
+            !isDark ? styles.textActive : isDark ? { color: colors.textSecondary } : styles.textInactiveLight,
           ]}
         >
           Light
@@ -46,7 +46,7 @@ export default function ThemeTogglePill({ style }: ThemeTogglePillProps) {
 
       <TouchableOpacity
         activeOpacity={0.8}
-        style={[styles.btn, isDark && styles.btnActiveDark]}
+        style={[styles.btn, isDark && [styles.btnActiveDark, { backgroundColor: colors.primary }]]}
         onPress={() => setThemeMode('dark')}
         accessibilityLabel="Dark Mode"
       >

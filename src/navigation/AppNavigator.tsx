@@ -46,6 +46,13 @@ import CrateTallyScreen from '../screens/CrateTallyScreen';
 // Settings & Preferences
 import SettingsScreen from '../screens/SettingsScreen';
 
+// AI Chatbot Help Assistant
+import ChatbotScreen from '../screens/ChatbotScreen';
+
+// Inventory & Transaction Confirmation
+import InventoryScreen from '../screens/InventoryScreen';
+import TransactionConfirmationScreen from '../screens/TransactionConfirmationScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
@@ -100,6 +107,13 @@ export default function AppNavigator() {
 
       {/* Settings & Language */}
       <Stack.Screen name="Settings" component={SettingsScreen} />
+
+      {/* AI Chatbot Help Assistant */}
+      <Stack.Screen name="Chatbot" component={ChatbotScreen} />
+
+      {/* Inventory Management & Transaction Confirmation */}
+      <Stack.Screen name="Inventory" component={InventoryScreen} />
+      <Stack.Screen name="TransactionConfirmation" component={TransactionConfirmationScreen} />
     </Stack.Navigator>
   );
 }

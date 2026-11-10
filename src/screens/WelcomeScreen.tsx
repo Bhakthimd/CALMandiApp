@@ -3,30 +3,27 @@ import {
   View,
   Text,
   ImageBackground,
+  Image,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  } from 'react-native';
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { UserRole } from '../types';
-import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { demoOwnerProfile, demoOperatorProfile } from '../data/mockData';
-import CALMandiLogo from '../components/CALMandiLogo';
 import LanguageSelectorModal from '../components/LanguageSelectorModal';
 
 export default function WelcomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { loginUser } = useMandi();
-  const { isDark, colors, setThemeMode, theme } = useTheme();
+  const { isDark, setThemeMode } = useTheme();
   const { currentLanguageOption, t } = useLanguage();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Owner');
 
-  const handleLogin = () => {
+  const handleContinue = () => {
     navigation.navigate('Login', { role: selectedRole });
   };
 
@@ -34,48 +31,54 @@ export default function WelcomeScreen({ navigation }: any) {
     navigation.navigate('Registration', { role: selectedRole });
   };
 
-  const handleInstantDemo = (role: UserRole) => {
-    const profile = role === 'Owner' ? demoOwnerProfile : demoOperatorProfile;
-    loginUser(profile);
-    navigation.replace('Home');
+  const handleOpenSettings = () => {
+    navigation.navigate('Settings');
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? '#0A0F1D' : '#0F172A' }]}>
       <StatusBar style="light" />
 
-      {/* Atmospheric Mandi Background Image */}
+      {/* Atmospheric Indian Wholesale Vegetable Mandi Background */}
       <ImageBackground
         source={require('../../assets/mandi_bg.jpg')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        {/* Multi-layered Dynamic Translucent Overlay for Theme-aware Contrast */}
-        <View style={[styles.overlayGradientTop, { backgroundColor: colors.overlayTop }]} />
-        <View style={[styles.overlayDimmer, { backgroundColor: colors.overlayDimmer }]} />
+        {/* Dark Translucent Overlay so text and controls remain readable */}
+        <View
+          style={[
+            styles.overlayDimmer,
+            {
+              backgroundColor: isDark
+                ? 'rgba(10, 15, 29, 0.78)'
+                : 'rgba(15, 23, 42, 0.42)',
+            },
+          ]}
+        />
 
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingTop: Math.max(insets.top + 16, 44),
-              paddingBottom: Math.max(insets.bottom + 20, 36),
+              paddingTop: Math.max(insets.top + 12, 40),
+              paddingBottom: Math.max(insets.bottom + 16, 24),
             },
           ]}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Top Bar: Theme Switcher & Language Selector */}
+          {/* Top Bar: Light/Dark Switcher & Language Selector */}
           <View style={styles.topControlRow}>
-            {/* Interactive Light / Dark Theme Segmented Switcher */}
+            {/* Segmented Theme Switcher */}
             <View
               style={[
                 styles.themeSegmentContainer,
                 {
                   backgroundColor: isDark
-                    ? 'rgba(15, 25, 20, 0.95)'
+                    ? 'rgba(30, 41, 59, 0.95)'
                     : 'rgba(255, 255, 255, 0.95)',
-                  borderColor: isDark ? colors.border : '#E2E8F0',
+                  borderColor: isDark ? '#334155' : '#E2E8F0',
                 },
               ]}
             >
@@ -88,19 +91,19 @@ export default function WelcomeScreen({ navigation }: any) {
                 onPress={() => setThemeMode('light')}
               >
                 <Ionicons
-                  name="sunny"
-                  size={13}
+                  name="sparkles"
+                  size={12}
                   color={!isDark ? '#FFFFFF' : '#94A3B8'}
                 />
                 <Text
                   style={[
                     styles.themeSegmentText,
                     !isDark
-                      ? styles.themeSegmentTextActiveLight
-                      : { color: colors.textSecondary },
+                      ? styles.themeSegmentTextActive
+                      : { color: isDark ? '#94A3B8' : '#64748B' },
                   ]}
                 >
-                  Light
+                  {t('lightMode', 'Light')}
                 </Text>
               </TouchableOpacity>
 
@@ -114,338 +117,313 @@ export default function WelcomeScreen({ navigation }: any) {
               >
                 <Ionicons
                   name="moon"
-                  size={13}
-                  color={isDark ? '#0B130E' : '#94A3B8'}
+                  size={12}
+                  color={isDark ? '#FFFFFF' : '#64748B'}
                 />
                 <Text
                   style={[
                     styles.themeSegmentText,
                     isDark
-                      ? styles.themeSegmentTextActiveDark
-                      : { color: colors.textSecondary },
+                      ? styles.themeSegmentTextActive
+                      : { color: '#64748B' },
                   ]}
                 >
-                  Dark
+                  {t('darkMode', 'Dark')}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Language Selector Button */}
+            {/* Language Selector Pill */}
             <TouchableOpacity
               activeOpacity={0.8}
               style={[
-                styles.langBtnWelcome,
+                styles.langPill,
                 {
                   backgroundColor: isDark
-                    ? 'rgba(15, 25, 20, 0.95)'
+                    ? 'rgba(30, 41, 59, 0.95)'
                     : 'rgba(255, 255, 255, 0.95)',
-                  borderColor: isDark ? colors.border : '#E2E8F0',
+                  borderColor: isDark ? '#334155' : '#E2E8F0',
                 },
               ]}
               onPress={() => setLangModalVisible(true)}
             >
-              <Ionicons name="globe-outline" size={13} color="#16834A" />
-              <Text style={[styles.langBtnWelcomeText, { color: colors.textPrimary }]}>
-                {currentLanguageOption.flagEmoji} {currentLanguageOption.nativeName}
+              <Ionicons
+                name="globe-outline"
+                size={14}
+                color={isDark ? '#4ADE80' : '#16834A'}
+              />
+              <Text
+                style={[
+                  styles.langPillText,
+                  { color: isDark ? '#FFFFFF' : '#1E293B' },
+                ]}
+              >
+                {currentLanguageOption.name || 'English'}
               </Text>
+              <Ionicons
+                name="chevron-down"
+                size={12}
+                color={isDark ? '#94A3B8' : '#64748B'}
+              />
             </TouchableOpacity>
           </View>
 
-          {/* Official CAL Mandi Logo & Tagline Header */}
-          <View style={styles.headerSection}>
-            <CALMandiLogo size="large" showTagline={false} forceLightText={true} />
+          {/* Logo & Brand Identity */}
+          <View style={styles.brandContainer}>
+            <View
+              style={[
+                styles.logoSquircle,
+                {
+                  borderColor: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(255, 255, 255, 0.35)',
+                  backgroundColor: isDark ? '#020617' : '#0F172A',
+                },
+              ]}
+            >
+              <Image
+                source={require('../../assets/app_logo.png')}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
 
-            {/* Mandatory Tagline */}
-            <View style={styles.taglineContainer}>
-              <Text style={styles.taglineText}>
-                {theme.typography.tagline}
-              </Text>
-                          </View>
+            <Text style={styles.appTitle}>CAL Mandi</Text>
+            <Text style={styles.appSubtitle}>{t('tagline', 'Mandi operations made easy')}</Text>
           </View>
 
-          {/* Role Selection Container */}
+          {/* Role Selection Card */}
           <View
             style={[
               styles.selectionCard,
               {
-                backgroundColor: colors.cardSelectionBg,
-                borderColor: colors.cardSelectionBorder,
+                backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                borderColor: isDark ? '#334155' : '#F1F5F9',
+                borderWidth: isDark ? 1.5 : 0,
               },
             ]}
           >
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="people-circle-outline" size={20} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons
+                name="globe-outline"
+                size={18}
+                color={isDark ? '#4ADE80' : '#16834A'}
+              />
+              <Text
+                style={[
+                  styles.cardTitle,
+                  { color: isDark ? '#FFFFFF' : '#1E293B' },
+                ]}
+              >
                 {t('chooseYourRole', 'Choose your role')}
               </Text>
             </View>
 
-            {/* Owner Role Card */}
+            {/* Option 1: Mandi Owner */}
             <TouchableOpacity
               activeOpacity={0.85}
               style={[
-                styles.roleCard,
-                {
-                  backgroundColor: colors.roleCardBg,
-                  borderColor: colors.roleCardBorder,
-                },
-                selectedRole === 'Owner' && {
-                  borderColor: colors.primary,
-                  backgroundColor: colors.roleCardActiveOwnerBg,
-                },
+                styles.roleOptionCard,
+                selectedRole === 'Owner'
+                  ? [
+                      styles.roleOptionSelected,
+                      {
+                        backgroundColor: isDark ? '#143823' : '#F0FDF4',
+                        borderColor: isDark ? '#4ADE80' : '#16834A',
+                      },
+                    ]
+                  : [
+                      styles.roleOptionUnselected,
+                      {
+                        backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                        borderColor: isDark ? '#334155' : '#E2E8F0',
+                      },
+                    ],
               ]}
               onPress={() => setSelectedRole('Owner')}
             >
-              <View style={styles.roleCardLeft}>
+              <View style={styles.roleLeft}>
                 <View
                   style={[
                     styles.roleIconCircle,
-                    selectedRole === 'Owner'
-                      ? { backgroundColor: colors.primary }
-                      : { backgroundColor: colors.roleIconInactiveBg },
+                    {
+                      backgroundColor: selectedRole === 'Owner'
+                        ? '#16834A'
+                        : isDark
+                        ? '#1E293B'
+                        : '#DCFCE7',
+                    },
                   ]}
                 >
                   <Ionicons
                     name="shield-checkmark"
-                    size={24}
-                    color={selectedRole === 'Owner' ? '#FFFFFF' : colors.primary}
+                    size={20}
+                    color={selectedRole === 'Owner' ? '#FFFFFF' : isDark ? '#4ADE80' : '#16834A'}
                   />
                 </View>
-
-                <View style={styles.roleTextGroup}>
-                  <View style={styles.roleHeaderRow}>
-                    <Text
-                      style={[
-                        styles.roleTitle,
-                        { color: colors.textPrimary },
-                        selectedRole === 'Owner' && { color: colors.primaryDark },
-                      ]}
-                    >
-                      {t('ownerRoleTitle', 'Owner / Vyapari')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.roleBadgeOwner,
-                        { backgroundColor: colors.ownerBadgeBg },
-                      ]}
-                    >
-                      <Text style={[styles.roleBadgeOwnerText, { color: colors.ownerBadgeText }]}>
-                        {t('ownerBadgeWelcome', 'Mandi Vyapari')}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>
-                    {t('ownerRoleDesc', 'Manage Khata, payments, staff and business')}
-                  </Text>
-                </View>
+                <Text
+                  style={[
+                    styles.roleLabelText,
+                    { color: isDark ? '#FFFFFF' : '#1E293B' },
+                  ]}
+                >
+                  {t('ownerRoleTitle', 'Mandi Owner')}
+                </Text>
               </View>
 
-              <View style={styles.radioContainer}>
-                <Ionicons
-                  name={
-                    selectedRole === 'Owner'
-                      ? 'radio-button-on'
-                      : 'radio-button-off'
-                  }
-                  size={22}
-                  color={
-                    selectedRole === 'Owner'
-                      ? colors.primary
-                      : colors.border
-                  }
-                />
+              {/* Radio Indicator */}
+              <View
+                style={[
+                  styles.radioOuter,
+                  selectedRole === 'Owner'
+                    ? [styles.radioOuterActive, { borderColor: isDark ? '#4ADE80' : '#16834A' }]
+                    : [styles.radioOuterInactive, { borderColor: isDark ? '#475569' : '#CBD5E1' }],
+                ]}
+              >
+                {selectedRole === 'Owner' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? '#4ADE80' : '#16834A' },
+                    ]}
+                  />
+                )}
               </View>
             </TouchableOpacity>
 
-            {/* Operator Role Card */}
+            {/* Option 2: Floor Operator */}
             <TouchableOpacity
               activeOpacity={0.85}
               style={[
-                styles.roleCard,
-                {
-                  backgroundColor: colors.roleCardBg,
-                  borderColor: colors.roleCardBorder,
-                },
-                selectedRole === 'Operator' && {
-                  borderColor: colors.operatorPrimary,
-                  backgroundColor: colors.roleCardActiveOperatorBg,
-                },
+                styles.roleOptionCard,
+                selectedRole === 'Operator'
+                  ? [
+                      styles.roleOptionSelected,
+                      {
+                        backgroundColor: isDark ? '#143823' : '#F0FDF4',
+                        borderColor: isDark ? '#4ADE80' : '#16834A',
+                      },
+                    ]
+                  : [
+                      styles.roleOptionUnselected,
+                      {
+                        backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                        borderColor: isDark ? '#334155' : '#E2E8F0',
+                      },
+                    ],
               ]}
               onPress={() => setSelectedRole('Operator')}
             >
-              <View style={styles.roleCardLeft}>
+              <View style={styles.roleLeft}>
                 <View
                   style={[
                     styles.roleIconCircle,
-                    selectedRole === 'Operator'
-                      ? { backgroundColor: colors.operatorPrimary }
-                      : { backgroundColor: colors.roleIconInactiveBg },
+                    {
+                      backgroundColor: isDark ? '#3B2904' : '#FFEDD5',
+                    },
                   ]}
                 >
                   <Ionicons
                     name="cube"
-                    size={24}
-                    color={
-                      selectedRole === 'Operator'
-                        ? '#FFFFFF'
-                        : colors.operatorPrimary
-                    }
+                    size={18}
+                    color={isDark ? '#FBBF24' : '#EA580C'}
                   />
                 </View>
-
-                <View style={styles.roleTextGroup}>
-                  <View style={styles.roleHeaderRow}>
-                    <Text
-                      style={[
-                        styles.roleTitle,
-                        { color: colors.textPrimary },
-                        selectedRole === 'Operator' && { color: colors.operatorBadgeText },
-                      ]}
-                    >
-                      {t('operatorRoleTitle', 'Floor Operator')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.roleBadgeOperator,
-                        { backgroundColor: colors.operatorBadgeBg },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.roleBadgeOperatorText,
-                          { color: colors.operatorBadgeText },
-                        ]}
-                      >
-                        {t('operatorBadgeWelcome', 'Clerk / Staff')}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>
-                    {t('operatorRoleDesc', 'Manage crates, weighing and daily sales')}
-                  </Text>
-                </View>
+                <Text
+                  style={[
+                    styles.roleLabelText,
+                    { color: isDark ? '#FFFFFF' : '#1E293B' },
+                  ]}
+                >
+                  {t('operatorRoleTitle', 'Floor Operator')}
+                </Text>
               </View>
 
-              <View style={styles.radioContainer}>
-                <Ionicons
-                  name={
-                    selectedRole === 'Operator'
-                      ? 'radio-button-on'
-                      : 'radio-button-off'
-                  }
-                  size={22}
-                  color={
-                    selectedRole === 'Operator'
-                      ? colors.operatorPrimary
-                      : colors.border
-                  }
-                />
+              {/* Radio Indicator */}
+              <View
+                style={[
+                  styles.radioOuter,
+                  selectedRole === 'Operator'
+                    ? [styles.radioOuterActive, { borderColor: isDark ? '#4ADE80' : '#16834A' }]
+                    : [styles.radioOuterInactive, { borderColor: isDark ? '#475569' : '#CBD5E1' }],
+                ]}
+              >
+                {selectedRole === 'Operator' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? '#4ADE80' : '#16834A' },
+                    ]}
+                  />
+                )}
               </View>
             </TouchableOpacity>
           </View>
 
-          {/* Primary Action Buttons: Register & Login */}
+          {/* Action Buttons */}
           <View style={styles.actionsContainer}>
-            {/* Login Button */}
+            {/* Primary Action Button */}
             <TouchableOpacity
               activeOpacity={0.88}
-              style={[
-                styles.primaryBtn,
-                {
-                  backgroundColor: colors.primary,
-                  shadowColor: colors.primary,
-                },
-                selectedRole === 'Operator' && {
-                  backgroundColor: colors.operatorPrimary,
-                  shadowColor: colors.operatorPrimary,
-                },
-              ]}
-              onPress={handleLogin}
+              style={styles.continueBtn}
+              onPress={handleContinue}
             >
-              <Ionicons name="log-in-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryBtnText}>
-                {t('loginAsRole', `Login as ${selectedRole}`, {
-                  role: selectedRole === 'Owner' ? t('owner', 'Owner') : t('operator', 'Operator'),
-                })}
+              <Text style={styles.continueBtnText}>
+                {selectedRole === 'Owner'
+                  ? t('continueAsOwner', 'Continue as Owner')
+                  : t('continueAsOperator', 'Continue as Operator')}
               </Text>
-              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
             </TouchableOpacity>
 
-            {/* Register Button */}
+            {/* Secondary Action Button */}
             <TouchableOpacity
               activeOpacity={0.88}
               style={[
-                styles.secondaryBtn,
+                styles.registerBtn,
                 {
-                  backgroundColor: colors.secondaryBtnBg,
-                  borderColor: colors.secondaryBtnBorder,
+                  backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                  borderColor: isDark ? '#334155' : '#CBD5E1',
                 },
               ]}
               onPress={handleRegister}
             >
-              <Ionicons
-                name="person-add-outline"
-                size={18}
-                color={colors.secondaryBtnText}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={[styles.secondaryBtnText, { color: colors.secondaryBtnText }]}>
+              <Text
+                style={[
+                  styles.registerBtnText,
+                  { color: isDark ? '#FFFFFF' : '#1E293B' },
+                ]}
+              >
                 {t('registerButtonText', 'Register New Mandi Account')}
               </Text>
             </TouchableOpacity>
-
-            {/* Quick 1-Tap Demo Shortcuts for Fast Evaluation */}
-            <View style={styles.demoBar}>
-              <Text style={styles.demoBarLabel}>{t('quickDemoAccess', 'Or test instantly:')}</Text>
-              <View style={styles.demoButtonsRow}>
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={[
-                    styles.demoChip,
-                    {
-                      backgroundColor: colors.demoChipBg,
-                      borderColor: colors.demoChipBorder,
-                    },
-                  ]}
-                  onPress={() => handleInstantDemo('Owner')}
-                >
-                  <Text style={[styles.demoChipText, { color: colors.primaryDark }]}>
-                    {t('ownerDemo', '👑 Owner Demo')}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={[
-                    styles.demoChip,
-                    {
-                      backgroundColor: colors.demoChipBg,
-                      borderColor: colors.demoChipBorderOperator,
-                    },
-                  ]}
-                  onPress={() => handleInstantDemo('Operator')}
-                >
-                  <Text
-                    style={[
-                      styles.demoChipTextOperator,
-                      { color: colors.operatorBadgeText },
-                    ]}
-                  >
-                    {t('operatorDemo', '👷 Operator Demo')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
 
-          {/* Footer note */}
+          {/* Bottom Footer Note */}
           <Text style={styles.footerNote}>
-            CAL Mandi v1.0 • Built for Indian APMC & Krishi Mandi Mandals
+            {t('appPlatformFooter', 'CAL Mandi v1.0 • Built for Indian APMC & Krishi Mandi Marketplace')}
           </Text>
         </ScrollView>
       </ImageBackground>
 
-      {/* Language Selector Modal */}
+      {/* Floating Settings Gear Icon */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[
+          styles.floatingSettingsBtn,
+          {
+            bottom: Math.max(insets.bottom + 12, 20),
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#334155' : '#E2E8F0',
+          },
+        ]}
+        onPress={handleOpenSettings}
+      >
+        <Ionicons
+          name="settings-outline"
+          size={20}
+          color={isDark ? '#FFFFFF' : '#1E293B'}
+        />
+      </TouchableOpacity>
+
+      {/* Language Modal */}
       <LanguageSelectorModal
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
@@ -463,9 +441,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  overlayGradientTop: {
-    ...StyleSheet.absoluteFill,
-  },
   overlayDimmer: {
     ...StyleSheet.absoluteFill,
   },
@@ -478,22 +453,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  langBtnWelcome: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  langBtnWelcomeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    marginBottom: 10,
   },
   themeSegmentContainer: {
     flexDirection: 'row',
@@ -503,7 +463,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -511,224 +471,213 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 9999,
   },
   themeSegmentActiveLight: {
     backgroundColor: '#16834A',
   },
   themeSegmentActiveDark: {
-    backgroundColor: '#22C55E',
+    backgroundColor: '#16834A',
   },
   themeSegmentText: {
     fontSize: 12,
     fontWeight: '700',
     marginLeft: 4,
   },
-  themeSegmentTextActiveLight: {
+  themeSegmentTextActive: {
     color: '#FFFFFF',
   },
-  themeSegmentTextActiveDark: {
-    color: '#0B130E',
-  },
-  headerSection: {
+  langPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  taglineContainer: {
+  langPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  brandContainer: {
     alignItems: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
+    marginVertical: 12,
   },
-  taglineText: {
-    fontSize: 20,
+  logoSquircle: {
+    width: 78,
+    height: 78,
+    borderRadius: 22,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 78,
+    height: 78,
+  },
+  appTitle: {
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.65)',
+    letterSpacing: -0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
-    letterSpacing: 0.2,
   },
-  subTaglineText: {
-    fontSize: 13,
-    color: '#E8F5EC',
-    textAlign: 'center',
+  appSubtitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#F1F5F9',
     marginTop: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
   selectionCard: {
     borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1.2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    marginTop: 4,
+    marginBottom: 16,
   },
-  sectionTitleRow: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
+    gap: 6,
   },
-  sectionTitle: {
-    fontSize: 17,
+  cardTitle: {
+    fontSize: 16,
     fontWeight: '700',
-    marginLeft: 6,
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    marginBottom: 14,
-  },
-  roleCard: {
+  roleOptionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderRadius: 14,
-    padding: 14,
-    borderWidth: 1.5,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginVertical: 4,
   },
-  roleCardLeft: {
+  roleOptionSelected: {
+    borderWidth: 1.5,
+  },
+  roleOptionUnselected: {
+    borderWidth: 1,
+  },
+  roleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    paddingRight: 10,
+    gap: 12,
   },
   roleIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  roleTextGroup: {
-    flex: 1,
+  roleLabelText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
-  roleHeaderRow: {
-    flexDirection: 'row',
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
-    marginBottom: 2,
+    justifyContent: 'center',
   },
-  roleTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+  radioOuterActive: {
+    borderWidth: 2,
   },
-  roleBadgeOwner: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-    marginLeft: 8,
+  radioOuterInactive: {
+    borderWidth: 1.5,
   },
-  roleBadgeOwnerText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  roleBadgeOperator: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  roleBadgeOperatorText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  roleDesc: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  radioContainer: {
-    marginLeft: 4,
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   actionsContainer: {
     width: '100%',
   },
-  primaryBtn: {
-    flexDirection: 'row',
+  continueBtn: {
+    backgroundColor: '#16834A',
+    height: 52,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
-    paddingVertical: 15,
-    marginBottom: 12,
+    shadowColor: '#16834A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    marginBottom: 10,
   },
-  primaryBtnText: {
+  continueBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.3,
   },
-  secondaryBtn: {
-    flexDirection: 'row',
+  registerBtn: {
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginBottom: 14,
-    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    marginBottom: 12,
   },
-  secondaryBtnText: {
+  registerBtnText: {
     fontSize: 15,
-    fontWeight: '700',
-  },
-  demoBar: {
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  demoBarLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.88)',
-    fontWeight: '600',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  demoButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  demoChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  demoChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  demoChipTextOperator: {
-    fontSize: 12,
     fontWeight: '700',
   },
   footerNote: {
     fontSize: 11,
     color: 'rgba(255, 255, 255, 0.75)',
     textAlign: 'center',
-    marginTop: 14,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    marginTop: 12,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  floatingSettingsBtn: {
+    position: 'absolute',
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
   },
 });

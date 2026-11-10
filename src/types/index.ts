@@ -17,7 +17,20 @@ export type UserProfile = {
   business: string;
   location: string;
   role: UserRole;
+  workspaceId?: string;
+  password?: string;
 };
+
+export interface MandiWorkspace {
+  id: string;
+  name: string;
+  location: string;
+  ownerId: string;
+  joinCode: string;
+  createdAt: string;
+  defaultCommissionRate?: number;
+  defaultLaborRatePerUnit?: number;
+}
 
 export type StaffMember = {
   id: string;
@@ -28,7 +41,7 @@ export type StaffMember = {
   status: 'Active' | 'On Leave';
 };
 
-export type CustomerType = 'Farmer' | 'Buyer' | 'Trader' | 'Other';
+export type CustomerType = 'Farmer' | 'Buyer' | 'Trader' | 'Both' | 'Supplier' | 'Other';
 
 export interface CustomerPricingRule {
   id: string;
@@ -56,6 +69,7 @@ export type Customer = {
   mobile: string;
   business: string;
   customerType?: CustomerType;
+  customerRoles?: CustomerType[];
   openingBalance?: number; // Positive = Customer owes Mandi; Negative = Mandi owes Customer
   totalPayable?: number; // Amount Mandi owes customer (e.g. farmer arrivals)
   totalReceivable?: number; // Amount customer owes Mandi (e.g. credit sales)
@@ -71,16 +85,21 @@ export type Customer = {
 export type Category = {
   id: string;
   name: string;
+  image?: string;
+  commissionRate?: number;
+  laborRatePerUnit?: number;
 };
 
 export type UnitType =
   | 'Kg'
+  | 'Gram'
   | 'Crate'
   | 'Box'
   | 'Bag'
   | 'Bunch'
   | 'Piece'
-  | 'Dozen';
+  | 'Dozen'
+  | 'Quintal';
 
 export interface ProductGrade {
   id: string;
@@ -106,6 +125,9 @@ export type Product = {
   wastageQuantity?: number; // Total wastage recorded
   wastageReason?: string;
   image?: string;
+  commissionRate?: number;
+  laborRatePerUnit?: number;
+  laborCharges?: number;
 };
 
 export type StockMovementType = 'IN' | 'OUT'; // IN: Farmer Arrival, OUT: Buyer Dispatch
@@ -271,6 +293,88 @@ export interface SaleRecord {
   netTotal?: number;
 }
 
+export interface ArrivalLot {
+  id: string;
+  arrivalId: string;
+  lotNumber: string;
+  productId: string;
+  productName: string;
+  supplierId?: string;
+  supplierName: string;
+  initialQuantity: number;
+  ungradedQuantity: number;
+  unit: string;
+  timestamp: string;
+  isFullyGraded: boolean;
+  notes?: string;
+}
+
+export type StockMovementAction =
+  | 'ARRIVAL_UNGRADED'
+  | 'GRADING_ALLOCATION'
+  | 'WASTAGE'
+  | 'DISPATCH'
+  | 'DISPATCH_REVERSAL'
+  | 'MANUAL_ADJUSTMENT';
+
+export interface StockLedgerEntry {
+  id: string;
+  productId: string;
+  productName: string;
+  gradeId?: string;
+  gradeName?: string;
+  action: StockMovementAction;
+  quantityDelta: number; // positive = added, negative = deducted
+  unit: string;
+  sourceReferenceType: 'ARRIVAL' | 'GRADING' | 'WASTAGE' | 'DISPATCH' | 'TALLY' | 'SLIP' | 'ADJUSTMENT';
+  sourceReferenceId: string;
+  stockAfter: number;
+  timestamp: string;
+  notes?: string;
+  createdBy?: string;
+}
+
+export interface DispatchLineItem {
+  id: string;
+  invoiceId: string;
+  productId: string;
+  productName: string;
+  category: string;
+  gradeId?: string;
+  gradeName?: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalAmount: number;
+  appliedPriceType?: 'Customer-Specific' | 'Default Grade Price' | 'Manual Override';
+}
+
+export interface DispatchInvoice {
+  id: string;
+  invoiceNumber: string;
+  customerId?: string;
+  customerName: string;
+  customerMobile?: string;
+  items: DispatchLineItem[];
+  subtotal: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  otherCharges?: number;
+  totalAmount: number;
+  cashPaid: number;
+  upiPaid: number;
+  totalPaid: number;
+  outstandingDebt: number;
+  paymentMethod: PaymentMethod | string;
+  notes?: string;
+  timestamp: string;
+  syncStatus: SyncStatusType;
+  isReversed?: boolean;
+  reversedAt?: string;
+  reversalReason?: string;
+  createdBy?: string;
+}
+
 export interface OfflineSyncStats {
   isOnline: boolean;
   isSimulatedOffline: boolean;
@@ -320,6 +424,26 @@ export type RootStackParamList = {
 
   // Settings & Preferences
   Settings: undefined;
+  Chatbot: undefined;
+  Inventory: undefined;
+  TransactionConfirmation: {
+    transactionNumber: string;
+    transactionType: 'SALE' | 'ARRIVAL' | 'INVOICE' | 'PATTI';
+    partyName: string;
+    partyType?: string;
+    items: {
+      name: string;
+      quantity: number;
+      unit: string;
+      rate?: number;
+      amount?: number;
+      productId?: string;
+    }[];
+    totalBill: number;
+    amountPaid: number;
+    remainingBalance: number;
+    receiptId?: string;
+  };
 
   // Patti & Invoices
   PattiReceipt: { pattiId?: string; saleId?: string; type: 'PATTI' | 'INVOICE' };
