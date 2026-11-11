@@ -22,7 +22,7 @@ export default function KhataScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const { customers, totalUdhaar, settleCustomerBalance, getCustomerBalance, isOwner } = useMandi();
+  const { customers, totalUdhaar, settleCustomerBalance, getCustomerBalance, isOwner, reminderSummary } = useMandi();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [settleAmount, setSettleAmount] = useState('');
@@ -150,6 +150,36 @@ Thank you,
             <Text style={styles.udhaarSub}>Owed by wholesale buyers</Text>
           </View>
         </View>
+
+        {/* Payment Reminders Shortcut */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: isDark ? '#2D1616' : '#FEF2F2',
+            borderWidth: 1,
+            borderColor: isDark ? '#7F1D1D' : '#FECACA',
+            borderRadius: 12,
+            padding: 12,
+            marginBottom: 18,
+          }}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('PaymentReminders')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
+            <Ionicons name="notifications" size={20} color="#DC2626" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#FCA5A5' : '#991B1B' }}>
+                View Overdue &amp; Due Date Reminders ({reminderSummary.overdueCount})
+              </Text>
+              <Text style={{ fontSize: 11, color: isDark ? '#F87171' : '#DC2626' }}>
+                Track overdue buyers &amp; pending farmer settlements
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#DC2626" />
+        </TouchableOpacity>
 
         {/* Customer Accounts */}
         <Text style={styles.sectionTitle}>Buyer Credit Accounts</Text>

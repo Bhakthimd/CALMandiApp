@@ -7,6 +7,7 @@
  */
 
 import { Product, Customer, UserProfile } from '../types';
+import { resolveCommodityKey } from '../utils/productImages';
 
 export type SupportedLanguage = 'en' | 'hi' | 'kn';
 
@@ -60,6 +61,7 @@ export class AIService {
         process.env.GEMINI_API_KEY ||
         null
       );
+  
     }
     return null;
   }
@@ -108,6 +110,23 @@ export class AIService {
   /**
    * Detect sensitive inventory transactions and mandate confirmation
    */
+  private findProductInPrompt(prompt: string, products: Product[]): Product | undefined {
+    const lower = prompt.toLowerCase();
+    const direct = products.find((p) => lower.includes(p.name.toLowerCase()));
+    if (direct) return direct;
+
+    const promptKey = resolveCommodityKey(lower);
+    if (promptKey) {
+      const byCanonical = products.find((p) => {
+        const prodKey = resolveCommodityKey(p.name);
+        return prodKey === promptKey || p.name.toLowerCase().includes(promptKey);
+      });
+      if (byCanonical) return byCanonical;
+    }
+
+    return undefined;
+  }
+
   private detectTransactionIntent(
     prompt: string,
     context: AIContext
@@ -142,9 +161,9 @@ export class AIService {
     if (!quantity || quantity <= 0) return null;
 
     // Match product name against existing products
-    let matchedProduct = context.products.find((p) =>
-      lower.includes(p.name.toLowerCase())
-    );
+    let matchedProduct = this.findProductInPrompt(prompt, context.products);
+
+
 
     // If not matched, try generic commodity keywords
     const candidateName = matchedProduct ? matchedProduct.name : 'commodity';
@@ -207,6 +226,13 @@ export class AIService {
       labelHi: string;
       labelKn: string;
     }[] = [
+      {
+        keywords: ['reminder', 'overdue', 'settlement', 'due date', 'रिमाइंडर', 'ಜ್ಞಾಪನೆ'],
+        target: 'PaymentReminders',
+        labelEn: 'Payment Reminders',
+        labelHi: 'भुगतान रिमाइंडर',
+        labelKn: 'ಪಾವತಿ ಜ್ಞಾಪನೆಗಳು',
+      },
       {
         keywords: ['product', 'catalogue', 'catalog', 'उत्पाद', 'सामान', 'ಉತ್ಪನ್ನ'],
         target: 'Products',
@@ -410,7 +436,7 @@ Rules:
       lower.includes('माल')
     ) {
       // Check if a specific product was mentioned
-      const matched = context.products.find((p) => lower.includes(p.name.toLowerCase()));
+      const matched = this.findProductInPrompt(prompt, context.products);
       if (matched) {
         const qty = matched.quantity || '0';
         if (lang === 'hi') {
@@ -441,6 +467,25 @@ Rules:
       }
       const text = `You currently have ${context.products.length} commodities in catalog:\n${summaryList}\n\nOpen Product Catalogue for full inventory breakdown.`;
       return { text, spokenText: `You have ${context.products.length} commodities in inventory.`, language: lang, intent: 'QUERY', source: 'LOCAL_EXPERT_ENGINE' };
+    }
+
+    // 3a. PAYMENT REMINDERS & OVERDUE SETTLEMENTS
+    if (
+      lower.includes('reminder') ||
+      lower.includes('overdue') ||
+      lower.includes('settlement') ||
+      lower.includes('due date') ||
+      lower.includes('who needs to pay') ||
+      lower.includes('रिमाइंडर') ||
+      lower.includes('ಜ್ಞಾಪನೆ')
+    ) {
+      const text =
+        lang === 'hi'
+          ? `भुगतान रिमाइंडर (Payment Reminders) खोलकर आप ओवरड्यू खरीदार बकाया और किसानों के लंबित भुगतान देख सकते हैं। वहीं से आप WhatsApp रिमाइंडर भेज सकते हैं, कॉल कर सकते हैं या देय तिथि बदल सकते हैं।`
+          : lang === 'kn'
+          ? `ಪಾವತಿ ಜ್ಞಾಪನೆಗಳು (Payment Reminders) ಪರದೆಯಲ್ಲಿ ಬಾಕಿ ಇರುವ ಖರೀದಿದಾರರ ಹಣ ಮತ್ತು ರೈತರ ಪಾವತಿಗಳನ್ನು ನೋಡಬಹುದು. ಅಲ್ಲಿಂದಲೇ WhatsApp ಜ್ಞಾಪನೆ ಕಳುಹಿಸಬಹುದು ಅಥವಾ ಕರೆ ಮಾಡಬಹುದು.`
+          : `Open Payment Reminders (from Home Alerts or More Menu) to view flagged overdue buyer dues and pending farmer settlements with due dates. You can send WhatsApp reminders, call parties, adjust due dates, snooze, or collect/settle directly.`;
+      return { text, spokenText: text, language: lang, intent: 'GUIDE', source: 'LOCAL_EXPERT_ENGINE' };
     }
 
     // 3. UDHAAR / DEBT INQUIRIES

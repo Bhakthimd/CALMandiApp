@@ -18,6 +18,7 @@ import {
   TallyRecord,
   StockLedgerEntry,
   DispatchInvoice,
+  PaymentReminderMeta,
 } from '../types';
 
 let SQLite: any = null;
@@ -50,6 +51,7 @@ let memoryPattis: FarmerPatti[] = [];
 let memorySlips: MandiSlip[] = [];
 let memoryTallyRecords: TallyRecord[] = [];
 let memoryStaff: StaffMember[] = [];
+let memoryReminderMeta: PaymentReminderMeta[] = [];
 let memoryMeta: Record<string, string> = {};
 
 export function getDb(): SQLiteDatabase | null {
@@ -421,6 +423,16 @@ export async function initOfflineStorage(): Promise<boolean> {
           mobile TEXT,
           assignedDesk TEXT,
           status TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS payment_reminder_meta (
+          customerId TEXT PRIMARY KEY,
+          customDueDate TEXT,
+          snoozedUntil TEXT,
+          lastRemindedAt TEXT,
+          reminderCount INTEGER,
+          notes TEXT,
+          updatedAt TEXT
         );
 
         -- Performance Indexes
@@ -1773,6 +1785,70 @@ export async function loadStaffMembersFromStorage(): Promise<StaffMember[]> {
   return memoryStaff;
 }
 
+// ================= PAYMENT REMINDER META =================
+export async function savePaymentReminderMetaToStorage(meta: PaymentReminderMeta): Promise<void> {
+  const db = getDb();
+  if (db) {
+    try {
+      db.runSync(
+        `INSERT OR REPLACE INTO payment_reminder_meta (
+          customerId, customDueDate, snoozedUntil, lastRemindedAt, reminderCount, notes, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          meta.customerId,
+          meta.customDueDate || '',
+          meta.snoozedUntil || '',
+          meta.lastRemindedAt || '',
+          meta.reminderCount || 0,
+          meta.notes || '',
+          meta.updatedAt,
+        ]
+      );
+      return;
+    } catch (err) {
+      console.warn('[OfflineStorage] Error saving payment reminder meta:', err);
+    }
+  }
+  const idx = memoryReminderMeta.findIndex((m) => m.customerId === meta.customerId);
+  if (idx >= 0) memoryReminderMeta[idx] = meta;
+  else memoryReminderMeta.push(meta);
+}
+
+export async function loadPaymentReminderMetaFromStorage(): Promise<PaymentReminderMeta[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      const rows = db.getAllSync<any>('SELECT * FROM payment_reminder_meta');
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          customerId: r.customerId,
+          customDueDate: r.customDueDate || undefined,
+          snoozedUntil: r.snoozedUntil || undefined,
+          lastRemindedAt: r.lastRemindedAt || undefined,
+          reminderCount: Number(r.reminderCount || 0),
+          notes: r.notes || undefined,
+          updatedAt: r.updatedAt,
+        }));
+      }
+    } catch (err) {
+      console.warn('[OfflineStorage] Error loading payment reminder meta:', err);
+    }
+  }
+  return memoryReminderMeta;
+}
+
+export async function deletePaymentReminderMetaFromStorage(customerId: string): Promise<void> {
+  const db = getDb();
+  if (db) {
+    try {
+      db.runSync('DELETE FROM payment_reminder_meta WHERE customerId = ?', [customerId]);
+    } catch (err) {
+      console.warn('[OfflineStorage] Error deleting payment reminder meta:', err);
+    }
+  }
+  memoryReminderMeta = memoryReminderMeta.filter((m) => m.customerId !== customerId);
+}
+
 // ================= SYNC META =================
 export async function setMetaValue(key: string, value: string): Promise<void> {
   const db = getDb();
@@ -1819,6 +1895,7 @@ export function resetStorageForTesting(): void {
   memorySlips = [];
   memoryTallyRecords = [];
   memoryStaff = [];
+  memoryReminderMeta = [];
   memoryMeta = {};
 
   const db = getDb();
@@ -1844,6 +1921,7 @@ export function resetStorageForTesting(): void {
         DELETE FROM mandi_slips;
         DELETE FROM tally_records;
         DELETE FROM staff_members;
+        DELETE FROM payment_reminder_meta;
         DELETE FROM sync_meta;
       `);
     } catch {

@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Image,
+
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ThemeColors } from '../styles/theme';
-import { getProductImage } from '../utils/productImages';
+import SmartProductImage from '../components/SmartProductImage';
 import BottomNavBar from '../components/BottomNavBar';
 
 type StockFilter = 'ALL' | 'AVAILABLE' | 'LOW' | 'OUT';
@@ -201,8 +201,8 @@ export default function InventoryScreen({ navigation }: any) {
 
             return (
               <View key={prod.id} style={styles.itemCard}>
-                <Image
-                  source={{ uri: getProductImage(prod) }}
+                <SmartProductImage name={prod.name} category={prod.category} image={prod.image} emojiSize={24}
+
                   style={styles.itemThumb}
                 />
 

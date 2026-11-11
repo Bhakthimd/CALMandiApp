@@ -40,6 +40,7 @@ export default function HomeScreen({ navigation }: any) {
     dispatchInvoices,
     ledgerTransactions,
     getCustomerBalance,
+    reminderSummary,
   } = useMandi();
 
   const [recentTab, setRecentTab] = useState<'sales' | 'arrivals' | 'payments'>('sales');
@@ -478,6 +479,78 @@ export default function HomeScreen({ navigation }: any) {
               </View>
             </View>
           )}
+
+          {/* Payment Reminders Alert (Overdue Buyers & Pending Farmer Settlements) */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('PaymentReminders')}
+            style={[
+              styles.alertItem,
+              {
+                backgroundColor:
+                  reminderSummary.overdueCount > 0
+                    ? (isDark ? '#2D1616' : '#FEF2F2')
+                    : (isDark ? colors.cardBackground : '#FFFFFF'),
+                borderColor:
+                  reminderSummary.overdueCount > 0
+                    ? (isDark ? '#7F1D1D' : '#FECACA')
+                    : (isDark ? colors.border : '#E2E8F0'),
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.alertIconCircle,
+                {
+                  backgroundColor:
+                    reminderSummary.overdueCount > 0
+                      ? (isDark ? '#5C1D1D' : '#FEE2E2')
+                      : (isDark ? '#1E293B' : '#F1F5F9'),
+                },
+              ]}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={18}
+                color={reminderSummary.overdueCount > 0 ? '#DC2626' : (isDark ? '#4ADE80' : '#16834A')}
+              />
+            </View>
+            <View style={styles.alertContent}>
+              <Text
+                style={[
+                  styles.alertTitle,
+                  {
+                    color:
+                      reminderSummary.overdueCount > 0
+                        ? (isDark ? '#FCA5A5' : '#991B1B')
+                        : colors.textPrimary,
+                  },
+                ]}
+              >
+                Payment Reminders{reminderSummary.overdueCount > 0 ? ` (${reminderSummary.overdueCount} Overdue)` : ''}
+              </Text>
+              <Text
+                style={[
+                  styles.alertSubtitle,
+                  {
+                    color:
+                      reminderSummary.overdueCount > 0
+                        ? (isDark ? '#F87171' : '#DC2626')
+                        : (isDark ? '#94A3B8' : '#64748B'),
+                  },
+                ]}
+              >
+                {reminderSummary.totalCount > 0
+                  ? `${reminderSummary.pendingBuyerCount} buyer dues • ${reminderSummary.pendingFarmerCount} farmer payouts`
+                  : 'All buyer & farmer accounts settled'}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={reminderSummary.overdueCount > 0 ? '#DC2626' : (isDark ? '#94A3B8' : '#CBD5E1')}
+            />
+          </TouchableOpacity>
 
           {/* Pending Customer Payments Alert */}
           <TouchableOpacity

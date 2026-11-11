@@ -21,6 +21,7 @@ import SyncCenterScreen from '../screens/SyncCenterScreen';
 
 // Cash & Debt Screens
 import CashDebtScreen from '../screens/CashDebtScreen';
+import PaymentRemindersScreen from '../screens/PaymentRemindersScreen';
 import CustomerLedgerScreen from '../screens/CustomerLedgerScreen';
 import AddPaymentScreen from '../screens/AddPaymentScreen';
 
@@ -83,6 +84,7 @@ export default function AppNavigator() {
 
       {/* Feature 1: Cash & Debt Screens */}
       <Stack.Screen name="CashDebt" component={CashDebtScreen} />
+      <Stack.Screen name="PaymentReminders" component={PaymentRemindersScreen} />
       <Stack.Screen name="CustomerLedger" component={CustomerLedgerScreen} />
       <Stack.Screen name="AddPayment" component={AddPaymentScreen} />
 

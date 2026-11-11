@@ -18,6 +18,7 @@ import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors } from '../styles/theme';
 import { getProductImage, getCategoryImage, DEFAULT_CATEGORY_IMAGES } from '../utils/productImages';
+import SmartProductImage from '../components/SmartProductImage';
 import { Product, UnitType } from '../types';
 import BottomNavBar from '../components/BottomNavBar';
 
@@ -615,7 +616,8 @@ export default function ProductsScreen({ navigation, route }: any) {
             {allCategoryList.map((catName) => {
               const isSelected = selectedCategoryTab.toLowerCase() === catName.toLowerCase();
               const count = categoryCounts[catName.toLowerCase()] || 0;
-              const photoUrl = getCategoryImage(catName);
+              const matchedCat = categories.find((c) => c.name.toLowerCase() === catName.toLowerCase());
+              const photoUrl = matchedCat?.image || getCategoryImage(catName);
 
               return (
                 <TouchableOpacity
@@ -772,10 +774,14 @@ export default function ProductsScreen({ navigation, route }: any) {
                     onPress={() => handleToggleSelect(product)}
                     style={styles.cardImageWrapper}
                   >
-                    <Image
-                      source={{ uri: imgUrl }}
+                    <SmartProductImage
+                      name={product.name}
+                      category={product.category}
+                      image={product.image}
+                      uri={imgUrl}
                       style={styles.cardImage}
                       resizeMode="cover"
+                      emojiSize={34}
                     />
 
                     {/* Operations Action Button (Three dots) - consistently positioned in Top-Right */}
@@ -1190,10 +1196,13 @@ export default function ProductsScreen({ navigation, route }: any) {
 
                 return (
                   <View key={pId} style={styles.reviewItemCard}>
-                    <Image
-                      source={{ uri: getProductImage(prod) }}
+                    <SmartProductImage
+                      name={prod.name}
+                      category={prod.category}
+                      image={prod.image}
                       style={styles.reviewItemThumb}
                       resizeMode="cover"
+                      emojiSize={22}
                     />
 
                     <View style={styles.reviewItemInfo}>
@@ -1556,10 +1565,13 @@ export default function ProductsScreen({ navigation, route }: any) {
           {activeActionProduct && (
             <View style={styles.actionsSheetCard}>
               <View style={styles.actionsSheetHeader}>
-                <Image
-                  source={{ uri: getProductImage(activeActionProduct) }}
+                <SmartProductImage
+                  name={activeActionProduct.name}
+                  category={activeActionProduct.category}
+                  image={activeActionProduct.image}
                   style={styles.actionSheetThumb}
                   resizeMode="cover"
+                  emojiSize={24}
                 />
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.actionSheetTitle} numberOfLines={1}>
