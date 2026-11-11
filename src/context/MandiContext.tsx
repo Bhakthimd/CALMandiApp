@@ -9,7 +9,7 @@ import React, {
   useMemo,
 } from 'react';
 import NetInfo from '@react-native-community/netinfo';
-import { getProductImage } from '../utils/productImages';
+import { getProductImage, isGenericFallbackImageUrl } from '../utils/productImages';
 import {
   Customer,
   Category,
@@ -31,6 +31,9 @@ import {
   DispatchInvoice,
   StockLedgerEntry,
   MandiWorkspace,
+  PaymentReminder,
+  PaymentReminderMeta,
+  PaymentReminderSummary,
 } from '../types';
 import {
   initialCustomers,
@@ -92,6 +95,9 @@ import {
   loadTallyRecordsFromStorage,
   loadDispatchInvoicesFromStorage,
   loadStockLedgerFromStorage,
+  savePaymentReminderMetaToStorage,
+  loadPaymentReminderMetaFromStorage,
+  deletePaymentReminderMetaFromStorage,
   setMetaValue,
   getMetaValue,
 } from '../services/offlineStorage';
@@ -109,6 +115,12 @@ import {
   DispatchInvoiceInput,
   PaymentCollectionInput,
 } from '../services/financeService';
+import {
+  computePaymentReminders,
+  getReminderSummary,
+  addDaysToIsoDate,
+  toIsoDate,
+} from '../services/reminderService';
 
 export interface FinancialSummary {
   totalCashReceived: number;
@@ -241,6 +253,14 @@ interface MandiContextType {
   pattis: FarmerPatti[];
   generatePatti: (params: Omit<FarmerPatti, 'id' | 'pattiNumber'>) => Promise<FarmerPatti>;
 
+  // Payment Reminders
+  paymentReminders: PaymentReminder[];
+  reminderSummary: PaymentReminderSummary;
+  markReminderSent: (customerId: string) => Promise<void>;
+  updateReminderDueDate: (customerId: string, dueDate: string, notes?: string) => Promise<void>;
+  snoozeReminder: (customerId: string, days: number) => Promise<void>;
+  clearReminderSnooze: (customerId: string) => Promise<void>;
+
   // Offline Mode & Data Sync
   arrivals: ArrivalRecord[];
   sales: SaleRecord[];
@@ -310,6 +330,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
   const [wastageRecords, setWastageRecords] = useState<WastageRecord[]>([]);
   const [pricingRules, setPricingRules] = useState<CustomerPricingRule[]>([]);
   const [pattis, setPattis] = useState<FarmerPatti[]>([]);
+  const [reminderMetas, setReminderMetas] = useState<PaymentReminderMeta[]>([]);
   const [slips, setSlips] = useState<MandiSlip[]>([]);
   const [tallyRecords, setTallyRecords] = useState<TallyRecord[]>([]);
   const [shiftSubmitted, setShiftSubmitted] = useState<boolean>(false);
@@ -501,6 +522,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const storedLastSync = await getMetaValue('lastSyncedAt');
+      const storedReminderMetas = await loadPaymentReminderMetaFromStorage();
 
       if (!isMounted) return;
 
@@ -523,6 +545,7 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       setSlips(storedSlips);
       setTallyRecords(storedTally);
       setStaffMembers(storedStaff);
+      setReminderMetas(storedReminderMetas || []);
 
       if (storedLastSync) {
         setLastSyncedAt(storedLastSync);
@@ -836,7 +859,13 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       costPrice: productData.costPrice || '',
       grades: initialGrades,
       ungradedStock: 0,
-      image: productData.image || getProductImage({ name: cleanName, category }),
+      image:
+        productData.image && !isGenericFallbackImageUrl(productData.image)
+          ? productData.image
+          : (() => {
+              const resolved = getProductImage({ name: cleanName, category });
+              return isGenericFallbackImageUrl(resolved) ? undefined : resolved;
+            })(),
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -1031,6 +1060,120 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
       netOutstanding: totalReceivable - totalPayable,
     };
   }, [ledgerTransactions, customers]);
+
+  // =========================================================================
+  // PAYMENT REMINDERS (OVERDUE BUYER RECEIVABLES & FARMER SETTLEMENTS)
+  // =========================================================================
+  const paymentReminders = useMemo(() => {
+    return computePaymentReminders({
+      customers,
+      ledgerTransactions,
+      pattis,
+      dispatchInvoices,
+      reminderMetas,
+    });
+  }, [customers, ledgerTransactions, pattis, dispatchInvoices, reminderMetas]);
+
+  const reminderSummary = useMemo(() => {
+    return getReminderSummary(paymentReminders);
+  }, [paymentReminders]);
+
+  const upsertReminderMeta = useCallback(
+    async (customerId: string, updater: (existing?: PaymentReminderMeta) => PaymentReminderMeta) => {
+      const nowIso = new Date().toISOString();
+      let savedMeta!: PaymentReminderMeta;
+      setReminderMetas((prev) => {
+        const existing = prev.find((m) => m.customerId === customerId);
+        savedMeta = updater(existing);
+        if (!savedMeta.updatedAt) savedMeta.updatedAt = nowIso;
+        const idx = prev.findIndex((m) => m.customerId === customerId);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = savedMeta;
+          return next;
+        }
+        return [...prev, savedMeta];
+      });
+      await savePaymentReminderMetaToStorage(savedMeta);
+    },
+    []
+  );
+
+  const markReminderSent = useCallback(
+    async (customerId: string) => {
+      const nowIso = new Date().toISOString();
+      await upsertReminderMeta(customerId, (existing) => ({
+        customerId,
+        customDueDate: existing?.customDueDate,
+        snoozedUntil: existing?.snoozedUntil,
+        lastRemindedAt: nowIso,
+        reminderCount: (existing?.reminderCount || 0) + 1,
+        notes: existing?.notes,
+        updatedAt: nowIso,
+      }));
+    },
+    [upsertReminderMeta]
+  );
+
+  const updateReminderDueDate = useCallback(
+    async (customerId: string, dueDate: string, notes?: string) => {
+      const nowIso = new Date().toISOString();
+      const normalizedDue = toIsoDate(dueDate);
+      await upsertReminderMeta(customerId, (existing) => ({
+        customerId,
+        customDueDate: normalizedDue,
+        snoozedUntil: undefined,
+        lastRemindedAt: existing?.lastRemindedAt,
+        reminderCount: existing?.reminderCount || 0,
+        notes: notes !== undefined ? notes : existing?.notes,
+        updatedAt: nowIso,
+      }));
+    },
+    [upsertReminderMeta]
+  );
+
+  const snoozeReminder = useCallback(
+    async (customerId: string, days: number) => {
+      const nowIso = new Date().toISOString();
+      const todayIso = toIsoDate(nowIso);
+      const snoozedUntil = addDaysToIsoDate(todayIso, Math.max(1, days));
+      await upsertReminderMeta(customerId, (existing) => ({
+        customerId,
+        customDueDate: existing?.customDueDate,
+        snoozedUntil,
+        lastRemindedAt: existing?.lastRemindedAt,
+        reminderCount: existing?.reminderCount || 0,
+        notes: existing?.notes,
+        updatedAt: nowIso,
+      }));
+    },
+    [upsertReminderMeta]
+  );
+
+  const clearReminderSnooze = useCallback(async (customerId: string) => {
+    const nowIso = new Date().toISOString();
+    let shouldDelete = false;
+    let updatedMeta: PaymentReminderMeta | null = null;
+    setReminderMetas((prev) => {
+      const existing = prev.find((m) => m.customerId === customerId);
+      if (!existing) return prev;
+      if (!existing.customDueDate && !existing.lastRemindedAt && !existing.notes) {
+        shouldDelete = true;
+        return prev.filter((m) => m.customerId !== customerId);
+      }
+      updatedMeta = {
+        ...existing,
+        snoozedUntil: undefined,
+        updatedAt: nowIso,
+      };
+      return prev.map((m) => (m.customerId === customerId ? updatedMeta! : m));
+    });
+    if (shouldDelete) {
+      await deletePaymentReminderMetaFromStorage(customerId);
+    } else if (updatedMeta) {
+      await savePaymentReminderMetaToStorage(updatedMeta);
+    }
+  }, []);
 
   // =========================================================================
   // PRODUCT GRADES & PRICING RULES
@@ -1920,6 +2063,14 @@ export const MandiProvider = ({ children }: { children: ReactNode }) => {
         // Feature 4: Farmer Patti
         pattis,
         generatePatti,
+
+        // Payment Reminders
+        paymentReminders,
+        reminderSummary,
+        markReminderSent,
+        updateReminderDueDate,
+        snoozeReminder,
+        clearReminderSnooze,
 
         // Offline Mode & Data Sync
         arrivals,

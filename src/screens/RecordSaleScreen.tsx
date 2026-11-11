@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Image,
+
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +17,7 @@ import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ThemeColors } from '../styles/theme';
-import { getProductImage } from '../utils/productImages';
+import SmartProductImage from '../components/SmartProductImage';
 
 const COMMON_UNITS = ['Kg', 'Crate', 'Box', 'Bag', 'Quintal'];
 
@@ -443,8 +443,8 @@ export default function RecordSaleScreen({ route, navigation }: any) {
                   onPress={() => handleProductSelect(p)}
                   activeOpacity={0.7}
                 >
-                  <Image
-                    source={{ uri: getProductImage(p) }}
+                  <SmartProductImage name={p.name} category={p.category} image={p.image} emojiSize={22}
+
                     style={styles.productTileThumb}
                   />
                   <Text

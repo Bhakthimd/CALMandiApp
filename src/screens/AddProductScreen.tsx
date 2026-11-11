@@ -10,14 +10,14 @@ import {
   Keyboard,
   Platform,
   Alert,
-  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMandi } from '../context/MandiContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors } from '../styles/theme';
-import { getProductImage, DEFAULT_PRODUCT_IMAGES, getProductEmoji } from '../utils/productImages';
+import { getProductImage, getProductEmoji, resolveCommodityKey } from '../utils/productImages';
+import SmartProductImage from '../components/SmartProductImage';
 
 const POPULAR_PRESETS = [
   // Fruits
@@ -88,7 +88,8 @@ export default function AddProductScreen({ route, navigation }: any) {
   const [customImage, setCustomImage] = useState<string>('');
   const [showImageInput, setShowImageInput] = useState<boolean>(false);
 
-  // Auto-calculated produce image
+  // Auto-calculated produce image & recognized commodity key
+  const recognizedKey = useMemo(() => resolveCommodityKey(name), [name]);
   const previewImageUrl = getProductImage({
     name,
     category: selectedCategory,
@@ -108,12 +109,7 @@ export default function AddProductScreen({ route, navigation }: any) {
 
   const handleSelectPreset = (presetName: string, presetCategory?: string) => {
     setName(presetName);
-    const key = presetName.toLowerCase();
-    if (DEFAULT_PRODUCT_IMAGES[key]) {
-      setCustomImage(DEFAULT_PRODUCT_IMAGES[key]);
-    } else {
-      setCustomImage('');
-    }
+    setCustomImage('');
     if (presetCategory) {
       setSelectedCategory(presetCategory);
     }
@@ -179,7 +175,7 @@ export default function AddProductScreen({ route, navigation }: any) {
       unit: selectedUnit,
       quantity: cleanQty,
       price: cleanPrice,
-      image: customImage.trim() || previewImageUrl,
+      image: customImage.trim() || (recognizedKey ? previewImageUrl : undefined),
     });
 
     if (success) {
@@ -251,10 +247,14 @@ export default function AddProductScreen({ route, navigation }: any) {
 
           {/* Product Image Preview Card */}
           <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: previewImageUrl }}
+            <SmartProductImage
+              name={name}
+              category={selectedCategory}
+              image={customImage}
+              uri={previewImageUrl}
               style={styles.imagePreview}
               resizeMode="cover"
+              emojiSize={30}
             />
             <View style={styles.imagePreviewTextWrap}>
               <View style={styles.imageTitleRow}>
@@ -266,9 +266,13 @@ export default function AddProductScreen({ route, navigation }: any) {
                 </Text>
               </View>
               <Text style={styles.imagePreviewDesc}>
-                {customImage
+                {customImage.trim()
                   ? 'Custom photo attached'
-                  : 'Auto-matched fresh produce photo'}
+                  : recognizedKey
+                  ? `Auto-recognized commodity photo (${recognizedKey})`
+                  : selectedCategory
+                  ? `Category fallback photo (${selectedCategory})`
+                  : 'Type product name to auto-match photo'}
               </Text>
 
               <TouchableOpacity

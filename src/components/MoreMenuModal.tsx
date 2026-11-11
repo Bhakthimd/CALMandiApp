@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useMandi } from '../context/MandiContext';
 import { useLanguage } from '../context/LanguageContext';
 
 interface MoreMenuModalProps {
@@ -28,6 +29,7 @@ export default function MoreMenuModal({
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
+  const { reminderSummary } = useMandi();
 
   const handleNavigate = (route: string, params?: any) => {
     onClose();
@@ -37,6 +39,21 @@ export default function MoreMenuModal({
   };
 
   const menuItems = [
+    {
+      id: 'payment-reminders',
+      title:
+        reminderSummary.overdueCount > 0
+          ? `Payment Reminders (${reminderSummary.overdueCount} Overdue)`
+          : 'Payment Reminders',
+      desc:
+        reminderSummary.totalCount > 0
+          ? `${reminderSummary.pendingBuyerCount} buyer dues • ${reminderSummary.pendingFarmerCount} farmer payouts`
+          : 'Flag overdue buyer dues & pending farmer settlements',
+      icon: 'notifications-outline' as const,
+      color: '#DC2626',
+      bgColor: isDark ? '#450A0A' : '#FEE2E2',
+      onPress: () => handleNavigate('PaymentReminders'),
+    },
     {
       id: 'inventory',
       title: t('inventory', 'Inventory Management'),

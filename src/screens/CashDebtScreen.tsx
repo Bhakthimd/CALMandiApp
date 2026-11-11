@@ -18,7 +18,7 @@ export default function CashDebtScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const { customers, financialSummary, getCustomerBalance } = useMandi();
+  const { customers, financialSummary, getCustomerBalance, reminderSummary } = useMandi();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<CustomerType | 'ALL'>('ALL');
@@ -191,6 +191,47 @@ export default function CashDebtScreen({ navigation }: any) {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Payment Reminders Banner */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: isDark ? '#2D1616' : '#FEF2F2',
+            borderWidth: 1,
+            borderColor: isDark ? '#7F1D1D' : '#FECACA',
+            borderRadius: 12,
+            padding: 12,
+            marginBottom: 14,
+          }}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('PaymentReminders')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                backgroundColor: isDark ? '#5C1D1D' : '#FEE2E2',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="notifications" size={18} color="#DC2626" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#FCA5A5' : '#991B1B' }}>
+                Payment Reminders ({reminderSummary.overdueCount} Overdue)
+              </Text>
+              <Text style={{ fontSize: 11, color: isDark ? '#F87171' : '#DC2626', marginTop: 1 }}>
+                {reminderSummary.pendingBuyerCount} buyer dues • {reminderSummary.pendingFarmerCount} farmer payouts
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#DC2626" />
+        </TouchableOpacity>
 
         {/* Customer Directory Header */}
         <View style={styles.directoryHeaderRow}>

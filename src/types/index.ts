@@ -388,6 +388,58 @@ export interface OfflineSyncStats {
   totalPendingCount: number;
 }
 
+// FEATURE 4: Payment Reminders
+export type PaymentReminderKind = 'BUYER_RECEIVABLE' | 'FARMER_SETTLEMENT';
+
+export type PaymentReminderStatus = 'OVERDUE' | 'DUE_TODAY' | 'UPCOMING' | 'SNOOZED';
+
+export interface PaymentReminderMeta {
+  customerId: string;
+  customDueDate?: string; // YYYY-MM-DD
+  snoozedUntil?: string; // YYYY-MM-DD
+  lastRemindedAt?: string; // ISO timestamp
+  reminderCount: number;
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface PaymentReminder {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerMobile?: string;
+  business?: string;
+  customerType: CustomerType;
+  kind: PaymentReminderKind;
+  amount: number;
+  dueDate: string; // YYYY-MM-DD
+  referenceDate: string; // YYYY-MM-DD
+  referenceNumber?: string;
+  daysOverdue: number; // > 0 overdue, 0 due today, < 0 upcoming
+  status: PaymentReminderStatus;
+  lastRemindedAt?: string;
+  reminderCount: number;
+  snoozedUntil?: string;
+  notes?: string;
+  isCustomDueDate: boolean;
+}
+
+export interface PaymentReminderSummary {
+  totalCount: number;
+  overdueCount: number;
+  dueTodayCount: number;
+  upcomingCount: number;
+  snoozedCount: number;
+  overdueBuyerCount: number;
+  overdueBuyerAmount: number;
+  pendingBuyerCount: number;
+  pendingBuyerAmount: number;
+  pendingFarmerCount: number;
+  pendingFarmerAmount: number;
+  overdueFarmerCount: number;
+  overdueFarmerAmount: number;
+}
+
 export type RootStackParamList = {
   Splash: undefined;
   Welcome: undefined;
@@ -408,6 +460,7 @@ export type RootStackParamList = {
 
   // Cash & Debt Screens
   CashDebt: undefined;
+  PaymentReminders: { initialFilter?: 'ALL' | 'OVERDUE' | 'BUYER' | 'FARMER' | 'SNOOZED' } | undefined;
   CustomerLedger: { customerId: string };
   AddPayment: { customerId?: string; defaultType?: 'RECEIVE' | 'PAY' } | undefined;
 
